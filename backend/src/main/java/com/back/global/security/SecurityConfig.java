@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/groups/invite/**"
-                        ).permitAll()
+                        ).authenticated()
                         .requestMatchers(
                                 "/",
                                 "/actuator/health",
