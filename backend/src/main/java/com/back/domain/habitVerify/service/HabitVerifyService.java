@@ -7,6 +7,7 @@ import com.back.domain.habit.entity.Habit;
 import com.back.domain.habit.entity.HabitStatus;
 import com.back.domain.habit.repository.HabitRepository;
 import com.back.global.exception.BusinessRuleException;
+import com.back.global.exception.EntityNotFoundException;
 import com.back.domain.habitVerify.dto.HabitVerifyRequest;
 import com.back.domain.habitVerify.dto.HabitVerifyResponse;
 import com.back.domain.habitVerify.dto.HabitVerifySummaryResponse;
@@ -106,7 +107,7 @@ public class HabitVerifyService {
             Long habitId, Long memberId
     ){
         Habit habit = habitRepository.findById(habitId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 습관입니다."));
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 습관입니다."));
 
         Long groupId = habit.getGroupMember().getGroup().getId();
         boolean isGroupMember = groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId);
@@ -155,7 +156,7 @@ public class HabitVerifyService {
                                 habitId
                         )
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new EntityNotFoundException(
                                         "존재하지 않는 인증 기록입니다."
                                 )
                         );
@@ -241,7 +242,7 @@ public class HabitVerifyService {
                 habitVerifyRepository
                         .findById(verificationId)
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new EntityNotFoundException(
                                         "존재하지 않는 인증 기록입니다."
                                 )
                         );
@@ -267,7 +268,7 @@ public class HabitVerifyService {
                 habitVerifyRepository
                         .findById(verificationId)
                         .orElseThrow(() ->
-                                new IllegalArgumentException(
+                                new EntityNotFoundException(
                                         "존재하지 않는 인증 기록입니다."
                                 )
                         );

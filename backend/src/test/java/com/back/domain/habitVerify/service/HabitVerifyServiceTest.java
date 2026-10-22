@@ -22,6 +22,7 @@ import com.back.domain.habitVerify.entity.HabitVerifyStatus;
 import com.back.domain.habitVerify.repository.HabitVerifyRepository;
 import com.back.domain.member.entity.Member;
 import com.back.global.exception.BusinessRuleException;
+import com.back.global.exception.EntityNotFoundException;
 import com.back.global.exception.ForbiddenException;
 import com.back.global.storage.StorageService;
 import java.time.LocalDate;
@@ -113,12 +114,12 @@ class HabitVerifyServiceTest {
         }
 
         @Test
-        @DisplayName("없는 인증이면 400이고 권한 확인까지 가지 않는다")
-        void 없는_인증_400() {
+        @DisplayName("없는 인증이면 404이고 권한 확인까지 가지 않는다")
+        void 없는_인증_404() {
             given(habitVerifyRepository.findById(999L)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> habitVerifyService.approve(OWNER_ID, 999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("존재하지 않는 인증 기록입니다.");
 
             verify(groupMemberRepository, never()).findByGroupIdAndMemberId(anyLong(), anyLong());
@@ -196,6 +197,18 @@ class HabitVerifyServiceTest {
 
             assertThat(habitVerify.getStatus()).isEqualTo(HabitVerifyStatus.REJECTED);
             assertThat(response.status()).isEqualTo(HabitVerifyStatus.REJECTED);
+        }
+
+        @Test
+        @DisplayName("없는 인증이면 404이고 권한 확인까지 가지 않는다")
+        void 없는_인증_404() {
+            given(habitVerifyRepository.findById(999L)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> habitVerifyService.reject(OWNER_ID, 999L))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("존재하지 않는 인증 기록입니다.");
+
+            verify(groupMemberRepository, never()).findByGroupIdAndMemberId(anyLong(), anyLong());
         }
 
         @Test
@@ -370,12 +383,12 @@ class HabitVerifyServiceTest {
         }
 
         @Test
-        @DisplayName("없는 습관이면 400이다")
-        void 없는_습관이면_400() {
+        @DisplayName("없는 습관이면 404다")
+        void 없는_습관이면_404() {
             given(habitRepository.findById(999L)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> habitVerifyService.findAll(999L, OWNER_ID))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("존재하지 않는 습관입니다.");
         }
 
