@@ -1,5 +1,12 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:db_dev;MODE=MySQL
+    # Testcontainers가 테스트 시작 시 PostgreSQL 컨테이너를 띄운다. (Docker 필요)
+    # TC_DAEMON=true: 컨테이너를 JVM 종료 시까지 유지해 여러 테스트 컨텍스트가 공유한다.
+    url: jdbc:tc:postgresql:16:///naegi_test?TC_DAEMON=true
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     hikari:
-      maximum-pool-size: 20      
+      maximum-pool-size: 20
+  test:
+    database:
+      # @DataJpaTest가 DB를 임베디드(H2)로 바꿔치기하지 않고 위 PostgreSQL을 그대로 사용하게 한다.
+      replace: none

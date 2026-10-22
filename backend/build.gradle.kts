@@ -46,4 +46,6 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// @ActiveProfiles가 없는 테스트도 로컬 개발 DB(local 프로필)가 아닌 Testcontainers(test 프로필)를 쓰게 한다.
+	systemProperty("spring.profiles.active", "test")
 }
