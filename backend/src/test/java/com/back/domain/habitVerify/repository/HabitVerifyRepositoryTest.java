@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
-// 임베디드 DB(H2)에서 HabitVerifyRepository의 조회 쿼리를 검증한다. (테스트마다 롤백)
+// Testcontainers PostgreSQL에서 HabitVerifyRepository의 조회 쿼리를 검증한다. (테스트마다 롤백)
 // 배포 DB는 PostgreSQL이지만, 여기서 쓰는 WHERE / IN / ORDER BY는 두 DB에서 같게 동작한다.
 @DataJpaTest
 class HabitVerifyRepositoryTest {
