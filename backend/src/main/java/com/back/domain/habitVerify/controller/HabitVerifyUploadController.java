@@ -34,6 +34,6 @@ public class HabitVerifyUploadController {
             @PathVariable Long habitId,
             @Valid @RequestBody UploadUrlRequest request
     ) {
-        return habitVerifyService.createUploadUrl(memberId, habitId, request.filename());
+        return habitVerifyService.createUploadUrl(memberId, habitId, request.getFilename());
     }
 }

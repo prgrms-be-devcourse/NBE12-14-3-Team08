@@ -74,7 +74,7 @@ public class PenaltyVerifyController {
         @PathVariable Long id,
         @Valid @RequestBody UploadUrlRequest request
     ) {
-        return penaltyVerifyService.createUploadUrl(memberId, id, request.filename());
+        return penaltyVerifyService.createUploadUrl(memberId, id, request.getFilename());
     }
 
     @Operation(

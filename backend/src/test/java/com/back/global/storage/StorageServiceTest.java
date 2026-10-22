@@ -55,9 +55,9 @@ class StorageServiceTest {
         verify(supabaseStorageClient).createSignedUploadUrl(eq("habit-bucket"), path.capture(), eq(300));
 
         assertThat(path.getValue()).matches("7/50/" + UUID_PATTERN + "\\.png");
-        assertThat(response.uploadUrl())
+        assertThat(response.getUploadUrl())
             .isEqualTo(SUPABASE_URL + "/storage/v1/object/upload/sign/habit-bucket/signed?token=abc");
-        assertThat(response.publicUrl())
+        assertThat(response.getPublicUrl())
             .isEqualTo(SUPABASE_URL + "/storage/v1/object/public/habit-bucket/" + path.getValue());
     }
 
@@ -73,7 +73,7 @@ class StorageServiceTest {
         verify(supabaseStorageClient).createSignedUploadUrl(eq("penalty-bucket"), path.capture(), eq(300));
 
         assertThat(path.getValue()).matches("7/3/" + UUID_PATTERN + "\\.jpg");
-        assertThat(response.publicUrl()).startsWith(SUPABASE_URL + "/storage/v1/object/public/penalty-bucket/7/3/");
+        assertThat(response.getPublicUrl()).startsWith(SUPABASE_URL + "/storage/v1/object/public/penalty-bucket/7/3/");
     }
 
     @ParameterizedTest(name = "{0} 허용")
@@ -86,7 +86,7 @@ class StorageServiceTest {
         UploadUrlResponse response = storageService.createUploadUrl(VerificationImageType.HABIT, 7L, 50L, filename);
 
         String extension = filename.substring(filename.lastIndexOf('.')).toLowerCase();
-        assertThat(response.publicUrl()).endsWith(extension);
+        assertThat(response.getPublicUrl()).endsWith(extension);
     }
 
     @ParameterizedTest(name = "{0} 거절")
