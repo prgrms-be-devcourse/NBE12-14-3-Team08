@@ -66,9 +66,9 @@ public class HabitService {
         // 3. 습관 생성
         Habit habit = Habit.create(
                 groupMember,
-                request.title(),
-                request.description(),
-                request.days()
+                request.getTitle(),
+                request.getDescription(),
+                request.getDays()
         );
 
         // 4. 저장

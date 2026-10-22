@@ -118,11 +118,11 @@ class HabitServiceTest {
 
             HabitResponse response = habitService.createHabit(GROUP_ID, MEMBER_ID, request);
 
-            assertThat(response.title()).isEqualTo("기상 후 스트레칭");
-            assertThat(response.description()).isEqualTo("10분 스트레칭");
-            assertThat(response.days()).isEqualTo(3);
-            assertThat(response.status()).isEqualTo(HabitStatus.ACTIVE);
-            assertThat(response.groupMemberId()).isEqualTo(GROUP_MEMBER_ID);
+            assertThat(response.getTitle()).isEqualTo("기상 후 스트레칭");
+            assertThat(response.getDescription()).isEqualTo("10분 스트레칭");
+            assertThat(response.getDays()).isEqualTo(3);
+            assertThat(response.getStatus()).isEqualTo(HabitStatus.ACTIVE);
+            assertThat(response.getGroupMemberId()).isEqualTo(GROUP_MEMBER_ID);
         }
 
         @Test
@@ -236,8 +236,8 @@ class HabitServiceTest {
 
             HabitResponse response = habitService.getActiveHabit(MEMBER_ID, GROUP_ID);
 
-            assertThat(response.id()).isEqualTo(HABIT_ID);
-            assertThat(response.status()).isEqualTo(HabitStatus.ACTIVE);
+            assertThat(response.getId()).isEqualTo(HABIT_ID);
+            assertThat(response.getStatus()).isEqualTo(HabitStatus.ACTIVE);
         }
 
         @Test
@@ -264,7 +264,7 @@ class HabitServiceTest {
 
             List<HabitResponse> responses = habitService.getFailedHabits(MEMBER_ID, GROUP_ID);
 
-            assertThat(responses).extracting(HabitResponse::id).containsExactly(2L, 1L);
+            assertThat(responses).extracting(HabitResponse::getId).containsExactly(2L, 1L);
         }
 
         @Test
@@ -283,7 +283,7 @@ class HabitServiceTest {
             given(habitRepository.findById(HABIT_ID)).willReturn(Optional.of(habit));
             given(groupMemberRepository.existsByGroupIdAndMemberId(GROUP_ID, MEMBER_ID)).willReturn(true);
 
-            assertThat(habitService.getHabit(MEMBER_ID, HABIT_ID).id()).isEqualTo(HABIT_ID);
+            assertThat(habitService.getHabit(MEMBER_ID, HABIT_ID).getId()).isEqualTo(HABIT_ID);
         }
 
         @Test
@@ -363,9 +363,9 @@ class HabitServiceTest {
             List<HabitWeeklyCheckResponse> results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID);
 
             assertThat(results).hasSize(1);
-            assertThat(results.get(0).habitId()).isEqualTo(HABIT_ID);
-            assertThat(results.get(0).result()).isEqualTo(WeeklyCheckResult.TOO_EARLY);
-            assertThat(results.get(0).habitStatus()).isEqualTo(HabitStatus.ACTIVE);
+            assertThat(results.get(0).getHabitId()).isEqualTo(HABIT_ID);
+            assertThat(results.get(0).getResult()).isEqualTo(WeeklyCheckResult.TOO_EARLY);
+            assertThat(results.get(0).getHabitStatus()).isEqualTo(HabitStatus.ACTIVE);
         }
     }
 
