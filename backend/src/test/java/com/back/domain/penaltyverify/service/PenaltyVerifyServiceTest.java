@@ -214,6 +214,24 @@ class PenaltyVerifyServiceTest {
                 .hasMessageContaining("본인의 벌칙만 재제출할 수 있습니다.");
             verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
         }
+
+        @Test
+        @DisplayName("resubmit: 종료된 방이면 BusinessRuleException(400)이고, 사진 검사 없이 반려 상태 그대로다")
+        void resubmit_종료된_방_400() {
+            PenaltyVerify pv = createFixturePenalty(1L, PenaltyVerifyStatus.REJECTED);
+            group.finish();
+            given(penaltyVerifyRepository.findById(1L)).willReturn(Optional.of(pv));
+
+            SubmitPenaltyVerifyRequest request = new SubmitPenaltyVerifyRequest(
+                "재제출 시도", "https://example.com/test.jpg"
+            );
+
+            assertThatThrownBy(() -> penaltyVerifyService.resubmit(2L, 1L, request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("이미 종료된 그룹에서는 벌칙을 재제출할 수 없습니다.");
+            verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
+            assertThat(pv.getStatus()).isEqualTo(PenaltyVerifyStatus.REJECTED);
+        }
     }
 
     @Nested
