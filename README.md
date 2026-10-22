@@ -45,9 +45,9 @@
 * **Framework:** Spring Boot 4.1.1
 
 ### 📦 인프라 & 데이터베이스
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="50" height="50"/><br>PostgreSQL | <img src="https://h2database.com/html/images/h2-logo-2.png" width="50" height="50"/><br>H2 Database | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/supabase/supabase-original.svg" width="50" height="50"/><br>Supabase | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vercel/vercel-original.svg" width="50" height="50"/><br>Vercel |
-| :---: | :---: | :---: | :---: |
-* **Database:** PostgreSQL (Supabase), H2 Database (Local)
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="50" height="50"/><br>PostgreSQL | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/supabase/supabase-original.svg" width="50" height="50"/><br>Supabase | <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vercel/vercel-original.svg" width="50" height="50"/><br>Vercel |
+| :---: | :---: | :---: |
+* **Database:** PostgreSQL (배포: Supabase, 로컬·테스트: Docker)
 * **Object / Storage:** Supabase
 * **Deployment:** Vercel
 
@@ -93,14 +93,32 @@
 
 ### Backend (Spring Boot)
 
+**사전 준비: Docker** (로컬 DB와 테스트 DB가 모두 PostgreSQL 컨테이너입니다)
+
 ```bash
+# 1) 로컬 PostgreSQL 실행 (프로젝트 루트에서)
+docker compose up -d
+
+# 2) 서버 실행
 cd backend
 ./gradlew bootRun
 ```
 
-- 기본 프로필은 `local`이며, 별도 설정 없이 H2 파일 DB(`./db_dev`)로 바로 실행됩니다.
+- 기본 프로필은 `local`이며, `docker compose`로 띄운 PostgreSQL(`localhost:5432`, DB/계정 `naegi`)에 연결합니다.
+- 로컬 프로필에서만 시연용 시드 데이터가 자동으로 들어갑니다.
 - 사진 업로드(습관/벌칙 인증) 기능까지 테스트하려면 `SUPABASE_SERVICE_ROLE_KEY` 환경변수가 필요합니다.
 - 서버는 기본적으로 `http://localhost:8080`에서 실행됩니다.
+- DB를 초기화하려면 `docker compose down -v` 후 다시 `docker compose up -d` 하세요.
+
+#### 테스트 실행
+
+```bash
+cd backend
+./gradlew test
+```
+
+- 테스트는 **Docker가 실행 중이어야** 합니다. Testcontainers가 PostgreSQL 컨테이너를 자동으로 띄우므로 로컬 DB(`docker compose`)와는 별개이며, 개발 데이터를 건드리지 않습니다.
+- Gradle로 실행하면 `test` 프로필이 자동 적용됩니다. IDE에서 Gradle이 아닌 JUnit 러너로 직접 실행한다면 VM 옵션 `-Dspring.profiles.active=test`를 추가하세요.
 
 ### Frontend (Next.js)
 
