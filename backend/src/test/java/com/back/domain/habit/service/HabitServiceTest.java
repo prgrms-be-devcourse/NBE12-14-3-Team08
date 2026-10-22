@@ -3,6 +3,7 @@ package com.back.domain.habit.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -331,7 +332,7 @@ class HabitServiceTest {
             assertThatThrownBy(() -> habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("주간 판정은 방장만 실행할 수 있습니다.");
-            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(any(), any());
+            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(anyLong(), any(HabitStatus.class));
         }
 
         @Test
@@ -343,7 +344,7 @@ class HabitServiceTest {
             assertThatThrownBy(() -> habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("이미 종료된 그룹은 주간 판정을 실행할 수 없습니다.");
-            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(any(), any());
+            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(anyLong(), any(HabitStatus.class));
         }
 
         @Test
@@ -380,7 +381,7 @@ class HabitServiceTest {
             habitService.autoCheckAllActiveHabits();
 
             verify(habitRepository).findAllByStatusInProgressGroup(HabitStatus.ACTIVE);
-            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(any(), any());
+            verify(habitRepository, never()).findAllByGroupMember_Group_IdAndStatus(anyLong(), any(HabitStatus.class));
         }
 
         @Test
