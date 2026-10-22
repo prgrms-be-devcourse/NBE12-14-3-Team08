@@ -17,6 +17,7 @@ import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
 import jakarta.transaction.Transactional
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 
@@ -81,7 +82,7 @@ class HabitService(
     fun getActiveHabit(memberId: Long, groupId: Long): HabitResponse {
         val habit = habitRepository
             .findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(memberId, groupId, HabitStatus.ACTIVE)
-            .orElseThrow { IllegalArgumentException("현재 진행 중인 습관이 없습니다.") }
+            ?: throw IllegalArgumentException("현재 진행 중인 습관이 없습니다.")
 
         return HabitResponse(habit)
     }
@@ -98,8 +99,8 @@ class HabitService(
 
     @Transactional
     fun getHabit(memberId: Long, habitId: Long): HabitResponse {
-        val habit = habitRepository.findById(habitId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 습관입니다.") }
+        val habit = habitRepository.findByIdOrNull(habitId)
+            ?: throw EntityNotFoundException("존재하지 않는 습관입니다.")
 
         val groupId = habit.groupMember.group.id
         if (!groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {

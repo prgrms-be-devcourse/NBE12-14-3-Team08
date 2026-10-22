@@ -27,7 +27,7 @@ interface HabitRepository : JpaRepository<Habit, Long> {
         memberId: Long,
         groupId: Long,
         status: HabitStatus,
-    ): Optional<Habit>
+    ): Habit?
 
     fun findAllByGroupMember_Member_IdAndGroupMember_Group_IdAndStatusOrderByCreateDateDesc(
         memberId: Long,

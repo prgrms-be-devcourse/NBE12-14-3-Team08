@@ -101,9 +101,11 @@ class HabitRepositoryTest {
             Habit active = saveHabit(groupMember, "물 마시기", HabitStatus.ACTIVE);
             saveHabit(groupMember, "예전 습관", HabitStatus.FAILED);
 
-            assertThat(habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                member.getId(), group.getId(), HabitStatus.ACTIVE))
-                .get().extracting(Habit::getId).isEqualTo(active.getId());
+            Habit found = habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
+                member.getId(), group.getId(), HabitStatus.ACTIVE);
+
+            assertThat(found).isNotNull();
+            assertThat(found.getId()).isEqualTo(active.getId());
         }
 
         @Test
@@ -115,7 +117,7 @@ class HabitRepositoryTest {
             saveHabit(inOtherGroup, "다른 그룹 습관", HabitStatus.ACTIVE);
 
             assertThat(habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                member.getId(), group.getId(), HabitStatus.ACTIVE)).isEmpty();
+                member.getId(), group.getId(), HabitStatus.ACTIVE)).isNull();
         }
 
         @Test

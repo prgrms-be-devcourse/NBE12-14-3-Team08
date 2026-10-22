@@ -232,7 +232,7 @@ class HabitServiceTest {
         void 활성_습관_조회_성공() {
             Habit habit = habit(groupMember(activeGroup(), GroupMemberRole.MEMBER));
             given(habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                MEMBER_ID, GROUP_ID, HabitStatus.ACTIVE)).willReturn(Optional.of(habit));
+                MEMBER_ID, GROUP_ID, HabitStatus.ACTIVE)).willReturn(habit);
 
             HabitResponse response = habitService.getActiveHabit(MEMBER_ID, GROUP_ID);
 
@@ -244,7 +244,7 @@ class HabitServiceTest {
         @DisplayName("활성 습관이 없으면 IllegalArgumentException이 발생한다")
         void 활성_습관이_없으면_예외() {
             given(habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                MEMBER_ID, GROUP_ID, HabitStatus.ACTIVE)).willReturn(Optional.empty());
+                MEMBER_ID, GROUP_ID, HabitStatus.ACTIVE)).willReturn(null);
 
             assertThatThrownBy(() -> habitService.getActiveHabit(MEMBER_ID, GROUP_ID))
                 .isInstanceOf(IllegalArgumentException.class)
