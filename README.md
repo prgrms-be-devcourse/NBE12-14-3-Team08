@@ -120,6 +120,23 @@ cd backend
 - 테스트는 **Docker가 실행 중이어야** 합니다. Testcontainers가 PostgreSQL 컨테이너를 자동으로 띄우므로 로컬 DB(`docker compose`)와는 별개이며, 개발 데이터를 건드리지 않습니다.
 - Gradle로 실행하면 `test` 프로필이 자동 적용됩니다. IDE에서 Gradle이 아닌 JUnit 러너로 직접 실행한다면 VM 옵션 `-Dspring.profiles.active=test`를 추가하세요.
 
+#### Kotlin 혼용 개발 (Java → Kotlin 전환 중)
+
+백엔드는 도메인별로 Java를 Kotlin으로 전환하는 중이라 **Java와 Kotlin이 함께 빌드**됩니다. (Kotlin 2.3.21, Spring Boot가 버전 관리)
+
+| 항목 | 내용 |
+|---|---|
+| 소스 위치 | Kotlin은 `src/main/kotlin`, `src/test/kotlin` (패키지 경로는 Java와 동일) |
+| 플러그인 | `jvm`, `spring`(Spring 클래스 open), `jpa`(엔티티 기본 생성자), `lombok` |
+| JPA 엔티티 | `allOpen`으로 `@Entity`, `@MappedSuperclass`, `@Embeddable`이 상속 가능. **엔티티에 `data class`는 쓰지 않습니다.** |
+| 테스트 | JUnit5 + AssertJ 그대로, Kotlin 단위 테스트는 MockK 사용 |
+
+**전환할 때 주의할 점**
+
+- **롬복**: Kotlin 컴파일러는 롬복이 만드는 getter/builder를 모릅니다. `kotlin-lombok` 플러그인이 이를 보완하므로 아직 Java인 롬복 클래스(`Group`, `GroupMember` 등)를 Kotlin에서 `group.title`처럼 쓸 수 있습니다. 롬복 클래스가 모두 사라지면 플러그인을 제거합니다. **새 Java 클래스에는 롬복을 추가하지 않습니다.**
+- **Java 호출부 유지**: 정적 팩토리는 `@JvmStatic`을 붙이고 getter 이름을 유지해야 Java 코드를 수정하지 않습니다.
+- **`record` → `data class`**: Java 접근자 `response.title()`가 `getTitle()`로 바뀌므로, DTO를 전환하는 PR에서 Java 테스트의 접근자도 함께 수정합니다.
+- **null 처리**: Java 롬복 getter의 반환 타입은 null 여부를 알 수 없는 플랫폼 타입입니다. 저장 전 엔티티의 `id`처럼 null일 수 있는 값을 `assertThat(entity.id)`로 바로 넘기면 Kotlin이 기본형으로 언박싱하다 NPE가 납니다. `val id: Long? = entity.id`처럼 nullable 타입으로 받으세요.
 ### Frontend (Next.js)
 
 ```bash
