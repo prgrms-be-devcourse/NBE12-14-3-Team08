@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: naegi-postgres
+    environment:
+      POSTGRES_DB: naegi
+      POSTGRES_USER: naegi
+      POSTGRES_PASSWORD: naegi
+    ports:
+      - "5432:5432"
+    volumes:
+      - naegi-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U naegi -d naegi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  naegi-pgdata:
