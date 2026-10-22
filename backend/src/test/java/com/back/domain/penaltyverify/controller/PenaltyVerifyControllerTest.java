@@ -1,6 +1,9 @@
 package com.back.domain.penaltyverify.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,11 +25,16 @@ import com.back.domain.penaltyverify.dto.SubmitPenaltyVerifyRequest;
 import com.back.domain.penaltyverify.entity.PenaltyVerify;
 import com.back.domain.penaltyverify.entity.PenaltyVerifyStatus;
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository;
+import com.back.global.exception.StorageUnavailableException;
 import com.back.global.storage.StorageService;
+import com.back.global.storage.UploadUrlRequest;
+import com.back.global.storage.UploadUrlResponse;
+import com.back.global.storage.VerificationImageType;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,6 +42,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -217,5 +226,96 @@ class PenaltyVerifyControllerTest {
             .andExpect(jsonPath("$.imageUrl").doesNotExist());
 
         assertThat(penaltyVerifyRepository.findById(pendingPenaltyId)).isPresent();
+    }
+
+    @Nested
+    @DisplayName("벌칙 인증 제출 실패 POST /api/habits/{habitId}/penalties")
+    class SubmitFailure {
+
+        private ResultActions submit(String token, Long habitId, SubmitPenaltyVerifyRequest request) throws Exception {
+            return mockMvc.perform(post("/api/habits/{habitId}/penalties", habitId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonMapper.writeValueAsString(request)));
+        }
+
+        @Test
+        @DisplayName("사진 없이 제출하면 400이다 (컨트롤러가 @Valid로 사진 필수 검사를 한다)")
+        void 사진_없으면_400() throws Exception {
+            submit(memberToken, memberHabitId, new SubmitPenaltyVerifyRequest("오늘 러닝 완료", " "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0]").value("인증 사진은 필수입니다."));
+        }
+
+        @Test
+        @DisplayName("같은 방 방장이 남의 벌칙을 제출하면 403이다")
+        void 남의_벌칙_403() throws Exception {
+            submit(ownerToken, memberHabitId, new SubmitPenaltyVerifyRequest("대신 제출", "https://example.com/run.jpg"))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("벌칙이 없는 습관이면 404다")
+        void 벌칙_없는_습관_404() throws Exception {
+            GroupMember memberGroupMember = groupMemberRepository.findById(memberGroupMemberId).orElseThrow();
+            Long habitWithoutPenaltyId = habitRepository.save(
+                Habit.create(memberGroupMember, "일찍 자기", "11시 전 취침", 30)
+            ).getId();
+
+            submit(memberToken, habitWithoutPenaltyId, new SubmitPenaltyVerifyRequest("제출", "https://example.com/run.jpg"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("해당 습관에 대한 벌칙 정보가 존재하지 않습니다."));
+        }
+
+        @Test
+        @DisplayName("사진을 확인하는 중 Supabase와 통신하지 못하면 502다")
+        void 사진_저장소_장애_502() throws Exception {
+            willThrow(new StorageUnavailableException("사진 저장소에 연결할 수 없습니다."))
+                .given(storageService).validateImageUrl(any(), any(), any(), any(), any());
+
+            submit(memberToken, memberHabitId, new SubmitPenaltyVerifyRequest("오늘 러닝 완료", "https://example.com/run.jpg"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").value("사진 저장소에 연결할 수 없습니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("벌칙 인증 사진 업로드 URL 발급 POST /api/penalties/{id}/upload-url")
+    class UploadUrl {
+
+        private ResultActions requestUploadUrl(String token, Long penaltyId) throws Exception {
+            return mockMvc.perform(post("/api/penalties/{id}/upload-url", penaltyId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonMapper.writeValueAsString(new UploadUrlRequest("penalty.png"))));
+        }
+
+        @Test
+        @DisplayName("재제출할 수 있는(반려된) 내 벌칙이면 200이고 이 회원·이 벌칙 기준으로 발급한 URL을 돌려준다")
+        void 내_벌칙_200() throws Exception {
+            given(storageService.createUploadUrl(VerificationImageType.PENALTY, memberId, rejectedPenaltyId, "penalty.png"))
+                .willReturn(new UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png"));
+
+            requestUploadUrl(memberToken, rejectedPenaltyId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uploadUrl").value("https://storage/upload-signed"))
+                .andExpect(jsonPath("$.publicUrl").value("https://storage/public.png"));
+        }
+
+        @Test
+        @DisplayName("이미 승인된 벌칙이면 409다")
+        void 승인된_벌칙_409() throws Exception {
+            penaltyVerifyRepository.findById(pendingPenaltyId).orElseThrow().approve();
+
+            requestUploadUrl(memberToken, pendingPenaltyId)
+                .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("같은 방 방장이 남의 벌칙에 요청하면 403이다")
+        void 남의_벌칙_403() throws Exception {
+            requestUploadUrl(ownerToken, rejectedPenaltyId)
+                .andExpect(status().isForbidden());
+        }
     }
 }
