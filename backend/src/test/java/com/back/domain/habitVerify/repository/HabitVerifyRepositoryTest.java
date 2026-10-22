@@ -165,4 +165,38 @@ class HabitVerifyRepositoryTest {
             assertThat(result).extracting(HabitVerify::getId).containsExactly(day20.getId(), day19.getId(), day18.getId());
         }
     }
+
+    @Nested
+    @DisplayName("같은 날 인증 여부(existsByHabitIdAndVerifyDate)")
+    class ExistsByHabitIdAndVerifyDate {
+
+        private final LocalDate oct22 = LocalDate.of(2026, 10, 22);
+
+        @Test
+        @DisplayName("그 습관에 그 날짜 인증이 있으면 true다 (같은 날 두 번째 인증을 막는 근거)")
+        void 같은_습관_같은_날짜_true() {
+            saveVerify(habitA1, oct22, HabitVerifyStatus.PENDING);
+            flushAndClear();
+
+            assertThat(habitVerifyRepository.existsByHabitIdAndVerifyDate(habitA1.getId(), oct22)).isTrue();
+        }
+
+        @Test
+        @DisplayName("그 습관의 인증이 다른 날짜에만 있으면 false다 (어제 인증했어도 오늘 인증할 수 있다)")
+        void 같은_습관_다른_날짜_false() {
+            saveVerify(habitA1, oct22.minusDays(1), HabitVerifyStatus.APPROVED);
+            flushAndClear();
+
+            assertThat(habitVerifyRepository.existsByHabitIdAndVerifyDate(habitA1.getId(), oct22)).isFalse();
+        }
+
+        @Test
+        @DisplayName("같은 방의 다른 멤버가 그 날짜에 인증했어도 내 습관 기준으로는 false다")
+        void 같은_방_다른_멤버_습관_같은_날짜_false() {
+            saveVerify(habitA2, oct22, HabitVerifyStatus.PENDING);
+            flushAndClear();
+
+            assertThat(habitVerifyRepository.existsByHabitIdAndVerifyDate(habitA1.getId(), oct22)).isFalse();
+        }
+    }
 }
