@@ -73,6 +73,10 @@ public class HabitVerifyService {
             throw new BusinessRuleException("이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다.");
         }
 
+        if (habit.getStatus() != HabitStatus.ACTIVE) {
+            throw new IllegalStateException("진행 중인 습관에만 인증을 등록할 수 있습니다. 현재 상태: " + habit.getStatus());
+        }
+
         LocalDate verifyDate = LocalDate.now();
 
         boolean alreadyExists =

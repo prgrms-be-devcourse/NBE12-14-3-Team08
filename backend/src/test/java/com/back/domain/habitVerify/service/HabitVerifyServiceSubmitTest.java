@@ -114,6 +114,21 @@ class HabitVerifyServiceSubmitTest {
 
             verify(habitVerifyRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("포기·판정으로 실패(FAILED)한 습관이면 409이고, 사진 검사와 저장을 하지 않는다")
+        void 실패한_습관_409() {
+            habit.fail();
+            given(habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L)).willReturn(Optional.of(habit));
+
+            assertThatThrownBy(() -> habitVerifyService.create(50L,
+                new HabitVerifyRequest("인증", "https://storage/a.png"), 2L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("진행 중인 습관에만 인증을 등록할 수 있습니다. 현재 상태: FAILED");
+
+            verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
+            verify(habitVerifyRepository, never()).save(any());
+        }
     }
 
     @Nested
