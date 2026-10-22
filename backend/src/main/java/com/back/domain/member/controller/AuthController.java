@@ -60,7 +60,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        String refreshToken = request.refreshToken();
+        String refreshToken = request.getRefreshToken();
 
         if (!authTokenService.validateToken(refreshToken)
                 || !authTokenService.isRefreshToken(refreshToken)) {

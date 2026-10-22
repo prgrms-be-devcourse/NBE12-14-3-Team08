@@ -34,15 +34,15 @@ public class MemberService {
 
     @Transactional
     public MemberResponse join(CreateMemberRequest request) {
-        if (memberRepository.existsByUsername(request.username())) {
+        if (memberRepository.existsByUsername(request.getUsername())) {
             throw new IllegalStateException("이미 사용 중인 아이디입니다.");
         }
 
-        String encodedPassword = passwordEncoder.encode(request.password());
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
 
         Member member = Member.create(
-                request.nickname(),
-                request.username(),
+                request.getNickname(),
+                request.getUsername(),
                 encodedPassword
         );
 
@@ -59,7 +59,7 @@ public class MemberService {
     }
 
     public Long authenticate(LoginRequest request) {
-        Member member = memberRepository.findByUsername(request.username())
+        Member member = memberRepository.findByUsername(request.getUsername())
                 .orElseThrow(
                         () -> new UnauthorizedException(
                                 "아이디 또는 비밀번호가 일치하지 않습니다."
@@ -67,7 +67,7 @@ public class MemberService {
                 );
 
         if (!passwordEncoder.matches(
-                request.password(),
+                request.getPassword(),
                 member.getPassword()
         )) {
             throw new UnauthorizedException(
@@ -91,20 +91,20 @@ public class MemberService {
     public MemberResponse updateMember(Long memberId, UpdateMemberRequest request) {
         Member member = findMember(memberId);
 
-        if (request.nickname() != null && !request.nickname().isBlank()) {
-            member.updateNickname(request.nickname());
+        if (request.getNickname() != null && !request.getNickname().isBlank()) {
+            member.updateNickname(request.getNickname());
         }
 
-        if (request.newPassword() != null && !request.newPassword().isBlank()) {
-            if (request.currentPassword() == null || request.currentPassword().isBlank()) {
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
                 throw new IllegalArgumentException("기존 비밀번호를 입력해주세요.");
             }
 
-            if (!passwordEncoder.matches(request.currentPassword(), member.getPassword())) {
+            if (!passwordEncoder.matches(request.getCurrentPassword(), member.getPassword())) {
                 throw new IllegalArgumentException("기존 비밀번호가 일치하지 않습니다.");
             }
 
-            String encodedPassword = passwordEncoder.encode(request.newPassword());
+            String encodedPassword = passwordEncoder.encode(request.getNewPassword());
             member.updatePassword(encodedPassword);
         }
 
