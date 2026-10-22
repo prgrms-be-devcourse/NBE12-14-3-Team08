@@ -21,6 +21,7 @@ import com.back.domain.habitVerify.entity.HabitVerify;
 import com.back.domain.habitVerify.entity.HabitVerifyStatus;
 import com.back.domain.habitVerify.repository.HabitVerifyRepository;
 import com.back.domain.member.entity.Member;
+import com.back.global.exception.BusinessRuleException;
 import com.back.global.exception.ForbiddenException;
 import com.back.global.storage.StorageService;
 import com.back.global.storage.VerificationImageType;
@@ -129,6 +130,21 @@ class HabitVerifyServiceSubmitTest {
             verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
             verify(habitVerifyRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("종료된 방이면 BusinessRuleException(400)이고, 사진 검사와 저장을 하지 않는다")
+        void 종료된_방_400() {
+            habit.getGroupMember().getGroup().finish();
+            given(habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L)).willReturn(Optional.of(habit));
+
+            assertThatThrownBy(() -> habitVerifyService.create(50L,
+                new HabitVerifyRequest("인증", "https://storage/a.png"), 2L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다.");
+
+            verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
+            verify(habitVerifyRepository, never()).save(any());
+        }
     }
 
     @Nested
@@ -198,6 +214,40 @@ class HabitVerifyServiceSubmitTest {
 
             assertThat(habitVerify.getStatus()).isEqualTo(HabitVerifyStatus.REJECTED);
             assertThat(habitVerify.getImageUrl()).isEqualTo("https://storage/old.png");
+        }
+
+        @Test
+        @DisplayName("그 인증이 속한 주의 마감이 지났으면 409이고, 사진 검사 없이 반려 상태 그대로다")
+        void 마감_지남_409() {
+            // 8일 전에 제출했으면 그 주 마감(제출 후 최대 7일 안)은 요일과 관계없이 이미 지났다
+            HabitVerify habitVerify = verifyIn(HabitVerifyStatus.REJECTED);
+            ReflectionTestUtils.setField(habitVerify, "createDate", LocalDateTime.now().minusDays(8));
+            given(habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L)).willReturn(Optional.of(habit));
+            given(habitVerifyRepository.findByIdAndHabitId(70L, 50L)).willReturn(Optional.of(habitVerify));
+
+            assertThatThrownBy(() -> habitVerifyService.resubmit(50L, 70L,
+                new HabitVerifyRequest("수정", "https://storage/new.png"), 2L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("마감일이 지나 더 이상 수정할 수 없습니다.");
+
+            verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
+            assertThat(habitVerify.getStatus()).isEqualTo(HabitVerifyStatus.REJECTED);
+        }
+
+        @Test
+        @DisplayName("종료된 방이면 BusinessRuleException(400)이고, 사진 검사 없이 반려 상태 그대로다")
+        void 종료된_방_400() {
+            HabitVerify habitVerify = verifyIn(HabitVerifyStatus.REJECTED);
+            habit.getGroupMember().getGroup().finish();
+            given(habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L)).willReturn(Optional.of(habit));
+
+            assertThatThrownBy(() -> habitVerifyService.resubmit(50L, 70L,
+                new HabitVerifyRequest("수정", "https://storage/new.png"), 2L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("이미 종료된 그룹의 습관 인증은 수정할 수 없습니다.");
+
+            verify(storageService, never()).validateImageUrl(any(), anyLong(), anyLong(), anyString(), any());
+            assertThat(habitVerify.getStatus()).isEqualTo(HabitVerifyStatus.REJECTED);
         }
     }
 }
