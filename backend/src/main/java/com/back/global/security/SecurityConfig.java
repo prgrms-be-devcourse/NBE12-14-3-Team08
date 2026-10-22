@@ -60,7 +60,6 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/",
-                                "/h2-console/**",
                                 "/actuator/health",
                                 "/api/connection-test",
                                 "/swagger-ui/**",
