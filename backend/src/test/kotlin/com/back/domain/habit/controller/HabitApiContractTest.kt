@@ -383,7 +383,6 @@ class HabitApiContractTest {
             "GET,/api/groups/abc/habits/fail",
             "POST,/api/groups/abc/weekly-check",
         )
-        @Disabled("버그: 경로 변수 타입 불일치(문자, 범위 초과)가 전역 예외 처리에서 500이 된다. 수정 이슈 처리 후 활성화")
         @DisplayName("경로 변수가 숫자가 아니면 400이다")
         fun 경로_변수가_숫자가_아니면_400이다(method: String, path: String) {
             mockMvc.perform(request(HttpMethod.valueOf(method), path).header("Authorization", "Bearer $memberToken"))
