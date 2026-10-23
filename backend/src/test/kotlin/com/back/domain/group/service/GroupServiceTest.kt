@@ -40,7 +40,6 @@ import java.util.Optional
 @ExtendWith(MockitoExtension::class)
 class GroupServiceTest {
 
-    @InjectMocks
     private lateinit var groupService: GroupService
 
     @Mock
@@ -66,10 +65,13 @@ class GroupServiceTest {
 
     @BeforeEach
     fun setUp() {
-        ReflectionTestUtils.setField(
-            groupService,
-            "baseInviteUrl",
-            BASE_INVITE_URL
+        groupService = GroupService(
+            groupRepository = groupRepository,
+            groupMemberRepository = groupMemberRepository,
+            groupMemberService = groupMemberService,
+            memberRepository = memberRepository,
+            passwordEncoder = passwordEncoder,
+            baseInviteUrl = BASE_INVITE_URL
         )
     }
 
@@ -552,7 +554,7 @@ class GroupServiceTest {
                     .hasMessageContaining("이미 종료된 그룹은 삭제할 수 없습니다.")
 
                 verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(any(Group::class.java))
+                    .deleteGroupAndAllMembers(mockGroup)
             }
 
             @Test
@@ -583,7 +585,7 @@ class GroupServiceTest {
                     .hasMessageContaining("그룹 삭제는 방장만 가능합니다.")
 
                 verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(any(Group::class.java))
+                    .deleteGroupAndAllMembers(mockGroup)
             }
 
             @Test
@@ -625,7 +627,7 @@ class GroupServiceTest {
                     )
 
                 verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(any(Group::class.java))
+                    .deleteGroupAndAllMembers(mockGroup)
             }
         }
     }
