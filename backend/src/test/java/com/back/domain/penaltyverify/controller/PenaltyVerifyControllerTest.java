@@ -2,6 +2,7 @@ package com.back.domain.penaltyverify.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -271,7 +272,7 @@ class PenaltyVerifyControllerTest {
         @DisplayName("사진을 확인하는 중 Supabase와 통신하지 못하면 502다")
         void 사진_저장소_장애_502() throws Exception {
             willThrow(new StorageUnavailableException("사진 저장소에 연결할 수 없습니다."))
-                .given(storageService).validateImageUrl(any(), any(), any(), any(), any());
+                .given(storageService).validateImageUrl(any(), anyLong(), anyLong(), any(), any());
 
             submit(memberToken, memberHabitId, new SubmitPenaltyVerifyRequest("오늘 러닝 완료", "https://example.com/run.jpg"))
                 .andExpect(status().isBadGateway())
@@ -316,6 +317,17 @@ class PenaltyVerifyControllerTest {
         void 남의_벌칙_403() throws Exception {
             requestUploadUrl(ownerToken, rejectedPenaltyId)
                 .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("파일명이 비어 있으면 400이다 (UploadUrlRequest의 @NotBlank 검사)")
+        void 파일명_없으면_400() throws Exception {
+            mockMvc.perform(post("/api/penalties/{id}/upload-url", rejectedPenaltyId)
+                    .header("Authorization", "Bearer " + memberToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(jsonMapper.writeValueAsString(new UploadUrlRequest(" "))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("입력값 검증에 실패했습니다."));
         }
     }
 }
