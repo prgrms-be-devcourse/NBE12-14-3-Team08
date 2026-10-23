@@ -69,10 +69,10 @@ class PenaltyVerifyResponseShapeTest {
         val habit = habitRepository.save(Habit.create(groupMember, "기상 후 스트레칭", "10분 스트레칭", 3))
         val penalty = penaltyVerifyRepository.save(PenaltyVerify.create(groupMember, habit))
 
-        memberToken = authTokenService.createAccessToken(member.id!!)
-        groupId = group.id!!
-        groupMemberId = groupMember.id!!
-        penaltyId = penalty.id!!
+        memberToken = authTokenService.createAccessToken(requireNotNull(member.id))
+        groupId = requireNotNull(group.id)
+        groupMemberId = requireNotNull(groupMember.id)
+        penaltyId = requireNotNull(penalty.id)
     }
 
     private fun getJson(url: String, vararg vars: Any): String =
