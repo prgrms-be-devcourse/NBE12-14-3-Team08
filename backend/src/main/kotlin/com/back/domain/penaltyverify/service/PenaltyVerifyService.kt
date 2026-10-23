@@ -40,7 +40,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("본인의 벌칙에만 사진을 올릴 수 있습니다.")
         }
 
-        if (penaltyVerify.groupMember.group.isFinished) {
+        if (penaltyVerify.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 벌칙 사진을 올릴 수 없습니다.")
         }
 
@@ -60,7 +60,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("본인의 습관에 대해서만 벌칙을 제출할 수 있습니다.")
         }
 
-        if (penaltyVerify.groupMember.group.isFinished) {
+        if (penaltyVerify.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다.")
         }
 
@@ -80,7 +80,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("본인의 벌칙만 재제출할 수 있습니다.")
         }
 
-        if (penaltyVerify.groupMember.group.isFinished) {
+        if (penaltyVerify.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 벌칙을 재제출할 수 없습니다.")
         }
 
@@ -180,7 +180,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("벌칙 취소/초기화 권한이 없습니다.")
         }
 
-        if (penaltyVerify.groupMember.group.isFinished) {
+        if (penaltyVerify.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹의 벌칙 기록은 변경할 수 없습니다.")
         }
 
@@ -217,7 +217,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("승인/거절 권한이 없습니다.")
         }
 
-        if (groupMember.group.isFinished) {
+        if (groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹은 벌칙을 검토할 수 없습니다.")
         }
     }
