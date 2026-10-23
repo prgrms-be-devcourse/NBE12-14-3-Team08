@@ -169,7 +169,8 @@ class HabitServiceTest {
         @DisplayName("본인의 활성 습관을 포기하면 FAILED가 되고 벌칙이 생성된다")
         fun 포기_성공() {
             val habit = habit(groupMember(activeGroup(), GroupMemberRole.MEMBER))
-            every { habitRepository.findByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns Optional.of(habit)
+            every { habitRepository.existsByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns true
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
             justRun { penaltyVerifyService.createPenaltyVerify(habit) }
 
             habitService.failHabit(MEMBER_ID, HABIT_ID)
@@ -179,9 +180,23 @@ class HabitServiceTest {
         }
 
         @Test
-        @DisplayName("본인의 습관이 아니거나 없으면 IllegalArgumentException이 발생하고 벌칙은 생성되지 않는다")
+        @DisplayName("본인의 습관이 아니거나 없으면 IllegalArgumentException이 발생하고 행을 잠그지도 벌칙을 만들지도 않는다")
         fun 습관이_없으면_예외() {
-            every { habitRepository.findByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns Optional.empty()
+            every { habitRepository.existsByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns false
+
+            assertThatThrownBy { habitService.failHabit(MEMBER_ID, HABIT_ID) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("해당 회원의 습관을 찾을 수 없습니다.")
+            // 남의 습관 id로 요청해 잠금을 붙잡지 못해야 한다
+            verify(exactly = 0) { habitRepository.findByIdForUpdate(any()) }
+            verify(exactly = 0) { penaltyVerifyService.createPenaltyVerify(any()) }
+        }
+
+        @Test
+        @DisplayName("본인 확인 뒤 잠그기 전에 습관이 사라졌으면 IllegalArgumentException이 발생한다")
+        fun 잠그기_전에_삭제되었으면_예외() {
+            every { habitRepository.existsByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns true
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns null
 
             assertThatThrownBy { habitService.failHabit(MEMBER_ID, HABIT_ID) }
                 .isInstanceOf(IllegalArgumentException::class.java)
@@ -193,7 +208,8 @@ class HabitServiceTest {
         @DisplayName("종료된 그룹의 습관은 포기할 수 없고 상태도 바뀌지 않는다")
         fun 종료된_그룹이면_예외() {
             val habit = habit(groupMember(group(GroupStatus.FINISH, null), GroupMemberRole.MEMBER))
-            every { habitRepository.findByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns Optional.of(habit)
+            every { habitRepository.existsByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns true
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
 
             assertThatThrownBy { habitService.failHabit(MEMBER_ID, HABIT_ID) }
                 .isInstanceOf(BusinessRuleException::class.java)
@@ -207,7 +223,8 @@ class HabitServiceTest {
         fun 이미_실패한_습관이면_예외() {
             val habit = habit(groupMember(activeGroup(), GroupMemberRole.MEMBER))
             habit.fail()
-            every { habitRepository.findByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns Optional.of(habit)
+            every { habitRepository.existsByIdAndGroupMember_Member_Id(HABIT_ID, MEMBER_ID) } returns true
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
 
             assertThatThrownBy { habitService.failHabit(MEMBER_ID, HABIT_ID) }
                 .isInstanceOf(IllegalStateException::class.java)
@@ -335,7 +352,7 @@ class HabitServiceTest {
             assertThatThrownBy { habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID) }
                 .isInstanceOf(ForbiddenException::class.java)
                 .hasMessageContaining("주간 판정은 방장만 실행할 수 있습니다.")
-            verify(exactly = 0) { habitRepository.findAllByGroupMember_Group_IdAndStatus(any(), any()) }
+            verify(exactly = 0) { habitRepository.findIdsByGroupIdAndStatus(any(), any()) }
         }
 
         @Test
@@ -347,7 +364,7 @@ class HabitServiceTest {
             assertThatThrownBy { habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID) }
                 .isInstanceOf(BusinessRuleException::class.java)
                 .hasMessageContaining("이미 종료된 그룹은 주간 판정을 실행할 수 없습니다.")
-            verify(exactly = 0) { habitRepository.findAllByGroupMember_Group_IdAndStatus(any(), any()) }
+            verify(exactly = 0) { habitRepository.findIdsByGroupIdAndStatus(any(), any()) }
         }
 
         @Test
@@ -359,8 +376,8 @@ class HabitServiceTest {
             ReflectionTestUtils.setField(owner, "createDate", LocalDateTime.now())
             val habit = habit(owner)
             every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
-            every { habitRepository.findAllByGroupMember_Group_IdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns
-                listOf(habit)
+            every { habitRepository.findIdsByGroupIdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
 
             val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
 
@@ -368,6 +385,35 @@ class HabitServiceTest {
             assertThat(results[0].habitId).isEqualTo(HABIT_ID)
             assertThat(results[0].result).isEqualTo(WeeklyCheckResult.TOO_EARLY)
             assertThat(results[0].habitStatus).isEqualTo(HabitStatus.ACTIVE)
+        }
+
+        @Test
+        @DisplayName("판정은 습관마다 행을 잠근 뒤 한다 (동시에 처리돼도 한 요청만 실패 처리와 벌칙을 만든다)")
+        fun 습관마다_행을_잠그고_판정한다() {
+            val owner = groupMember(activeGroup(), GroupMemberRole.OWNER)
+            ReflectionTestUtils.setField(owner, "createDate", LocalDateTime.now())
+            every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
+            every { habitRepository.findIdsByGroupIdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit(owner)
+
+            habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            verify(exactly = 1) { habitRepository.findByIdForUpdate(HABIT_ID) }
+            // 엔티티 목록을 미리 읽으면 잠그기 전의 오래된 상태를 쓰게 되므로 id만 조회해야 한다
+            verify(exactly = 0) { habitRepository.findAllByGroupMember_Group_IdAndStatus(any(), any()) }
+        }
+
+        @Test
+        @DisplayName("판정 도중 습관이 삭제되었으면 그 습관만 건너뛴다")
+        fun 판정_도중_삭제된_습관은_건너뛴다() {
+            val owner = groupMember(activeGroup(), GroupMemberRole.OWNER)
+            every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
+            every { habitRepository.findIdsByGroupIdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns null
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            assertThat(results).isEmpty()
         }
     }
 
@@ -378,19 +424,20 @@ class HabitServiceTest {
         @Test
         @DisplayName("진행 중인 그룹의 활성 습관만 조회해서 판정한다 (종료 그룹 제외 쿼리 사용)")
         fun 종료_그룹_제외_쿼리를_사용한다() {
-            every { habitRepository.findAllByStatusInProgressGroup(HabitStatus.ACTIVE) } returns emptyList()
+            every { habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE) } returns emptyList()
 
             habitService.autoCheckAllActiveHabits()
 
-            verify { habitRepository.findAllByStatusInProgressGroup(HabitStatus.ACTIVE) }
-            verify(exactly = 0) { habitRepository.findAllByGroupMember_Group_IdAndStatus(any(), any()) }
+            verify { habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE) }
+            verify(exactly = 0) { habitRepository.findIdsByGroupIdAndStatus(any(), any()) }
         }
 
         @Test
         @DisplayName("진행 중인 그룹에서 승인 횟수가 모자라면 습관이 실패 처리되고 벌칙이 생성된다 (대조군)")
         fun 진행중인_그룹은_판정된다() {
             val habit = overdueHabit(activeGroup())
-            every { habitRepository.findAllByStatusInProgressGroup(HabitStatus.ACTIVE) } returns listOf(habit)
+            every { habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
             // 인증 기록이 하나도 없는 상태
             every {
                 habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(any(), any(), any(), any())
@@ -407,7 +454,8 @@ class HabitServiceTest {
         @DisplayName("마감일은 지났지만 아직 FINISH 처리 전인 그룹의 습관은 판정하지 않는다")
         fun 마감일이_지난_그룹은_판정하지_않는다() {
             val habit = overdueHabit(group(GroupStatus.ACTIVE, LocalDate.now().minusDays(1)))
-            every { habitRepository.findAllByStatusInProgressGroup(HabitStatus.ACTIVE) } returns listOf(habit)
+            every { habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
 
             habitService.autoCheckAllActiveHabits()
 

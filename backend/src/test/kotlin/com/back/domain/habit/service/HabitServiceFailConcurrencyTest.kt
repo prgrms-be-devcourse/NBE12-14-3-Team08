@@ -9,7 +9,6 @@ import com.back.support.ConcurrentRunner
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -95,7 +94,6 @@ class HabitServiceFailConcurrencyTest {
     }
 
     @Test
-    @Disabled("버그: 동시에 포기하면 졌을 때 벌칙 중복 제약(uk_penalty_verify) 위반(DataIntegrityViolationException)이 그대로 올라와 409가 아니라 500이 된다. 수정 이슈 처리 후 활성화")
     @DisplayName("동시에 포기했을 때 진 요청은 충돌(IllegalStateException, 409)로 끝난다")
     fun 동시에_포기하면_진_요청은_충돌로_끝난다() {
         val results = failConcurrently()
