@@ -62,7 +62,7 @@ class HabitServiceConcurrencyTest {
     fun setUp() {
         val suffix = UUID.randomUUID().toString().substring(0, 8)
         owner = memberRepository.save(
-            Member.create("habit-$suffix", "habit-$suffix", passwordEncoder.encode("pw1234!")),
+            Member.create("habit-$suffix", "habit-$suffix", requireNotNull(passwordEncoder.encode("pw1234!"))),
         )
 
         val created = groupService.createGroup(

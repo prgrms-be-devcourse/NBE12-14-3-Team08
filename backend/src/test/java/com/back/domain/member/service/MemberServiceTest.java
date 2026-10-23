@@ -60,10 +60,10 @@ class MemberServiceTest {
                 "password123"
         );
 
-        when(memberRepository.existsByUsername(request.username()))
+        when(memberRepository.existsByUsername(request.getUsername()))
                 .thenReturn(false);
 
-        when(passwordEncoder.encode(request.password()))
+        when(passwordEncoder.encode(request.getPassword()))
                 .thenReturn("encoded-password");
 
         when(memberRepository.save(any(Member.class)))
@@ -80,9 +80,9 @@ class MemberServiceTest {
         MemberResponse response = memberService.join(request);
 
         // then
-        assertThat(response.memberId()).isEqualTo(1L);
-        assertThat(response.nickname()).isEqualTo("habit_user");
-        assertThat(response.username()).isEqualTo("user@example.com");
+        assertThat(response.getMemberId()).isEqualTo(1L);
+        assertThat(response.getNickname()).isEqualTo("habit_user");
+        assertThat(response.getUsername()).isEqualTo("user@example.com");
 
         verify(passwordEncoder).encode("password123");
         verify(authTokenService).createRefreshToken(1L);
@@ -98,7 +98,7 @@ class MemberServiceTest {
                 "password123"
         );
 
-        when(memberRepository.existsByUsername(request.username()))
+        when(memberRepository.existsByUsername(request.getUsername()))
                 .thenReturn(true);
 
         // when & then
@@ -125,11 +125,11 @@ class MemberServiceTest {
                 "encoded-password"
         );
 
-        when(memberRepository.findByUsername(request.username()))
+        when(memberRepository.findByUsername(request.getUsername()))
                 .thenReturn(Optional.of(member));
 
         when(passwordEncoder.matches(
-                request.password(),
+                request.getPassword(),
                 member.getPassword()
         )).thenReturn(true);
 
@@ -149,7 +149,7 @@ class MemberServiceTest {
                 "password123"
         );
 
-        when(memberRepository.findByUsername(request.username()))
+        when(memberRepository.findByUsername(request.getUsername()))
                 .thenReturn(Optional.empty());
 
         // when & then
@@ -174,11 +174,11 @@ class MemberServiceTest {
                 "encoded-password"
         );
 
-        when(memberRepository.findByUsername(request.username()))
+        when(memberRepository.findByUsername(request.getUsername()))
                 .thenReturn(Optional.of(member));
 
         when(passwordEncoder.matches(
-                request.password(),
+                request.getPassword(),
                 member.getPassword()
         )).thenReturn(false);
 
@@ -206,9 +206,9 @@ class MemberServiceTest {
         MemberResponse response = memberService.getMember(1L);
 
         // then
-        assertThat(response.memberId()).isEqualTo(1L);
-        assertThat(response.nickname()).isEqualTo("habit_user");
-        assertThat(response.username()).isEqualTo("user@example.com");
+        assertThat(response.getMemberId()).isEqualTo(1L);
+        assertThat(response.getNickname()).isEqualTo("habit_user");
+        assertThat(response.getUsername()).isEqualTo("user@example.com");
     }
 
     @Test
@@ -242,7 +242,7 @@ class MemberServiceTest {
                 memberService.updateMember(1L, request);
 
         // then
-        assertThat(response.nickname()).isEqualTo("updated_user");
+        assertThat(response.getNickname()).isEqualTo("updated_user");
         assertThat(member.getPassword())
                 .isEqualTo("new-encoded-password");
     }
@@ -294,7 +294,7 @@ class MemberServiceTest {
 
         MemberResponse response = memberService.updateMember(1L, request);
 
-        assertThat(response.nickname()).isEqualTo("updated_user");
+        assertThat(response.getNickname()).isEqualTo("updated_user");
         assertThat(member.getPassword()).isEqualTo("old-encoded-password");
         verify(passwordEncoder, never()).matches(any(), any());
         verify(passwordEncoder, never()).encode(any(CharSequence.class));

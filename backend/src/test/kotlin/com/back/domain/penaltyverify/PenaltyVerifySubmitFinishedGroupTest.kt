@@ -61,7 +61,7 @@ class PenaltyVerifySubmitFinishedGroupTest {
         val groupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))
         val habit = habitRepository.save(Habit.create(groupMember, "기상 후 스트레칭", "10분 스트레칭", 3))
         val penalty = penaltyVerifyRepository.save(PenaltyVerify.create(groupMember, habit))
-        val token = authTokenService.createAccessToken(member.id!!)
+        val token = authTokenService.createAccessToken(requireNotNull(member.id))
 
         mockMvc.perform(
             post("/api/habits/{habitId}/penalties", habit.id)
