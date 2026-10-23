@@ -40,7 +40,7 @@ class HabitService(
             .findByGroupIdAndMemberIdForUpdate(groupId, memberId)
             .orElseThrow { IllegalArgumentException("해당 그룹의 멤버를 찾을 수 없습니다.") }
 
-        if (groupMember.group.isFinished) {
+        if (groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 습관을 추가할 수 없습니다.")
         }
 
@@ -69,7 +69,7 @@ class HabitService(
             .findByIdAndGroupMember_Member_Id(habitId, memberId)
             .orElseThrow { IllegalArgumentException("해당 회원의 습관을 찾을 수 없습니다.") }
 
-        if (habit.groupMember.group.isFinished) {
+        if (habit.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹의 습관은 포기할 수 없습니다.")
         }
 
@@ -120,7 +120,7 @@ class HabitService(
             throw ForbiddenException("주간 판정은 방장만 실행할 수 있습니다.")
         }
 
-        if (requester.group.isFinished) {
+        if (requester.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹은 주간 판정을 실행할 수 없습니다.")
         }
 
@@ -156,7 +156,7 @@ class HabitService(
 
         // 이미 끝난 그룹은 판정하지 않는다. (마감일이 지났지만 아직 FINISH 처리 전인 그룹 포함)
         // 판정하면 제출할 수 없는 벌칙이 생기고, 끝난 내기의 결과가 바뀌게 된다.
-        if (groupMember.group.isFinished) {
+        if (groupMember.group.isFinished()) {
             return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.GROUP_FINISHED, habit.status)
         }
 
