@@ -6,7 +6,6 @@ import com.back.domain.member.dto.CreateMemberRequest
 import com.back.domain.member.service.AuthTokenService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -356,10 +355,9 @@ class HabitApiContractTest {
                 .andExpect(status().isNotFound())
         }
 
-        // --- 아래는 현재 500을 돌려주는 버그다. 올바른 동작(400)을 기대하도록 써 두고, 수정 이슈가 끝나면 @Disabled를 지운다. ---
+        // --- 이전에 500이던 버그를 기록해 둔 테스트. 길이 검증이 추가되어(#55) 활성화했다. ---
 
         @Test
-        @Disabled("버그: 제목이 컬럼 길이(255자)를 넘으면 DB 오류로 500이 된다. 수정 이슈 처리 후 활성화")
         @DisplayName("제목이 256자 이상이면 400이다")
         fun 제목_256자는_400이다() {
             createHabitAsOwner(jsonMapper.writeValueAsString(CreateHabitRequest("가".repeat(256), "설명", 3)))
@@ -367,7 +365,6 @@ class HabitApiContractTest {
         }
 
         @Test
-        @Disabled("버그: 설명이 컬럼 길이(255자)를 넘으면 DB 오류로 500이 된다. 수정 이슈 처리 후 활성화")
         @DisplayName("설명이 256자 이상이면 400이다")
         fun 설명_256자는_400이다() {
             createHabitAsOwner(jsonMapper.writeValueAsString(CreateHabitRequest("독서", "나".repeat(256), 3)))
