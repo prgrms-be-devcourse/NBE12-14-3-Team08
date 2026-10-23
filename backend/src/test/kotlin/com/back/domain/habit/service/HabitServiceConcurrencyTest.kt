@@ -69,7 +69,7 @@ class HabitServiceConcurrencyTest {
             owner.id,
             GroupRequest.Create("습관 동시성 그룹", "설명", LocalDate.now().plusDays(7), "벌칙", "pw1234", 5),
         )
-        groupId = created.id()
+        groupId = requireNotNull(created.id)
     }
 
     @AfterEach
