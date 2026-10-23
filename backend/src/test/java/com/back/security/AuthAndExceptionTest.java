@@ -23,8 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.NoSuchElementException;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,6 +76,11 @@ class AuthAndExceptionTest {
         public void throw409() {
             throw new IllegalStateException("이미 진행 중인 상태입니다.");
         }
+
+        @GetMapping("/api/test/500")
+        public void throw500() {
+            throw new RuntimeException("DB 연결 문자열이 노출되면 안 되는 내부 오류");
+        }
     }
 
     record DummyDto(
@@ -101,7 +109,11 @@ class AuthAndExceptionTest {
             mockMvc.perform(get("/api/test/403"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."));
+                .andExpect(jsonPath("$.message").value("접근 권한이 없습니다."))
+                .andExpect(jsonPath("$.timestamp").exists())
+                // 일반 에러 응답에는 errors 키 자체가 없다 (@Valid 실패일 때만 포함)
+                // jsonPath(...).doesNotExist()는 "errors": null도 통과시키므로 본문 문자열로 확인한다
+                .andExpect(content().string(not(containsString("\"errors\""))));
         }
 
         @Test
@@ -143,6 +155,15 @@ class AuthAndExceptionTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("요청 본문(JSON) 형식이 올바르지 않습니다."));
+        }
+
+        @Test
+        @DisplayName("500 처리하지 못한 예외는 내부 메시지를 숨기고 고정 메시지로 응답")
+        void unexpectedException() throws Exception {
+            mockMvc.perform(get("/api/test/500"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."));
         }
     }
 }
