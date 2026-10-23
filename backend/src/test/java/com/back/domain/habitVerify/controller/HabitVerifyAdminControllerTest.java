@@ -1,6 +1,7 @@
 package com.back.domain.habitVerify.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,10 +33,11 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 // 일괄 승인의 "하나라도 실패하면 전부 취소"를 실제 트랜잭션으로 확인한다.
 // 테스트 클래스에 @Transactional을 붙이면 서비스가 테스트 트랜잭션에 합류해 롤백 여부를 볼 수 없으므로 붙이지 않고,
-// 대신 만든 데이터를 @AfterEach에서 직접 지운다. (메모리 DB, test 프로필)
+// 대신 만든 데이터를 @AfterEach에서 직접 지운다. (Testcontainers PostgreSQL, test 프로필)
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -55,6 +58,7 @@ class HabitVerifyAdminControllerTest {
     private GroupMember memberGroupMember;
     private Habit habit;
     private String ownerToken;
+    private String memberToken;
 
     @BeforeEach
     void setUp() {
@@ -72,6 +76,7 @@ class HabitVerifyAdminControllerTest {
         memberGroupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER));
         habit = habitRepository.save(Habit.create(memberGroupMember, "기상 후 스트레칭", "10분 스트레칭", 3));
         ownerToken = authTokenService.createAccessToken(owner.getId());
+        memberToken = authTokenService.createAccessToken(member.getId());
     }
 
     @AfterEach
@@ -130,5 +135,119 @@ class HabitVerifyAdminControllerTest {
 
         assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING);
         assertThat(statusInDb(approved)).isEqualTo(HabitVerifyStatus.APPROVED);
+    }
+
+    @Nested
+    @DisplayName("단건 승인 PATCH /api/habits/verifications/{id}/approve")
+    class Approve {
+
+        private ResultActions approve(String token, Long verificationId) throws Exception {
+            return mockMvc.perform(patch("/api/habits/verifications/{id}/approve", verificationId)
+                .header("Authorization", "Bearer " + token));
+        }
+
+        @Test
+        @DisplayName("방장이 검토 대기 인증을 승인하면 200이고 DB에 APPROVED로 저장된다")
+        void 방장_승인_200() throws Exception {
+            HabitVerify pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+
+            approve(ownerToken, pending.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+            assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("일반 멤버가 승인하면 403이고 DB는 PENDING 그대로다")
+        void 일반_멤버_403() throws Exception {
+            HabitVerify pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+
+            approve(memberToken, pending.getId())
+                .andExpect(status().isForbidden());
+
+            assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("없는 인증이면 404다")
+        void 없는_인증_404() throws Exception {
+            approve(ownerToken, Long.MAX_VALUE)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("존재하지 않는 인증 기록입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("단건 반려 PATCH /api/habits/verifications/{id}/reject")
+    class Reject {
+
+        private ResultActions reject(String token, Long verificationId) throws Exception {
+            return mockMvc.perform(patch("/api/habits/verifications/{id}/reject", verificationId)
+                .header("Authorization", "Bearer " + token));
+        }
+
+        @Test
+        @DisplayName("방장이 검토 대기 인증을 반려하면 200이고 DB에 REJECTED로 저장된다")
+        void 방장_반려_200() throws Exception {
+            HabitVerify pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+
+            reject(ownerToken, pending.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+            assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.REJECTED);
+        }
+
+        @Test
+        @DisplayName("일반 멤버가 반려하면 403이고 DB는 PENDING 그대로다")
+        void 일반_멤버_403() throws Exception {
+            HabitVerify pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+
+            reject(memberToken, pending.getId())
+                .andExpect(status().isForbidden());
+
+            assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("없는 인증이면 404다")
+        void 없는_인증_404() throws Exception {
+            reject(ownerToken, Long.MAX_VALUE)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("존재하지 않는 인증 기록입니다."));
+        }
+    }
+
+    @Nested
+    @DisplayName("검토 대기 목록 GET /api/groups/{groupId}/habits/verifications/pending")
+    class Pending {
+
+        private ResultActions getPending(String token) throws Exception {
+            return mockMvc.perform(get("/api/groups/{groupId}/habits/verifications/pending", group.getId())
+                .header("Authorization", "Bearer " + token));
+        }
+
+        @Test
+        @DisplayName("방장이 조회하면 200이고 검토 대기(PENDING) 인증만 받는다")
+        void 방장_조회_200() throws Exception {
+            HabitVerify pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+            saveVerify(LocalDate.of(2026, 10, 21), HabitVerifyStatus.APPROVED);
+
+            getPending(ownerToken)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(pending.getId()))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+        }
+
+        @Test
+        @DisplayName("일반 멤버가 조회하면 403이다")
+        void 일반_멤버_403() throws Exception {
+            saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING);
+
+            getPending(memberToken)
+                .andExpect(status().isForbidden());
+        }
     }
 }

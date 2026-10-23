@@ -142,6 +142,17 @@ class HabitVerifyControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("해당 날짜에 이미 인증 기록이 있습니다."));
         }
+
+        @Test
+        @DisplayName("포기해서 실패(FAILED)한 습관에 인증하면 409다")
+        void 실패한_습관_409() throws Exception {
+            memberHabit.fail();
+
+            postVerification(memberToken, memberHabitId,
+                new HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("진행 중인 습관에만 인증을 등록할 수 있습니다. 현재 상태: FAILED"));
+        }
     }
 
     @Nested
