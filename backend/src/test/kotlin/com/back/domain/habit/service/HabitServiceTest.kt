@@ -415,8 +415,8 @@ class HabitServiceTest {
             val failedHabit = habit(owner)
             failedHabit.fail()
             every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
-            every { habitRepository.findAllByGroupMember_Group_IdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns
-                listOf(failedHabit)
+            every { habitRepository.findIdsByGroupIdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns failedHabit
 
             val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
 
@@ -424,6 +424,9 @@ class HabitServiceTest {
             assertThat(results[0].habitStatus).isEqualTo(HabitStatus.FAILED)
             // 인증 기록 저장소는 스텁이 없어(MockK는 기본이 엄격) 호출되면 이 테스트가 실패한다
             verify(exactly = 0) { penaltyVerifyService.createPenaltyVerify(any()) }
+        }
+
+        @Test
         @DisplayName("판정은 습관마다 행을 잠근 뒤 한다 (동시에 처리돼도 한 요청만 실패 처리와 벌칙을 만든다)")
         fun 습관마다_행을_잠그고_판정한다() {
             val owner = groupMember(activeGroup(), GroupMemberRole.OWNER)
@@ -526,8 +529,8 @@ class HabitServiceTest {
                 ReflectionTestUtils.setField(habit, "createDate", habitCreatedAt(deadline))
 
                 every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
-                every { habitRepository.findAllByGroupMember_Group_IdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns
-                    listOf(habit)
+                every { habitRepository.findIdsByGroupIdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns listOf(HABIT_ID)
+                every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
             }
 
             // 지정한 구간(weekStart ~ deadline)으로 조회될 때만 값을 돌려준다. 구간이 다르면 MockK가 예외를 던져 테스트가 실패한다.
