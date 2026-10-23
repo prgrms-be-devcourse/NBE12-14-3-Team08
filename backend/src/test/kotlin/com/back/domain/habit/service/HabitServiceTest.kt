@@ -10,6 +10,8 @@ import com.back.domain.habit.dto.WeeklyCheckResult
 import com.back.domain.habit.entity.Habit
 import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
+import com.back.domain.habitVerify.entity.HabitVerify
+import com.back.domain.habitVerify.entity.HabitVerifyStatus
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.penaltyverify.service.PenaltyVerifyService
@@ -24,10 +26,13 @@ import io.mockk.justRun
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -157,6 +162,22 @@ class HabitServiceTest {
             assertThatThrownBy { habitService.createHabit(GROUP_ID, MEMBER_ID, request) }
                 .isInstanceOf(IllegalStateException::class.java)
                 .hasMessageContaining("이미 활성화된 습관이 존재합니다.")
+            verify(exactly = 0) { habitRepository.save(any<Habit>()) }
+        }
+
+        @Test
+        @DisplayName("제목이 없는 요청을 서비스에 직접 넘기면 IllegalArgumentException이 발생하고 저장하지 않는다")
+        fun 제목이_없으면_예외() {
+            val groupMember = groupMember(activeGroup(), GroupMemberRole.MEMBER)
+            every { groupMemberRepository.findByGroupIdAndMemberIdForUpdate(GROUP_ID, MEMBER_ID) } returns
+                Optional.of(groupMember)
+            every { habitRepository.existsByGroupMember_IdAndStatus(GROUP_MEMBER_ID, HabitStatus.ACTIVE) } returns false
+
+            assertThatThrownBy {
+                habitService.createHabit(GROUP_ID, MEMBER_ID, CreateHabitRequest(null, "설명", 3))
+            }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("습관 제목은 필수입니다.")
             verify(exactly = 0) { habitRepository.save(any<Habit>()) }
         }
     }
@@ -388,6 +409,21 @@ class HabitServiceTest {
         }
 
         @Test
+        @DisplayName("이미 실패한 습관은 ALREADY_FAILED를 반환하고 인증 기록 조회나 벌칙 생성을 하지 않는다")
+        fun 이미_실패한_습관은_재판정하지_않는다() {
+            val owner = groupMember(activeGroup(), GroupMemberRole.OWNER)
+            val failedHabit = habit(owner)
+            failedHabit.fail()
+            every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
+            every { habitRepository.findAllByGroupMember_Group_IdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns
+                listOf(failedHabit)
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.ALREADY_FAILED)
+            assertThat(results[0].habitStatus).isEqualTo(HabitStatus.FAILED)
+            // 인증 기록 저장소는 스텁이 없어(MockK는 기본이 엄격) 호출되면 이 테스트가 실패한다
+            verify(exactly = 0) { penaltyVerifyService.createPenaltyVerify(any()) }
         @DisplayName("판정은 습관마다 행을 잠근 뒤 한다 (동시에 처리돼도 한 요청만 실패 처리와 벌칙을 만든다)")
         fun 습관마다_행을_잠그고_판정한다() {
             val owner = groupMember(activeGroup(), GroupMemberRole.OWNER)
@@ -461,6 +497,136 @@ class HabitServiceTest {
 
             assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
             verify(exactly = 0) { penaltyVerifyService.createPenaltyVerify(any()) }
+        }
+    }
+
+    // 그룹 생성 요일이 "오늘 - d일"의 요일일 때(d = 0..6), 이번 주 마감(그 요일 00시)과 판정 구간이 맞게 계산되는지 확인한다.
+    // 마감 시각은 시계가 아니라 날짜에서 계산되므로 Clock 없이도 기대값을 정확히 만들 수 있다.
+    // (오늘이 일요일이면 요일 번호 순환이 일어나지 않아 +7 제거 같은 실수를 이 테스트로 못 잡는다. Clock 주입 후 보완)
+    @Nested
+    @DisplayName("주간 판정 구간 계산 (그룹 생성 요일별)")
+    inner class WeeklyWindow {
+
+        private val days = 3L
+
+        private inner class Window(val offsetDays: Long, habitCreatedAt: (LocalDateTime) -> LocalDateTime) {
+            val today: LocalDate = LocalDate.now()
+            val deadline: LocalDateTime = today.minusDays(offsetDays).atStartOfDay()
+            val weekStart: LocalDateTime = deadline.minusWeeks(1)
+            val habit: Habit
+
+            init {
+                val now = LocalDateTime.now()
+                val group = activeGroup()
+                // 14일(2주)은 요일이 같으므로 요일은 "오늘 - offsetDays"가 된다.
+                ReflectionTestUtils.setField(group, "createDate", now.minusDays(14 + offsetDays))
+                val owner = groupMember(group, GroupMemberRole.OWNER)
+                ReflectionTestUtils.setField(owner, "createDate", now.minusDays(10))
+                habit = habit(owner)
+                ReflectionTestUtils.setField(habit, "createDate", habitCreatedAt(deadline))
+
+                every { groupMemberRepository.findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID) } returns Optional.of(owner)
+                every { habitRepository.findAllByGroupMember_Group_IdAndStatus(GROUP_ID, HabitStatus.ACTIVE) } returns
+                    listOf(habit)
+            }
+
+            // 지정한 구간(weekStart ~ deadline)으로 조회될 때만 값을 돌려준다. 구간이 다르면 MockK가 예외를 던져 테스트가 실패한다.
+            fun stubCount(status: HabitVerifyStatus, count: Long) {
+                every {
+                    habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(HABIT_ID, weekStart, deadline, status)
+                } returns count
+            }
+
+            // 테스트가 자정을 넘기면 기대값이 어긋나므로 실패 대신 중단한다.
+            fun assumeSameDay() = Assumptions.assumeTrue(LocalDate.now() == today, "테스트 도중 날짜가 바뀌었습니다.")
+        }
+
+        private fun defaultWindow(offsetDays: Long) = Window(offsetDays) { it.minusDays(1) }
+
+        @ParameterizedTest(name = "요일 차이 {0}일")
+        @ValueSource(longs = [0, 1, 2, 3, 4, 5, 6])
+        @DisplayName("이번 주 마감과 시작 시각으로 승인된 인증 횟수를 센다")
+        fun 판정_구간은_마감_한_주_전부터_마감까지다(offsetDays: Long) {
+            val window = defaultWindow(offsetDays)
+            window.stubCount(HabitVerifyStatus.PENDING, 0L)
+            window.stubCount(HabitVerifyStatus.APPROVED, days)
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            window.assumeSameDay()
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.PASSED)
+            verify {
+                habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(
+                    HABIT_ID, window.weekStart, window.deadline, HabitVerifyStatus.APPROVED,
+                )
+            }
+        }
+
+        @ParameterizedTest(name = "요일 차이 {0}일")
+        @ValueSource(longs = [0, 1, 2, 3, 4, 5, 6])
+        @DisplayName("습관이 마감 시각 정각에 만들어졌으면 BEFORE_DEADLINE이고 인증 기록을 조회하지 않는다")
+        fun 마감_정각에_만든_습관은_판정하지_않는다(offsetDays: Long) {
+            val window = Window(offsetDays) { it }
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            window.assumeSameDay()
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.BEFORE_DEADLINE)
+            assertThat(window.habit.status).isEqualTo(HabitStatus.ACTIVE)
+            verify(exactly = 0) {
+                habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(any(), any(), any(), any())
+            }
+        }
+
+        @ParameterizedTest(name = "요일 차이 {0}일")
+        @ValueSource(longs = [0, 1, 2, 3, 4, 5, 6])
+        @DisplayName("습관이 마감 1나노초 전에 만들어졌으면 판정 대상이다")
+        fun 마감_직전에_만든_습관은_판정한다(offsetDays: Long) {
+            val window = Window(offsetDays) { it.minusNanos(1) }
+            window.stubCount(HabitVerifyStatus.PENDING, 0L)
+            window.stubCount(HabitVerifyStatus.APPROVED, days)
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            window.assumeSameDay()
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.PASSED)
+        }
+
+        @Test
+        @DisplayName("마감이 오늘이면(요일 차이 0일) 검토 유예시간이 남아 있어 PENDING_REVIEW로 보류하고 자동 승인하지 않는다")
+        fun 마감이_오늘이면_미검토_건이_있을_때_보류한다() {
+            val window = defaultWindow(0)
+            window.stubCount(HabitVerifyStatus.PENDING, 1L)
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            window.assumeSameDay()
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.PENDING_REVIEW)
+            assertThat(window.habit.status).isEqualTo(HabitStatus.ACTIVE)
+            verify(exactly = 0) {
+                habitVerifyRepository.findAllByHabit_IdAndCreateDateBetweenAndStatus(any(), any(), any(), any())
+            }
+        }
+
+        @ParameterizedTest(name = "요일 차이 {0}일")
+        @ValueSource(longs = [1, 2, 3, 4, 5, 6])
+        @DisplayName("마감이 어제 이전이면 검토 유예시간(마감 다음날 24시)이 지나 미검토 건을 자동 승인하고 판정을 이어간다")
+        fun 유예시간이_지나면_미검토_건을_자동_승인한다(offsetDays: Long) {
+            val window = defaultWindow(offsetDays)
+            val pending = HabitVerify.create(window.habit, LocalDate.now().minusDays(offsetDays + 1), "설명", "https://x.com/a.jpg")
+            window.stubCount(HabitVerifyStatus.PENDING, 1L)
+            window.stubCount(HabitVerifyStatus.APPROVED, days)
+            every {
+                habitVerifyRepository.findAllByHabit_IdAndCreateDateBetweenAndStatus(
+                    HABIT_ID, window.weekStart, window.deadline, HabitVerifyStatus.PENDING,
+                )
+            } returns listOf(pending)
+
+            val results = habitService.checkWeeklyFailureForGroup(MEMBER_ID, GROUP_ID)
+
+            window.assumeSameDay()
+            assertThat(pending.status).isEqualTo(HabitVerifyStatus.APPROVED)
+            assertThat(results.map { it.result }).containsExactly(WeeklyCheckResult.PASSED)
         }
     }
 }
