@@ -8,6 +8,7 @@ import java.time.LocalDateTime
 
 interface GroupResponse {
 
+    @JvmRecord
     data class Detail(
         val id: Long?,
         val title: String,
@@ -65,6 +66,7 @@ interface GroupResponse {
         }
     }
 
+    @JvmRecord
     data class Simple(
         val id: Long?,
         val title: String,
