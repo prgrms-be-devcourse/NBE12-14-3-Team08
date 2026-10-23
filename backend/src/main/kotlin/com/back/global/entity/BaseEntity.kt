@@ -16,14 +16,14 @@ abstract class BaseEntity {
 
     @field:Id
     @field:GeneratedValue(strategy = GenerationType.IDENTITY)
-    final var id: Long? = null
-        private set
+    var id: Long? = null
+        protected set
 
     @field:CreatedDate
-    final var createDate: LocalDateTime? = null
-        private set
+    var createDate: LocalDateTime? = null
+        protected set
 
     @field:LastModifiedDate
-    final var modifyDate: LocalDateTime? = null
-        private set
+    var modifyDate: LocalDateTime? = null
+        protected set
 }
