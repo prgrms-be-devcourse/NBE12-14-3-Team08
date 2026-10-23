@@ -1,8 +1,5 @@
-# Docker Compose 파일: 모니터링 스택(Prometheus, Grafana)과 k6 실행 컨테이너를 정의합니다.
-version: "3.8"
 
 services:
-  # Prometheus 서비스 – 원격 write 수신을 활성화하여 k6 메트릭을 직접 수집합니다.
   prometheus:
     image: prom/prometheus:latest
     command:
@@ -15,7 +12,6 @@ services:
       - prometheus_data:/prometheus
     restart: unless-stopped
 
-  # Grafana 서비스 – UI를 통해 Prometheus 메트릭을 시각화합니다.
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -24,17 +20,18 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - prometheus
     restart: unless-stopped
 
-  # k6 실행용 컨테이너 – 테스트 스크립트를 런타임에 전달해 실행합니다.
   k6:
     image: grafana/k6:latest
     depends_on:
       - prometheus
-    # 기본 커맨드는 없으며, 아래와 같이 실행 시 스크립트와 함께 메트릭을 전송합니다.
-    #   docker compose -f docker-compose.monitoring.yml run k6 run --out prometheus <script.js>
+    volumes:
+      - ./k6:/k6
+    working_dir: /k6
 
 volumes:
   prometheus_data:
