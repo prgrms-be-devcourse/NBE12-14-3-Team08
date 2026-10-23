@@ -6,6 +6,11 @@ spring:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     hikari:
       maximum-pool-size: 20
+      # 테스트 컨텍스트는 설정이 다르면 따로 만들어져 캐시에 남는다. 컨텍스트마다 유휴 연결을 20개씩(기본값: 최대 풀 크기와 같음)
+      # 잡고 있으면 5개쯤에서 PostgreSQL의 동시 접속 한도(100)에 닿아 "too many clients already"로 컨텍스트가 뜨지 않는다.
+      # 평소에는 2개만 유지하고, 동시성 테스트처럼 필요할 때만 최대 20개까지 늘어난다.
+      minimum-idle: 2
+      idle-timeout: 10000
   test:
     database:
       # @DataJpaTest가 DB를 임베디드(H2)로 바꿔치기하지 않고 위 PostgreSQL을 그대로 사용하게 한다.

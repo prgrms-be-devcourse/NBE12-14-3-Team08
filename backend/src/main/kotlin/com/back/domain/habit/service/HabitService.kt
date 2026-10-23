@@ -65,9 +65,15 @@ class HabitService(
 
     @Transactional
     fun failHabit(memberId: Long, habitId: Long) {
-        val habit = habitRepository
-            .findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { IllegalArgumentException("해당 회원의 습관을 찾을 수 없습니다.") }
+        // 본인의 습관인지는 잠그기 전에 확인한다. (남의 습관 id로 요청해 잠금을 붙잡지 못하게 함)
+        if (!habitRepository.existsByIdAndGroupMember_Member_Id(habitId, memberId)) {
+            throw IllegalArgumentException("해당 회원의 습관을 찾을 수 없습니다.")
+        }
+
+        // 같은 습관을 동시에 포기해도 한 요청만 처리되도록 행을 잠근 뒤 상태를 다시 읽는다.
+        // 늦게 온 요청은 이미 FAILED인 상태를 읽어 아래 fail()에서 충돌(IllegalStateException, 409)이 된다.
+        val habit = habitRepository.findByIdForUpdate(habitId)
+            ?: throw IllegalArgumentException("해당 회원의 습관을 찾을 수 없습니다.")
 
         if (habit.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹의 습관은 포기할 수 없습니다.")
@@ -124,10 +130,9 @@ class HabitService(
             throw BusinessRuleException("이미 종료된 그룹은 주간 판정을 실행할 수 없습니다.")
         }
 
-        val activeHabits = habitRepository
-            .findAllByGroupMember_Group_IdAndStatus(groupId, HabitStatus.ACTIVE)
+        val habitIds = habitRepository.findIdsByGroupIdAndStatus(groupId, HabitStatus.ACTIVE)
 
-        return activeHabits.map { evaluateWeeklyResult(it) }
+        return habitIds.mapNotNull { judgeLocked(it) }
     }
 
     // 매일 00시 05분에 모든 활성 습관을 순회하며 판정을 적용한다.
@@ -136,11 +141,22 @@ class HabitService(
     @Scheduled(cron = "0 5 0 * * *")
     @Transactional
     fun autoCheckAllActiveHabits() {
-        val activeHabits = habitRepository.findAllByStatusInProgressGroup(HabitStatus.ACTIVE)
+        val habitIds = habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE)
 
-        for (habit in activeHabits) {
-            evaluateWeeklyResult(habit)
+        for (habitId in habitIds) {
+            judgeLocked(habitId)
         }
+    }
+
+    // 습관 행을 잠근 뒤 최신 상태로 판정한다.
+    // 스케줄러와 방장의 수동 판정이 같은 습관을 동시에 처리해도 먼저 온 쪽이 실패 처리와 벌칙 생성을 끝내고,
+    // 늦은 쪽은 잠금이 풀린 뒤 FAILED 상태를 읽어 ALREADY_FAILED로 넘어간다. (벌칙 중복 제약 위반이 일어나지 않음)
+    // 습관 id는 오름차순으로 잠가 두 호출이 서로를 기다리는 교착을 막는다.
+    // 판정 도중에 습관이 삭제됐다면(그룹 삭제 등) 건너뛴다.
+    private fun judgeLocked(habitId: Long): HabitWeeklyCheckResponse? {
+        val habit = habitRepository.findByIdForUpdate(habitId) ?: return null
+
+        return evaluateWeeklyResult(habit)
     }
 
     // 판정 로직 자체는 memberId(로그인 컨텍스트) 없이 Habit만으로 동작하도록 분리

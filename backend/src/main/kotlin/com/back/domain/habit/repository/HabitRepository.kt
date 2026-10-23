@@ -2,7 +2,9 @@ package com.back.domain.habit.repository
 
 import com.back.domain.habit.entity.Habit
 import com.back.domain.habit.entity.HabitStatus
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -22,6 +24,31 @@ interface HabitRepository : JpaRepository<Habit, Long> {
         groupMemberId: Long,
         status: HabitStatus,
     ): Boolean
+
+    fun existsByIdAndGroupMember_Member_Id(habitId: Long, memberId: Long): Boolean
+
+    // 같은 습관을 동시에 포기·판정할 때 한 요청만 먼저 처리되도록 행을 잠그고 읽는다.
+    // 늦게 온 요청은 잠금이 풀릴 때까지 기다린 뒤 이미 바뀐 상태(FAILED)를 읽는다.
+    // 이 습관을 같은 트랜잭션에서 미리 읽어 두었다면 영속성 컨텍스트의 오래된 상태가 그대로 돌아오므로,
+    // 호출하기 전에 엔티티가 아니라 id만 조회해야 한다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select h from Habit h where h.id = :habitId")
+    fun findByIdForUpdate(@Param("habitId") habitId: Long): Habit?
+
+    // 주간 판정 대상 id 조회. 여러 습관을 잠그는 순서를 항상 같게(id 오름차순) 해 교착을 막는다.
+    @Query("select h.id from Habit h where h.groupMember.group.id = :groupId and h.status = :status order by h.id")
+    fun findIdsByGroupIdAndStatus(@Param("groupId") groupId: Long, @Param("status") status: HabitStatus): List<Long>
+
+    // 스케줄러용: 진행 중인 그룹의 해당 상태 습관 id (이미 종료된 그룹의 습관은 제외)
+    @Query(
+        "select h.id from Habit h " +
+            "join h.groupMember gm " +
+            "join gm.group g " +
+            "where h.status = :status " +
+            "and g.status <> com.back.domain.group.entity.GroupStatus.FINISH " +
+            "order by h.id",
+    )
+    fun findIdsByStatusInProgressGroup(@Param("status") status: HabitStatus): List<Long>
 
     fun findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
         memberId: Long,
