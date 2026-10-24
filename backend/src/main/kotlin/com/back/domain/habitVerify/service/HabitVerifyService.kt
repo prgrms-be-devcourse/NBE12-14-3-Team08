@@ -11,9 +11,10 @@ import com.back.domain.habitVerify.dto.HabitVerifyResponse
 import com.back.domain.habitVerify.dto.HabitVerifySummaryResponse
 import com.back.domain.habitVerify.entity.HabitVerify
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
-import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
+import com.back.global.exception.requireAllowed
+import com.back.global.exception.requireBusinessRule
 import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
@@ -41,9 +42,7 @@ class HabitVerifyService(
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
             .getOrNull() ?: throw ForbiddenException("본인의 습관에만 사진을 올릴 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증 사진을 올릴 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 습관 인증 사진을 올릴 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) {
             "진행 중인 습관에만 사진을 올릴 수 있습니다. 현재 상태: ${habit.status}"
@@ -57,9 +56,7 @@ class HabitVerifyService(
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
             .getOrNull() ?: throw ForbiddenException("본인의 습관에만 인증을 등록할 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) {
             "진행 중인 습관에만 인증을 등록할 수 있습니다. 현재 상태: ${habit.status}"
@@ -101,9 +98,7 @@ class HabitVerifyService(
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
             .getOrNull() ?: throw ForbiddenException("본인의 습관 인증만 재제출할 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹의 습관 인증은 수정할 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹의 습관 인증은 수정할 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) { "이미 종료된 습관의 인증은 수정할 수 없습니다." }
 
@@ -204,8 +199,6 @@ class HabitVerifyService(
             throw AccessDeniedException("승인/거절 권한이 없습니다.")
         }
 
-        if (groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹은 인증을 검토할 수 없습니다.")
-        }
+        requireBusinessRule(!groupMember.group.isFinished()) { "이미 종료된 그룹은 인증을 검토할 수 없습니다." }
     }
 }
