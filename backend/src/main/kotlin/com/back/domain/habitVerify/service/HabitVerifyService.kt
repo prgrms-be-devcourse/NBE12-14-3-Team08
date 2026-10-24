@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class HabitVerifyService(
@@ -38,7 +39,7 @@ class HabitVerifyService(
     @Transactional(readOnly = true)
     fun createUploadUrl(memberId: Long, habitId: Long, filename: String?): UploadUrlResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관에만 사진을 올릴 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관에만 사진을 올릴 수 있습니다.")
 
         if (habit.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증 사진을 올릴 수 없습니다.")
@@ -54,7 +55,7 @@ class HabitVerifyService(
     @Transactional
     fun create(habitId: Long, request: HabitVerifyRequest, memberId: Long): HabitVerifyResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관에만 인증을 등록할 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관에만 인증을 등록할 수 있습니다.")
 
         if (habit.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다.")
@@ -80,7 +81,7 @@ class HabitVerifyService(
     @Transactional(readOnly = true)
     fun findAll(habitId: Long, memberId: Long): List<HabitVerifyResponse> {
         val habit = habitRepository.findById(habitId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 습관입니다.") }
+            .getOrNull() ?: throw EntityNotFoundException("존재하지 않는 습관입니다.")
 
         if (!groupMemberRepository.existsByGroupIdAndMemberId(habit.groupMember.group.requiredId, memberId)) {
             throw ForbiddenException("같은 그룹의 멤버만 조회할 수 있습니다.")
@@ -98,7 +99,7 @@ class HabitVerifyService(
         memberId: Long,
     ): HabitVerifyResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관 인증만 재제출할 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관 인증만 재제출할 수 있습니다.")
 
         if (habit.groupMember.group.isFinished()) {
             throw BusinessRuleException("이미 종료된 그룹의 습관 인증은 수정할 수 없습니다.")
@@ -107,7 +108,7 @@ class HabitVerifyService(
         check(habit.status == HabitStatus.ACTIVE) { "이미 종료된 습관의 인증은 수정할 수 없습니다." }
 
         val habitVerify = habitVerifyRepository.findByIdAndHabitId(verificationId, habitId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 인증 기록입니다.") }
+            ?: throw EntityNotFoundException("존재하지 않는 인증 기록입니다.")
 
         check(LocalDateTime.now().isBefore(calculateEntryDeadline(habit, habitVerify))) {
             "마감일이 지나 더 이상 수정할 수 없습니다."
@@ -145,7 +146,7 @@ class HabitVerifyService(
     @Transactional(readOnly = true)
     fun getPendingByGroup(memberId: Long, groupId: Long): List<HabitVerifySummaryResponse> {
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { AccessDeniedException("해당 그룹의 멤버가 아닙니다.") }
+            .getOrNull() ?: throw AccessDeniedException("해당 그룹의 멤버가 아닙니다.")
 
         if (groupMember.role != GroupMemberRole.OWNER) {
             throw AccessDeniedException("방장만 대기 목록을 조회할 수 있습니다.")
@@ -189,11 +190,11 @@ class HabitVerifyService(
 
     private fun findById(verificationId: Long): HabitVerify =
         habitVerifyRepository.findById(verificationId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 인증 기록입니다.") }
+            .getOrNull() ?: throw EntityNotFoundException("존재하지 않는 인증 기록입니다.")
 
     private fun validateOwner(memberId: Long, groupId: Long) {
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { AccessDeniedException("승인/거절 권한이 없습니다.") }
+            .getOrNull() ?: throw AccessDeniedException("승인/거절 권한이 없습니다.")
 
         if (groupMember.role != GroupMemberRole.OWNER) {
             throw AccessDeniedException("승인/거절 권한이 없습니다.")

@@ -8,13 +8,12 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Optional
 
 interface HabitVerifyRepository : JpaRepository<HabitVerify, Long> {
 
     fun findAllByHabitIdOrderByVerifyDateDesc(habitId: Long): List<HabitVerify>
 
-    fun findByIdAndHabitId(id: Long, habitId: Long): Optional<HabitVerify>
+    fun findByIdAndHabitId(id: Long, habitId: Long): HabitVerify?
 
     fun existsByHabitIdAndVerifyDate(habitId: Long, verifyDate: LocalDate): Boolean
 

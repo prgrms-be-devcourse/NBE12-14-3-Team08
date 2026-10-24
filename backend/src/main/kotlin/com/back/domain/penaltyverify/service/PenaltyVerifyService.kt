@@ -19,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional(readOnly = true)
@@ -55,7 +56,7 @@ class PenaltyVerifyService(
     @Transactional
     fun submit(memberId: Long, habitId: Long, request: SubmitPenaltyVerifyRequest): PenaltyVerifyDetailResponse {
         val penaltyVerify = penaltyVerifyRepository.findByHabitId(habitId)
-            .orElseThrow { NoSuchElementException("해당 습관에 대한 벌칙 정보가 존재하지 않습니다.") }
+            ?: throw NoSuchElementException("해당 습관에 대한 벌칙 정보가 존재하지 않습니다.")
 
         if (penaltyVerify.groupMember.member.id != memberId) {
             throw ForbiddenException("본인의 습관에 대해서만 벌칙을 제출할 수 있습니다.")
@@ -128,7 +129,7 @@ class PenaltyVerifyService(
     // 방장만 대기 목록 조회 가능
     fun getPendingByGroup(memberId: Long, groupId: Long): List<PenaltyVerifySummaryResponse> {
         val requester = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { AccessDeniedException("해당 방의 멤버가 아닙니다.") }
+            .getOrNull() ?: throw AccessDeniedException("해당 방의 멤버가 아닙니다.")
 
         if (requester.role != GroupMemberRole.OWNER) {
             throw AccessDeniedException("방장만 대기 목록을 조회할 수 있습니다.")
@@ -207,12 +208,12 @@ class PenaltyVerifyService(
     }
 
     private fun findById(id: Long): PenaltyVerify =
-        penaltyVerifyRepository.findById(id)
-            .orElseThrow { NoSuchElementException("존재하지 않는 벌칙 인증입니다.") }
+        penaltyVerifyRepository.findDetailById(id)
+            ?: throw NoSuchElementException("존재하지 않는 벌칙 인증입니다.")
 
     private fun validateOwner(memberId: Long, groupId: Long) {
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { ForbiddenException("승인/거절 권한이 없습니다.") }
+            .getOrNull() ?: throw ForbiddenException("승인/거절 권한이 없습니다.")
 
         if (groupMember.role != GroupMemberRole.OWNER) {
             throw ForbiddenException("승인/거절 권한이 없습니다.")
@@ -225,6 +226,5 @@ class PenaltyVerifyService(
 
     private fun isGroupOwner(memberId: Long, groupId: Long): Boolean =
         groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .map { it.role == GroupMemberRole.OWNER }
-            .orElse(false)
+            .getOrNull()?.role == GroupMemberRole.OWNER
 }
