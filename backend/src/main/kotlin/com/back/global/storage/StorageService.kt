@@ -51,50 +51,37 @@ class StorageService(
         val bucket = type.bucket(properties.storage)
         val bucketUrl = publicUrl(bucket, "")
 
-        if (imageUrl == null || !imageUrl.startsWith(bucketUrl)) {
-            throw IllegalArgumentException("업로드한 사진만 사용할 수 있습니다.")
-        }
+        require(imageUrl != null && imageUrl.startsWith(bucketUrl)) { "업로드한 사진만 사용할 수 있습니다." }
 
-        val path = imageUrl.substring(bucketUrl.length)
+        val path = imageUrl.removePrefix(bucketUrl)
 
-        if (imageUrl != currentImageUrl && !isIssuedPath(path, memberId, targetId)) {
-            throw IllegalArgumentException("본인이 업로드한 사진만 사용할 수 있습니다.")
+        require(imageUrl == currentImageUrl || isIssuedPath(path, memberId, targetId)) {
+            "본인이 업로드한 사진만 사용할 수 있습니다."
         }
-
-        if (!supabaseStorageClient.exists(bucket, path)) {
-            throw IllegalArgumentException("업로드된 사진을 확인할 수 없습니다.")
-        }
+        require(supabaseStorageClient.exists(bucket, path)) { "업로드된 사진을 확인할 수 없습니다." }
     }
 
     // createUploadUrl이 발급하는 경로 형태와 정확히 같은지 확인 (../, 쿼리 문자열 등 차단)
     private fun isIssuedPath(path: String, memberId: Long, targetId: Long): Boolean {
         val prefix = "$memberId/$targetId/"
 
-        if (!path.startsWith(prefix)) {
-            return false
-        }
+        if (!path.startsWith(prefix)) return false
 
-        val filename = path.substring(prefix.length)
+        val filename = path.removePrefix(prefix)
         val dotIndex = filename.lastIndexOf('.')
 
         return dotIndex > 0 &&
-            UUID_REGEX.matches(filename.substring(0, dotIndex)) &&
+            UUID_REGEX.matches(filename.take(dotIndex)) &&
             filename.substring(dotIndex) in ALLOWED_EXTENSIONS
     }
 
     // .jpg, .jpeg, .png, .webp 형식만 허용 (대소문자 무시)
     private fun extractExtension(filename: String?): String {
-        val dotIndex = filename?.lastIndexOf('.') ?: -1
+        require(filename != null && '.' in filename) { "파일 확장자가 없습니다." }
 
-        if (filename == null || dotIndex == -1) {
-            throw IllegalArgumentException("파일 확장자가 없습니다.")
-        }
+        val extension = ".${filename.substringAfterLast('.')}".lowercase(Locale.ROOT)
 
-        val extension = filename.substring(dotIndex).lowercase(Locale.ROOT)
-
-        if (extension !in ALLOWED_EXTENSIONS) {
-            throw IllegalArgumentException("허용되지 않는 이미지 파일 형식입니다.")
-        }
+        require(extension in ALLOWED_EXTENSIONS) { "허용되지 않는 이미지 파일 형식입니다." }
 
         return extension
     }
