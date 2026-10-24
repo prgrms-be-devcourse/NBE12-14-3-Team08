@@ -9,8 +9,9 @@ import com.back.domain.penaltyverify.dto.PenaltyVerifySummaryResponse
 import com.back.domain.penaltyverify.dto.SubmitPenaltyVerifyRequest
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
-import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.ForbiddenException
+import com.back.global.exception.requireAllowed
+import com.back.global.exception.requireBusinessRule
 import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
@@ -38,12 +39,10 @@ class PenaltyVerifyService(
     fun createUploadUrl(memberId: Long, id: Long, filename: String?): UploadUrlResponse {
         val penaltyVerify = findById(id)
 
-        if (penaltyVerify.groupMember.member.id != memberId) {
-            throw ForbiddenException("본인의 벌칙에만 사진을 올릴 수 있습니다.")
-        }
+        requireAllowed(penaltyVerify.groupMember.member.id == memberId) { "본인의 벌칙에만 사진을 올릴 수 있습니다." }
 
-        if (penaltyVerify.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 벌칙 사진을 올릴 수 없습니다.")
+        requireBusinessRule(!penaltyVerify.groupMember.group.isFinished()) {
+            "이미 종료된 그룹에서는 벌칙 사진을 올릴 수 없습니다."
         }
 
         check(penaltyVerify.isSubmittable()) {
@@ -58,13 +57,9 @@ class PenaltyVerifyService(
         val penaltyVerify = penaltyVerifyRepository.findByHabitId(habitId)
             ?: throw NoSuchElementException("해당 습관에 대한 벌칙 정보가 존재하지 않습니다.")
 
-        if (penaltyVerify.groupMember.member.id != memberId) {
-            throw ForbiddenException("본인의 습관에 대해서만 벌칙을 제출할 수 있습니다.")
-        }
+        requireAllowed(penaltyVerify.groupMember.member.id == memberId) { "본인의 습관에 대해서만 벌칙을 제출할 수 있습니다." }
 
-        if (penaltyVerify.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다.")
-        }
+        requireBusinessRule(!penaltyVerify.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다." }
 
         penaltyVerify.validateSubmittable()
         validatePenaltyImage(memberId, penaltyVerify, request.imageUrl)
@@ -78,13 +73,9 @@ class PenaltyVerifyService(
     fun resubmit(memberId: Long, id: Long, request: SubmitPenaltyVerifyRequest): PenaltyVerifyDetailResponse {
         val penaltyVerify = findById(id)
 
-        if (penaltyVerify.groupMember.member.id != memberId) {
-            throw ForbiddenException("본인의 벌칙만 재제출할 수 있습니다.")
-        }
+        requireAllowed(penaltyVerify.groupMember.member.id == memberId) { "본인의 벌칙만 재제출할 수 있습니다." }
 
-        if (penaltyVerify.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 벌칙을 재제출할 수 없습니다.")
-        }
+        requireBusinessRule(!penaltyVerify.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 벌칙을 재제출할 수 없습니다." }
 
         penaltyVerify.validateResubmittable()
         validatePenaltyImage(memberId, penaltyVerify, request.imageUrl)
@@ -166,9 +157,7 @@ class PenaltyVerifyService(
             throw ForbiddenException("벌칙 취소/초기화 권한이 없습니다.")
         }
 
-        if (penaltyVerify.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹의 벌칙 기록은 변경할 수 없습니다.")
-        }
+        requireBusinessRule(!penaltyVerify.groupMember.group.isFinished()) { "이미 종료된 그룹의 벌칙 기록은 변경할 수 없습니다." }
 
         if (isOwner) {
             penaltyVerify.resetByOwner()
@@ -219,13 +208,9 @@ class PenaltyVerifyService(
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
             .getOrNull() ?: throw ForbiddenException("승인/거절 권한이 없습니다.")
 
-        if (groupMember.role != GroupMemberRole.OWNER) {
-            throw ForbiddenException("승인/거절 권한이 없습니다.")
-        }
+        requireAllowed(groupMember.role == GroupMemberRole.OWNER) { "승인/거절 권한이 없습니다." }
 
-        if (groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹은 벌칙을 검토할 수 없습니다.")
-        }
+        requireBusinessRule(!groupMember.group.isFinished()) { "이미 종료된 그룹은 벌칙을 검토할 수 없습니다." }
     }
 
     private fun isGroupOwner(memberId: Long, groupId: Long): Boolean =

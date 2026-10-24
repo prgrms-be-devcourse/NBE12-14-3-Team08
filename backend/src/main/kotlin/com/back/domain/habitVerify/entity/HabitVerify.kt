@@ -58,14 +58,14 @@ class HabitVerify private constructor(
         status = HabitVerifyStatus.PENDING
     }
 
-    fun approve() {
-        check(status == HabitVerifyStatus.PENDING) { "검토 대기 상태가 아닙니다. 현재 상태: $status" }
-        status = HabitVerifyStatus.APPROVED
-    }
+    fun approve() = reviewTo(HabitVerifyStatus.APPROVED)
 
-    fun reject() {
+    fun reject() = reviewTo(HabitVerifyStatus.REJECTED)
+
+    // 승인·반려는 검토 대기(PENDING)에서만 할 수 있다
+    private fun reviewTo(result: HabitVerifyStatus) {
         check(status == HabitVerifyStatus.PENDING) { "검토 대기 상태가 아닙니다. 현재 상태: $status" }
-        status = HabitVerifyStatus.REJECTED
+        status = result
     }
 
     companion object {

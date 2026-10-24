@@ -80,14 +80,14 @@ class PenaltyVerify private constructor(
         fill(verifyDate, description, imageUrl)
     }
 
-    fun approve() {
-        check(status == PenaltyVerifyStatus.PENDING) { "승인 대기 상태가 아닙니다. 현재 상태 : $status" }
-        status = PenaltyVerifyStatus.APPROVED
-    }
+    fun approve() = reviewTo(PenaltyVerifyStatus.APPROVED)
 
-    fun reject() {
+    fun reject() = reviewTo(PenaltyVerifyStatus.REJECTED)
+
+    // 승인·반려는 승인 대기(PENDING)에서만 할 수 있다
+    private fun reviewTo(result: PenaltyVerifyStatus) {
         check(status == PenaltyVerifyStatus.PENDING) { "승인 대기 상태가 아닙니다. 현재 상태 : $status" }
-        status = PenaltyVerifyStatus.REJECTED
+        status = result
     }
 
     // 처음 제출(REQUIRED) 또는 반려 후 재제출(REJECTED)이 가능한 상태인지
