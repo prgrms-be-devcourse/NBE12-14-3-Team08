@@ -10,6 +10,7 @@ import com.back.domain.penaltyverify.dto.SubmitPenaltyVerifyRequest
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.exception.ForbiddenException
+import com.back.global.exception.requireAccess
 import com.back.global.exception.requireAllowed
 import com.back.global.exception.requireBusinessRule
 import com.back.global.storage.StorageService
@@ -45,7 +46,7 @@ class PenaltyVerifyService(
             "이미 종료된 그룹에서는 벌칙 사진을 올릴 수 없습니다."
         }
 
-        check(penaltyVerify.isSubmittable()) {
+        check(penaltyVerify.isSubmittable) {
             "제출 또는 재제출할 수 있는 벌칙이 아닙니다. 현재 상태 : ${penaltyVerify.status}"
         }
 
@@ -66,7 +67,7 @@ class PenaltyVerifyService(
 
         penaltyVerify.submit(LocalDate.now(), request.description, request.imageUrl)
 
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
+        return PenaltyVerifyDetailResponse(penaltyVerify)
     }
 
     @Transactional
@@ -82,7 +83,7 @@ class PenaltyVerifyService(
 
         penaltyVerify.resubmit(LocalDate.now(), request.description, request.imageUrl)
 
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
+        return PenaltyVerifyDetailResponse(penaltyVerify)
     }
 
     @Transactional
@@ -106,42 +107,34 @@ class PenaltyVerifyService(
         val requester = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
             .getOrNull() ?: throw AccessDeniedException("해당 방의 멤버가 아닙니다.")
 
-        if (requester.role != GroupMemberRole.OWNER) {
-            throw AccessDeniedException("방장만 대기 목록을 조회할 수 있습니다.")
-        }
+        requireAccess(requester.role == GroupMemberRole.OWNER) { "방장만 대기 목록을 조회할 수 있습니다." }
 
-        return penaltyVerifyRepository.findPendingByGroupId(groupId).map(PenaltyVerifySummaryResponse::from)
+        return penaltyVerifyRepository.findPendingByGroupId(groupId).map(::PenaltyVerifySummaryResponse)
     }
 
-    fun getDetail(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
-        val penaltyVerify = findById(id)
-
-        val isMember = groupMemberRepository.existsByGroupIdAndMemberId(
-            penaltyVerify.habit.groupMember.group.requiredId,
-            memberId,
-        )
-
-        if (!isMember) {
-            throw AccessDeniedException("같은 그룹의 멤버만 조회할 수 있습니다.")
-        }
-
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
-    }
+    // 찾고 → 같은 그룹 멤버인지 확인하고 → 응답으로
+    fun getDetail(memberId: Long, id: Long): PenaltyVerifyDetailResponse =
+        findById(id)
+            .also {
+                val groupId = it.habit.groupMember.group.requiredId
+                requireAccess(groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
+                    "같은 그룹의 멤버만 조회할 수 있습니다."
+                }
+            }
+            .let(::PenaltyVerifyDetailResponse)
 
     fun getCount(groupId: Long, memberId: Long): Long =
         penaltyVerifyRepository.countByGroupMember_Group_IdAndGroupMember_Member_Id(groupId, memberId)
 
     fun getPenaltiesByGroupMember(memberId: Long, groupId: Long, groupMemberId: Long): List<PenaltyVerifySummaryResponse> {
-        if (!groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
-            throw AccessDeniedException("같은 그룹의 멤버만 조회할 수 있습니다.")
+        requireAccess(groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
+            "같은 그룹의 멤버만 조회할 수 있습니다."
         }
 
-        if (!groupMemberRepository.existsByIdAndGroupId(groupMemberId, groupId)) {
-            throw IllegalArgumentException("해당 그룹에 속하지 않은 멤버입니다.")
-        }
+        require(groupMemberRepository.existsByIdAndGroupId(groupMemberId, groupId)) { "해당 그룹에 속하지 않은 멤버입니다." }
 
         return penaltyVerifyRepository.findByGroupMemberIdOrderByIdDesc(groupMemberId)
-            .map(PenaltyVerifySummaryResponse::from)
+            .map(::PenaltyVerifySummaryResponse)
     }
 
     // 결산 집계를 위해 벌칙 row는 지우지 않는다 (docs/adr/0001-penalty-verify-no-hard-delete.md)
@@ -153,9 +146,7 @@ class PenaltyVerifyService(
         val isAuthor = penaltyVerify.groupMember.member.id == memberId
         val isOwner = isGroupOwner(memberId, penaltyVerify.groupMember.group.requiredId)
 
-        if (!isAuthor && !isOwner) {
-            throw ForbiddenException("벌칙 취소/초기화 권한이 없습니다.")
-        }
+        requireAllowed(isAuthor || isOwner) { "벌칙 취소/초기화 권한이 없습니다." }
 
         requireBusinessRule(!penaltyVerify.groupMember.group.isFinished()) { "이미 종료된 그룹의 벌칙 기록은 변경할 수 없습니다." }
 
@@ -165,7 +156,7 @@ class PenaltyVerifyService(
             penaltyVerify.cancelSubmission()
         }
 
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
+        return PenaltyVerifyDetailResponse(penaltyVerify)
     }
 
     // 사진 필수 여부는 SubmitPenaltyVerifyRequest의 @NotBlank가 막는다.
@@ -181,12 +172,12 @@ class PenaltyVerifyService(
     }
 
     // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
-    private fun review(memberId: Long, id: Long, action: (PenaltyVerify) -> Unit): PenaltyVerifyDetailResponse {
-        val target = findById(id)
-        validateOwner(memberId, target.groupMember.group.requiredId)
-        action(target)
-        return PenaltyVerifyDetailResponse.from(target)
-    }
+    // 찾고 → 방장인지 확인하고 → 승인(또는 반려)하고 → 응답으로
+    private fun review(memberId: Long, id: Long, action: (PenaltyVerify) -> Unit): PenaltyVerifyDetailResponse =
+        findById(id)
+            .also { validateOwner(memberId, it.groupMember.group.requiredId) }
+            .apply(action)
+            .let(::PenaltyVerifyDetailResponse)
 
     private fun bulkReview(
         memberId: Long,
@@ -197,11 +188,14 @@ class PenaltyVerifyService(
         validateOwner(memberId, groupId)
         return penaltyVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
             .onEach(action)
-            .map(PenaltyVerifyDetailResponse::from)
+            .map(::PenaltyVerifyDetailResponse)
     }
 
+    // findByIdOrNull(id)을 쓰지 않는 이유: 그 함수는 CrudRepository의 일반 findById를 불러서,
+    // PenaltyVerifyRepository가 @EntityGraph를 붙여 재정의한 findById를 거치지 않는다(쿼리가 늘어남).
+    // PenaltyVerifyFindByIdEntityGraphTest가 이 차이를 고정한다.
     private fun findById(id: Long): PenaltyVerify =
-        penaltyVerifyRepository.findDetailById(id)
+        penaltyVerifyRepository.findById(id).getOrNull()
             ?: throw NoSuchElementException("존재하지 않는 벌칙 인증입니다.")
 
     private fun validateOwner(memberId: Long, groupId: Long) {

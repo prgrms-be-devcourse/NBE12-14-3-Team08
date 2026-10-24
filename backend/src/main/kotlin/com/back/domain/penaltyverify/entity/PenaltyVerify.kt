@@ -91,8 +91,8 @@ class PenaltyVerify private constructor(
     }
 
     // 처음 제출(REQUIRED) 또는 반려 후 재제출(REJECTED)이 가능한 상태인지
-    fun isSubmittable(): Boolean =
-        status == PenaltyVerifyStatus.REQUIRED || status == PenaltyVerifyStatus.REJECTED
+    val isSubmittable: Boolean
+        get() = status == PenaltyVerifyStatus.REQUIRED || status == PenaltyVerifyStatus.REJECTED
 
     // 작성자의 제출 취소: 방장 검토 전(PENDING)에만 가능
     fun cancelSubmission() {
@@ -126,6 +126,7 @@ class PenaltyVerify private constructor(
 
     companion object {
         // 습관 이름과 방의 벌칙 문구는 실패 시점 값으로 남긴다 (이후 바뀌어도 이 벌칙 기록은 그대로)
+        // @JvmStatic: Java 코드(TestDataInit, SettlementServiceTest)가 PenaltyVerify.create(...)로 부른다
         @JvmStatic
         fun create(groupMember: GroupMember, habit: Habit): PenaltyVerify =
             PenaltyVerify(

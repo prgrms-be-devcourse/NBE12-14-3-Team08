@@ -21,13 +21,17 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
+import org.springframework.data.repository.findByIdOrNull
+import kotlin.jvm.optionals.getOrNull
 
-// findById(Optional)를 findDetailById(nullable)로 바꾸면서 두 가지가 그대로인지 고정한다.
+// PenaltyVerifyService는 @EntityGraph를 붙여 재정의한 findById(id).getOrNull()로 벌칙 인증을 찾는다. 세 가지를 고정한다.
 // 1) id로 정확히 한 건을 찾고, 없으면 null을 돌려준다.
-// 2) @EntityGraph가 살아 있어서 벌칙 인증 + 멤버 + 그룹을 쿼리 한 번에 읽는다. (빠지면 접근할 때마다 쿼리가 더 나간다)
-// 서비스 단위 테스트는 레포지토리를 목으로 바꾸기 때문에, 이 메서드의 실제 쿼리는 여기서만 확인된다.
+// 2) @EntityGraph가 살아 있어서 벌칙 인증 + 멤버 + 그룹을 쿼리 한 번에 읽는다.
+// 3) Spring Data의 findByIdOrNull(id)은 일반 findById를 불러 @EntityGraph가 빠진다 → 서비스가 이걸 쓰면 안 되는 이유.
+//    (언젠가 Spring이 바뀌어 이 테스트가 실패하면 findByIdOrNull로 바꿔도 된다는 신호)
+// 서비스 단위 테스트는 레포지토리를 목으로 바꾸기 때문에, 실제 쿼리는 여기서만 확인된다.
 @DataJpaTest
-class PenaltyVerifyFindDetailByIdTest {
+class PenaltyVerifyFindByIdEntityGraphTest {
 
     @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
     @Autowired lateinit var habitRepository: HabitRepository
@@ -55,7 +59,7 @@ class PenaltyVerifyFindDetailByIdTest {
     fun id로_찾는다() {
         val penaltyVerify = savePenaltyVerify("find-by-id")
 
-        val found = penaltyVerifyRepository.findDetailById(penaltyVerify.requiredId)
+        val found = penaltyVerifyRepository.findById(penaltyVerify.requiredId).getOrNull()
 
         assertThat(found).isNotNull
         assertThat(found?.requiredId).isEqualTo(penaltyVerify.requiredId)
@@ -64,7 +68,7 @@ class PenaltyVerifyFindDetailByIdTest {
     @Test
     @DisplayName("없는 id면 null을 돌려준다")
     fun 없는_id면_null() {
-        assertThat(penaltyVerifyRepository.findDetailById(Long.MAX_VALUE)).isNull()
+        assertThat(penaltyVerifyRepository.findById(Long.MAX_VALUE).getOrNull()).isNull()
     }
 
     @Test
@@ -74,7 +78,7 @@ class PenaltyVerifyFindDetailByIdTest {
         flushAndClear()
 
         statistics.clear()
-        val found = requireNotNull(penaltyVerifyRepository.findDetailById(id))
+        val found = requireNotNull(penaltyVerifyRepository.findById(id).getOrNull())
         // 지연 로딩이었다면 여기서 쿼리가 더 나간다
         val nickname = found.groupMember.member.nickname
         val penalty = found.groupMember.group.penalty
@@ -84,15 +88,15 @@ class PenaltyVerifyFindDetailByIdTest {
         assertThat(statistics.prepareStatementCount).isEqualTo(1)
     }
 
-    // 위 테스트가 쿼리 수를 제대로 잡는지 확인한다: @EntityGraph가 없는 기본 findById는 접근할 때마다 쿼리가 더 나간다
+    // 서비스가 findByIdOrNull을 쓰지 않는 이유를 고정한다. 위 테스트가 쿼리 수를 제대로 센다는 증거도 된다.
     @Test
-    @DisplayName("기본 findById는 같은 접근에서 쿼리가 더 나간다 (위 테스트가 의미 있다는 증거)")
-    fun 기본_조회는_쿼리가_더_나간다() {
+    @DisplayName("findByIdOrNull은 재정의한 findById를 거치지 않아 @EntityGraph가 빠지고 쿼리가 더 나간다")
+    fun findByIdOrNull은_EntityGraph가_빠진다() {
         val id = savePenaltyVerify("plain-find-by-id").requiredId
         flushAndClear()
 
         statistics.clear()
-        val found = requireNotNull(penaltyVerifyRepository.findById(id).orElse(null))
+        val found = requireNotNull(penaltyVerifyRepository.findByIdOrNull(id))
         found.groupMember.member.nickname
         found.groupMember.group.penalty
 
