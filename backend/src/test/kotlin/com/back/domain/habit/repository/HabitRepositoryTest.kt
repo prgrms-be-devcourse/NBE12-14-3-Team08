@@ -10,6 +10,7 @@ import com.back.domain.habit.entity.Habit
 import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
+import com.back.global.entity.requiredId
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -83,9 +84,9 @@ class HabitRepositoryTest {
         fun 상태별_존재_여부() {
             saveHabit(groupMember, "물 마시기", HabitStatus.FAILED)
 
-            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.id, HabitStatus.FAILED))
+            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.requiredId, HabitStatus.FAILED))
                 .isTrue()
-            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.id, HabitStatus.ACTIVE))
+            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.requiredId, HabitStatus.ACTIVE))
                 .isFalse()
         }
 
@@ -97,7 +98,7 @@ class HabitRepositoryTest {
                 groupMemberRepository.save(GroupMember.create(group, other, GroupMemberRole.MEMBER))
             saveHabit(otherGroupMember, "독서", HabitStatus.ACTIVE)
 
-            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.id, HabitStatus.ACTIVE))
+            assertThat(habitRepository.existsByGroupMember_IdAndStatus(groupMember.requiredId, HabitStatus.ACTIVE))
                 .isFalse()
         }
 
@@ -108,7 +109,7 @@ class HabitRepositoryTest {
             saveHabit(groupMember, "예전 습관", HabitStatus.FAILED)
 
             val found = habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                member.id, group.id, HabitStatus.ACTIVE,
+                member.requiredId, group.requiredId, HabitStatus.ACTIVE,
             )
 
             assertThat(found).isNotNull()
@@ -125,7 +126,7 @@ class HabitRepositoryTest {
 
             assertThat(
                 habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
-                    member.id, group.id, HabitStatus.ACTIVE,
+                    member.requiredId, group.requiredId, HabitStatus.ACTIVE,
                 ),
             ).isNull()
         }
@@ -136,7 +137,7 @@ class HabitRepositoryTest {
             val habit = saveHabit(groupMember, "물 마시기", HabitStatus.ACTIVE)
 
             assertThat(habitRepository.findByIdAndGroupMember_Member_Id(habit.id, member.id)).isPresent()
-            assertThat(habitRepository.findByIdAndGroupMember_Member_Id(habit.id, member.id + 999)).isEmpty()
+            assertThat(habitRepository.findByIdAndGroupMember_Member_Id(habit.requiredId, member.requiredId + 999)).isEmpty()
         }
     }
 
@@ -157,7 +158,7 @@ class HabitRepositoryTest {
 
             val result = habitRepository
                 .findAllByGroupMember_Member_IdAndGroupMember_Group_IdAndStatusOrderByCreateDateDesc(
-                    member.id, group.id, HabitStatus.FAILED,
+                    member.requiredId, group.requiredId, HabitStatus.FAILED,
                 )
 
             assertThat(result).extracting<String> { it.title }.containsExactly("최근 습관", "오래된 습관")
@@ -204,7 +205,7 @@ class HabitRepositoryTest {
             )
             saveHabit(inOtherGroup, "다른 그룹 활성 습관", HabitStatus.ACTIVE)
 
-            val result = habitRepository.findAllByGroupMember_Group_IdAndStatus(group.id, HabitStatus.ACTIVE)
+            val result = habitRepository.findAllByGroupMember_Group_IdAndStatus(group.requiredId, HabitStatus.ACTIVE)
 
             assertThat(result).extracting<Long?> { it.id }.containsExactly(active.id)
         }
@@ -230,10 +231,10 @@ class HabitRepositoryTest {
             val target = saveHabit(groupMember, "삭제 대상", HabitStatus.FAILED)
             val keep = saveHabit(groupMember, "유지", HabitStatus.ACTIVE)
 
-            habitRepository.deleteByIds(listOf(target.id))
+            habitRepository.deleteByIds(listOf(target.requiredId))
 
-            assertThat(habitRepository.findById(target.id)).isEmpty()
-            assertThat(habitRepository.findById(keep.id)).isPresent()
+            assertThat(habitRepository.findById(target.requiredId)).isEmpty()
+            assertThat(habitRepository.findById(keep.requiredId)).isPresent()
         }
 
         @Test
@@ -251,9 +252,9 @@ class HabitRepositoryTest {
             entityManager.clear()
 
             assertThat(deleted).isEqualTo(2)
-            assertThat(habitRepository.findById(inGroup1.id)).isEmpty()
-            assertThat(habitRepository.findById(inGroup2.id)).isEmpty()
-            assertThat(habitRepository.findById(otherGroupHabit.id)).isPresent()
+            assertThat(habitRepository.findById(inGroup1.requiredId)).isEmpty()
+            assertThat(habitRepository.findById(inGroup2.requiredId)).isEmpty()
+            assertThat(habitRepository.findById(otherGroupHabit.requiredId)).isPresent()
         }
     }
 }

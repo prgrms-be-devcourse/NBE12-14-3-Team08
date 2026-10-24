@@ -9,6 +9,7 @@ import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
+import com.back.global.entity.requiredId
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
@@ -66,7 +67,7 @@ class HabitServiceConcurrencyTest {
         )
 
         val created = groupService.createGroup(
-            owner.id,
+            owner.requiredId,
             GroupRequest.Create("습관 동시성 그룹", "설명", LocalDate.now().plusDays(7), "벌칙", "pw1234", 5),
         )
         groupId = requireNotNull(created.id)
@@ -80,7 +81,7 @@ class HabitServiceConcurrencyTest {
         )
         groupMemberRepository.deleteAll(members)
         groupRepository.deleteById(groupId)
-        memberRepository.deleteById(owner.id)
+        memberRepository.deleteById(owner.requiredId)
     }
 
     @Test
@@ -103,7 +104,7 @@ class HabitServiceConcurrencyTest {
                     try {
                         readyLatch.countDown()
                         startLatch.await()
-                        habitService.createHabit(groupId, owner.id, request)
+                        habitService.createHabit(groupId, owner.requiredId, request)
                         successCount.incrementAndGet()
                     } catch (e: IllegalStateException) {
                         rejectedCount.incrementAndGet()
@@ -130,6 +131,6 @@ class HabitServiceConcurrencyTest {
         assertThat(activeHabits).hasSize(1)
 
         // 활성 습관이 중복되면 단건 조회가 예외(500)를 내던 문제의 회귀 확인
-        assertThatCode { habitService.getActiveHabit(owner.id, groupId) }.doesNotThrowAnyException()
+        assertThatCode { habitService.getActiveHabit(owner.requiredId, groupId) }.doesNotThrowAnyException()
     }
 }

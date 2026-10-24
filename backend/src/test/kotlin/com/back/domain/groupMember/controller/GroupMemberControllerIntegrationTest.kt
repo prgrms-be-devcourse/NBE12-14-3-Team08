@@ -3,6 +3,7 @@ package com.back.domain.groupMember.controller
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.member.service.AuthTokenService
+import com.back.global.entity.requiredId
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -394,7 +395,7 @@ class GroupMemberControllerIntegrationTest {
             Member.create(username, username, "encoded-password")
         )
 
-        return authTokenService.createAccessToken(member.id)
+        return authTokenService.createAccessToken(member.requiredId)
     }
 
     private fun createGroup(accessToken: String): Long {
