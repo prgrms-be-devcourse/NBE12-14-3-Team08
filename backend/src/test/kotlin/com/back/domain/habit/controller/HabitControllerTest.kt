@@ -255,7 +255,7 @@ class HabitControllerTest {
             val habit = habitRepository.findById(habitId).orElseThrow()
             assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
 
-            val penalty = penaltyVerifyRepository.findByHabitId(habitId).orElseThrow()
+            val penalty = requireNotNull(penaltyVerifyRepository.findByHabitId(habitId))
             assertThat(penalty.status).isEqualTo(PenaltyVerifyStatus.REQUIRED)
             assertThat(penalty.penaltyText).isEqualTo("커피 사기")
             assertThat(penalty.habitTitle).isEqualTo("물 마시기")
@@ -284,7 +284,7 @@ class HabitControllerTest {
 
             assertThat(habitRepository.findById(habitId).orElseThrow().status)
                 .isEqualTo(HabitStatus.ACTIVE)
-            assertThat(penaltyVerifyRepository.findByHabitId(habitId)).isEmpty()
+            assertThat(penaltyVerifyRepository.findByHabitId(habitId)).isNull()
         }
 
         @Test
@@ -315,7 +315,7 @@ class HabitControllerTest {
 
             assertThat(habitRepository.findById(habitId).orElseThrow().status)
                 .isEqualTo(HabitStatus.ACTIVE)
-            assertThat(penaltyVerifyRepository.findByHabitId(habitId)).isEmpty()
+            assertThat(penaltyVerifyRepository.findByHabitId(habitId)).isNull()
         }
     }
 

@@ -7,16 +7,16 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
-import java.util.Optional
 
 @Repository
 interface PenaltyVerifyRepository : JpaRepository<PenaltyVerify, Long> {
 
+    // 기본 findById는 Optional을 돌려줘서 재정의로 null 반환형을 쓸 수 없다. 연관 엔티티를 함께 읽는 전용 조회를 따로 둔다.
     @EntityGraph(attributePaths = ["groupMember", "groupMember.group", "groupMember.member"])
-    override fun findById(id: Long): Optional<PenaltyVerify>
+    fun findDetailById(id: Long): PenaltyVerify?
 
     @EntityGraph(attributePaths = ["groupMember", "groupMember.member"])
-    fun findByHabitId(habitId: Long): Optional<PenaltyVerify>
+    fun findByHabitId(habitId: Long): PenaltyVerify?
 
     @Query(
         """

@@ -264,7 +264,7 @@ class HabitWeeklyCheckControllerTest {
             .andExpect(jsonPath("$[0].result").value("FAILED_INSUFFICIENT_SUBMISSION"))
             .andExpect(jsonPath("$[0].habitStatus").value("FAILED"))
 
-        Assertions.assertTrue(penaltyVerifyRepository.findByHabitId(habitId).isPresent)
+        Assertions.assertNotNull(penaltyVerifyRepository.findByHabitId(habitId))
     }
 
     @Test
@@ -302,7 +302,7 @@ class HabitWeeklyCheckControllerTest {
             .andExpect(jsonPath("$[0].result").value("FAILED_INSUFFICIENT_SUBMISSION"))
             .andExpect(jsonPath("$[0].habitStatus").value("FAILED"))
 
-        Assertions.assertTrue(penaltyVerifyRepository.findByHabitId(habitId).isPresent)
+        Assertions.assertNotNull(penaltyVerifyRepository.findByHabitId(habitId))
     }
 
     @Test

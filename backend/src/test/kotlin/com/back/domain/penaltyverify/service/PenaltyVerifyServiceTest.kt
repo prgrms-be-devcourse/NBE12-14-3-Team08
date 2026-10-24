@@ -112,7 +112,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 본인의 습관에 대한 벌칙 제출 성공 시 PENDING 상태로 전환")
         fun submit_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             imageValidationPasses()
 
             val request = SubmitPenaltyVerifyRequest("스트레칭 인증합니다.", "https://example.com/stretch.jpg")
@@ -129,7 +129,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 타인의 습관에 벌칙을 제출하려 하면 ForbiddenException(403), 사진 검사는 하지 않는다")
         fun submit_타인습관_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("타인의 벌칙 제출", "https://example.com/test.jpg")
 
@@ -143,7 +143,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: REQUIRED 상태가 아닌 벌칙에 제출 시도 시 IllegalStateException 발생")
         fun submit_REQUIRED아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.APPROVED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("이미 승인된 벌칙", "https://example.com/test.jpg")
 
@@ -161,7 +161,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("resubmit: 반려된(REJECTED) 벌칙을 본인이 재제출하면 PENDING 상태로 전환")
         fun resubmit_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REJECTED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             imageValidationPasses()
 
             val request = SubmitPenaltyVerifyRequest("재촬영 인증", "https://example.com/resubmit.jpg")
@@ -176,7 +176,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("resubmit: REJECTED 상태가 아닌 벌칙을 재제출하려 하면 예외 발생")
         fun resubmit_반려상태아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("재제출 시도", "https://example.com/test.jpg")
 
@@ -189,7 +189,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("resubmit: 타인의 벌칙을 재제출하려 하면 ForbiddenException(403), 사진 검사는 하지 않는다")
         fun resubmit_타인벌칙_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REJECTED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("타인 재제출 시도", "https://example.com/test.jpg")
 
@@ -204,7 +204,7 @@ class PenaltyVerifyServiceTest {
         fun resubmit_종료된_방_400() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REJECTED)
             group.finish()
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("재제출 시도", "https://example.com/test.jpg")
 
@@ -224,7 +224,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("approve: 방장이 PENDING 상태의 벌칙을 정상 승인(APPROVED)")
         fun approve_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             val response = penaltyVerifyService.approve(1L, 1L)
@@ -236,7 +236,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("reject: 방장이 PENDING 상태의 벌칙을 정상 거절(REJECTED)")
         fun reject_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             val response = penaltyVerifyService.reject(1L, 1L)
@@ -248,7 +248,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방장이 아닌 일반 회원이 승인 시도 시 ForbiddenException (403)")
         fun approve_방장아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 2L) } returns Optional.of(normalGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.approve(2L, 1L) }
@@ -260,7 +260,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("PENDING 상태가 아닌 벌칙을 승인/반려하려 할 경우 예외 발생")
         fun approve_PENDING아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.approve(1L, 1L) }
@@ -271,7 +271,7 @@ class PenaltyVerifyServiceTest {
         @Test
         @DisplayName("없는 벌칙 인증이면 NoSuchElementException (404), 권한 확인까지 가지 않는다")
         fun approve_없는벌칙_예외() {
-            every { penaltyVerifyRepository.findById(404L) } returns Optional.empty()
+            every { penaltyVerifyRepository.findDetailById(404L) } returns null
 
             assertThatThrownBy { penaltyVerifyService.approve(1L, 404L) }
                 .isInstanceOf(NoSuchElementException::class.java)
@@ -284,7 +284,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방에 가입하지 않은 사람이 승인 시도 시 ForbiddenException (403), 상태는 그대로")
         fun approve_방밖의사람_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 999L) } returns Optional.empty()
 
             assertThatThrownBy { penaltyVerifyService.approve(999L, 1L) }
@@ -298,7 +298,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방장이 아닌 일반 회원이 반려 시도 시 ForbiddenException (403), 상태는 그대로")
         fun reject_방장아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 2L) } returns Optional.of(normalGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.reject(2L, 1L) }
@@ -312,7 +312,7 @@ class PenaltyVerifyServiceTest {
         fun approve_종료된방_예외() {
             group.finish()
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.approve(1L, 1L) }
@@ -448,7 +448,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("getDetail: 동일 그룹 멤버는 벌칙 상세를 정상 조회")
         fun getDetail_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.existsByGroupIdAndMemberId(100L, 2L) } returns true
 
             val response = penaltyVerifyService.getDetail(2L, 1L)
@@ -461,7 +461,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("getDetail: 그룹에 속하지 않은 외부 사용자가 조회 시 AccessDeniedException 발생")
         fun getDetail_외부인_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.existsByGroupIdAndMemberId(100L, 999L) } returns false
 
             assertThatThrownBy { penaltyVerifyService.getDetail(999L, 1L) }
@@ -568,7 +568,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("작성자가 PENDING 벌칙을 제출 취소하면 REQUIRED가 되고 행은 지우지 않는다")
         fun 작성자_PENDING_제출취소_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 2L) } returns Optional.of(normalGroupMember)
 
             val response = penaltyVerifyService.cancelOrReset(2L, 1L)
@@ -584,7 +584,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("작성자는 APPROVED 벌칙을 제출 취소할 수 없다 (409)")
         fun 작성자_APPROVED_제출취소_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.APPROVED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 2L) } returns Optional.of(normalGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.cancelOrReset(2L, 1L) }
@@ -597,7 +597,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방장은 멤버의 APPROVED 벌칙을 초기화할 수 있다")
         fun 방장_APPROVED_초기화_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.APPROVED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             val response = penaltyVerifyService.cancelOrReset(1L, 1L)
@@ -612,7 +612,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방장은 자기 자신의 APPROVED 벌칙도 초기화할 수 있다")
         fun 방장_본인벌칙_APPROVED_초기화_성공() {
             val pv = createOwnerPenalty(2L, PenaltyVerifyStatus.APPROVED)
-            every { penaltyVerifyRepository.findById(2L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(2L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 1L) } returns Optional.of(ownerGroupMember)
 
             val response = penaltyVerifyService.cancelOrReset(1L, 2L)
@@ -625,7 +625,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("방 밖의 사람이 요청하면 ForbiddenException (403)")
         fun 방밖의_사람_ForbiddenException() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 999L) } returns Optional.empty()
 
             assertThatThrownBy { penaltyVerifyService.cancelOrReset(999L, 1L) }
@@ -641,7 +641,7 @@ class PenaltyVerifyServiceTest {
             ReflectionTestUtils.setField(otherGroupMember, "id", 30L)
 
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 999L) } returns Optional.of(otherGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.cancelOrReset(999L, 1L) }
@@ -656,7 +656,7 @@ class PenaltyVerifyServiceTest {
             group.finish()
 
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { groupMemberRepository.findByGroupIdAndMemberId(100L, 2L) } returns Optional.of(normalGroupMember)
 
             assertThatThrownBy { penaltyVerifyService.cancelOrReset(2L, 1L) }
@@ -676,7 +676,7 @@ class PenaltyVerifyServiceTest {
         fun 업로드_URL_발급_성공(status: PenaltyVerifyStatus) {
             val pv = createFixturePenalty(1L, status)
             val expected = UploadUrlResponse("https://upload", "https://public/2/1/a.png")
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             every { storageService.createUploadUrl(VerificationImageType.PENALTY, 2L, 1L, "proof.png") } returns expected
 
             val response = penaltyVerifyService.createUploadUrl(2L, 1L, "proof.png")
@@ -688,7 +688,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("내 벌칙이 아니면 ForbiddenException (403)")
         fun 내_벌칙_아님_403() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             assertThatThrownBy { penaltyVerifyService.createUploadUrl(999L, 1L, "proof.png") }
                 .isInstanceOf(ForbiddenException::class.java)
@@ -701,7 +701,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("이미 제출했거나 승인된 벌칙이면 IllegalStateException (409)")
         fun 제출_불가_상태_409(status: PenaltyVerifyStatus) {
             val pv = createFixturePenalty(1L, status)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             assertThatThrownBy { penaltyVerifyService.createUploadUrl(2L, 1L, "proof.png") }
                 .isInstanceOf(IllegalStateException::class.java)
@@ -714,7 +714,7 @@ class PenaltyVerifyServiceTest {
         fun 종료된_방_400() {
             group.finish()
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
 
             assertThatThrownBy { penaltyVerifyService.createUploadUrl(2L, 1L, "proof.png") }
                 .isInstanceOf(BusinessRuleException::class.java)
@@ -732,7 +732,7 @@ class PenaltyVerifyServiceTest {
         fun submit_사진검사_통과() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
             ReflectionTestUtils.setField(pv, "imageUrl", null)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             imageValidationPasses()
 
             penaltyVerifyService.submit(2L, 50L, SubmitPenaltyVerifyRequest("수행", "https://storage/new.png"))
@@ -745,7 +745,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 사진 URL 검사에 실패하면 400이고 벌칙 상태는 그대로다")
         fun submit_사진검사_실패() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             every { storageService.validateImageUrl(any(), any(), any(), any(), any()) } throws
                 IllegalArgumentException("업로드한 사진만 사용할 수 있습니다.")
 
@@ -761,7 +761,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 제출할 수 없는 상태(PENDING)면 사진 검사 전에 409")
         fun submit_상태먼저() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             assertThatThrownBy {
                 penaltyVerifyService.submit(2L, 50L, SubmitPenaltyVerifyRequest("수행", "https://storage/new.png"))
@@ -776,7 +776,7 @@ class PenaltyVerifyServiceTest {
         fun resubmit_기존사진_전달() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REJECTED)
             ReflectionTestUtils.setField(pv, "imageUrl", "https://storage/penalties/2/old.png")
-            every { penaltyVerifyRepository.findById(1L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findDetailById(1L) } returns pv
             imageValidationPasses()
 
             penaltyVerifyService.resubmit(
