@@ -12,6 +12,7 @@ import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
+import com.back.global.entity.requiredId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -88,7 +89,7 @@ class HabitServiceFinishedGroupBatchTest {
         habitService.autoCheckAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.id)).isPresent()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isPresent()
     }
 
     @Test
@@ -99,7 +100,7 @@ class HabitServiceFinishedGroupBatchTest {
         habitService.autoCheckAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.id)).isEmpty()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
     }
 
     @Test
@@ -110,6 +111,6 @@ class HabitServiceFinishedGroupBatchTest {
         habitService.autoCheckAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.id)).isEmpty()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
     }
 }

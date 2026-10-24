@@ -15,6 +15,8 @@ import com.back.domain.penaltyverify.service.PenaltyVerifyService
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
+import com.back.global.entity.requiredCreateDate
+import com.back.global.entity.requiredId
 import jakarta.transaction.Transactional
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.data.repository.findByIdOrNull
@@ -45,7 +47,7 @@ class HabitService(
         }
 
         // 2. 활성 습관 존재 여부 확인
-        if (habitRepository.existsByGroupMember_IdAndStatus(groupMember.id, HabitStatus.ACTIVE)) {
+        if (habitRepository.existsByGroupMember_IdAndStatus(groupMember.requiredId, HabitStatus.ACTIVE)) {
             throw IllegalStateException("이미 활성화된 습관이 존재합니다.")
         }
 
@@ -108,7 +110,7 @@ class HabitService(
         val habit = habitRepository.findByIdOrNull(habitId)
             ?: throw EntityNotFoundException("존재하지 않는 습관입니다.")
 
-        val groupId = habit.groupMember.group.id
+        val groupId = habit.groupMember.group.requiredId
         if (!groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
             throw ForbiddenException("해당 그룹의 습관만 조회할 수 있습니다.")
         }
@@ -162,7 +164,7 @@ class HabitService(
     // 판정 로직 자체는 memberId(로그인 컨텍스트) 없이 Habit만으로 동작하도록 분리
     // - 추후 스케줄러가 전체 ACTIVE 습관을 순회하며 그대로 재사용할 수 있도록 하기 위함
     private fun evaluateWeeklyResult(habit: Habit): HabitWeeklyCheckResponse {
-        val habitId = habit.id
+        val habitId = habit.requiredId
 
         if (habit.status != HabitStatus.ACTIVE) {
             return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.ALREADY_FAILED, habit.status)
@@ -179,12 +181,12 @@ class HabitService(
         val now = LocalDateTime.now()
 
         // 가입 1주 미만이면 판정 대상에서 제외
-        if (now.isBefore(groupMember.createDate.plusWeeks(1))) {
+        if (now.isBefore(groupMember.requiredCreateDate.plusWeeks(1))) {
             return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.TOO_EARLY, habit.status)
         }
 
         // 방 생성 요일을 기준으로 이번 주 마감 시각(해당 요일 00시) 계산
-        val deadlineDayOfWeek = groupMember.group.createDate.dayOfWeek
+        val deadlineDayOfWeek = groupMember.group.requiredCreateDate.dayOfWeek
         val daysSinceDeadlineDay = (now.dayOfWeek.value - deadlineDayOfWeek.value + 7) % 7
         val currentDeadline = now.toLocalDate()
             .minusDays(daysSinceDeadlineDay.toLong())
@@ -194,7 +196,7 @@ class HabitService(
         // 습관이 이번 판정 구간의 마감 시점 이후에 생성됐다면, 그 구간 동안 아예 존재하지 않았던
         // 습관이므로 아직 판정하지 않음 (currentDeadline은 "지금 이전 또는 지금"의 마감이라
         // now와 비교하는 것은 항상 거짓이 되어 의미가 없음 - 습관 생성 시점과 비교해야 함)
-        if (!habit.createDate.isBefore(currentDeadline)) {
+        if (!habit.requiredCreateDate.isBefore(currentDeadline)) {
             return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.BEFORE_DEADLINE, habit.status)
         }
 

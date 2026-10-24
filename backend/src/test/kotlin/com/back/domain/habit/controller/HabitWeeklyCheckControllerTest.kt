@@ -16,6 +16,7 @@ import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.member.service.AuthTokenService
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
+import com.back.global.entity.requiredId
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -84,7 +85,7 @@ class HabitWeeklyCheckControllerTest {
         val now = LocalDateTime.now()
 
         val owner = memberRepository.save(Member.create("방장", "weekly-owner01", "password1234"))
-        val ownerId: Long = owner.id
+        val ownerId: Long = owner.requiredId
         memberId = ownerId
         ownerToken = authTokenService.createAccessToken(ownerId)
 
@@ -99,7 +100,7 @@ class HabitWeeklyCheckControllerTest {
         )
         ReflectionTestUtils.setField(group, "createDate", now.minusDays(14))
         groupRepository.saveAndFlush(group)
-        groupId = group.id
+        groupId = group.requiredId
 
         val groupMember = groupMemberRepository.save(GroupMember.create(group, owner, GroupMemberRole.OWNER))
         ReflectionTestUtils.setField(groupMember, "createDate", now.minusDays(10))
@@ -272,7 +273,7 @@ class HabitWeeklyCheckControllerTest {
         val regularMember = memberRepository.save(Member.create("일반멤버", "weekly-member02", "password1234"))
         val group = groupRepository.findById(groupId).orElseThrow()
         groupMemberRepository.save(GroupMember.create(group, regularMember, GroupMemberRole.MEMBER))
-        val regularMemberId: Long = regularMember.id
+        val regularMemberId: Long = regularMember.requiredId
         val memberToken = authTokenService.createAccessToken(regularMemberId)
 
         weeklyCheck(memberToken)
@@ -283,7 +284,7 @@ class HabitWeeklyCheckControllerTest {
     @DisplayName("그룹 멤버가 아닌 사람이 호출하면 400을 반환한다")
     fun 그룹_멤버가_아니면_400() {
         val other = memberRepository.save(Member.create("다른멤버", "weekly-other01", "password1234"))
-        val otherId: Long = other.id
+        val otherId: Long = other.requiredId
         val otherToken = authTokenService.createAccessToken(otherId)
 
         weeklyCheck(otherToken)

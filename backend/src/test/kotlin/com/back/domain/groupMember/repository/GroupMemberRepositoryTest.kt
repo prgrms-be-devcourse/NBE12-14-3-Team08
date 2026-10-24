@@ -12,6 +12,7 @@ import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
+import com.back.global.entity.requiredId
 import java.time.LocalDate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -72,8 +73,8 @@ class GroupMemberRepositoryTest {
     @DisplayName("그룹 ID와 회원 ID로 그룹 멤버를 조회한다")
     fun findByGroupIdAndMemberId() {
         val result = groupMemberRepository.findByGroupIdAndMemberId(
-            group.id,
-            member.id
+            group.requiredId,
+            member.requiredId
         )
 
         assertThat(result).isPresent
@@ -85,14 +86,14 @@ class GroupMemberRepositoryTest {
     fun existsByGroupIdAndMemberId() {
         assertThat(
             groupMemberRepository.existsByGroupIdAndMemberId(
-                group.id,
-                member.id
+                group.requiredId,
+                member.requiredId
             )
         ).isTrue
 
         assertThat(
             groupMemberRepository.existsByGroupIdAndMemberId(
-                group.id,
+                group.requiredId,
                 -1L
             )
         ).isFalse
@@ -101,14 +102,14 @@ class GroupMemberRepositoryTest {
     @Test
     @DisplayName("회원 ID로 그룹 멤버 존재 여부를 확인한다")
     fun existsByMemberId() {
-        assertThat(groupMemberRepository.existsByMemberId(member.id)).isTrue
+        assertThat(groupMemberRepository.existsByMemberId(member.requiredId)).isTrue
         assertThat(groupMemberRepository.existsByMemberId(-1L)).isFalse
     }
 
     @Test
     @DisplayName("그룹 ID로 멤버 수를 조회한다")
     fun countByGroupId() {
-        val count = groupMemberRepository.countByGroupId(group.id)
+        val count = groupMemberRepository.countByGroupId(group.requiredId)
 
         assertThat(count).isEqualTo(1L)
     }
@@ -117,12 +118,12 @@ class GroupMemberRepositoryTest {
     @DisplayName("그룹 ID와 상태로 멤버 수를 조회한다")
     fun countByGroupIdAndStatus() {
         val activeCount = groupMemberRepository.countByGroupIdAndStatus(
-            group.id,
+            group.requiredId,
             GroupMemberStatus.ACTIVE
         )
 
         val leftCount = groupMemberRepository.countByGroupIdAndStatus(
-            group.id,
+            group.requiredId,
             GroupMemberStatus.LEFT
         )
 
@@ -135,16 +136,16 @@ class GroupMemberRepositoryTest {
     fun existsByGroupIdAndMemberIdAndStatus() {
         assertThat(
             groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                group.id,
-                member.id,
+                group.requiredId,
+                member.requiredId,
                 GroupMemberStatus.ACTIVE
             )
         ).isTrue
 
         assertThat(
             groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                group.id,
-                member.id,
+                group.requiredId,
+                member.requiredId,
                 GroupMemberStatus.LEFT
             )
         ).isFalse
@@ -155,14 +156,14 @@ class GroupMemberRepositoryTest {
     fun existsByIdAndGroupId() {
         assertThat(
             groupMemberRepository.existsByIdAndGroupId(
-                groupMember.id,
-                group.id
+                groupMember.requiredId,
+                group.requiredId
             )
         ).isTrue
 
         assertThat(
             groupMemberRepository.existsByIdAndGroupId(
-                groupMember.id,
+                groupMember.requiredId,
                 -1L
             )
         ).isFalse
@@ -171,7 +172,7 @@ class GroupMemberRepositoryTest {
     @Test
     @DisplayName("그룹 ID로 그룹 멤버 목록을 조회한다")
     fun findAllByGroupId() {
-        val result = groupMemberRepository.findAllByGroupId(group.id)
+        val result = groupMemberRepository.findAllByGroupId(group.requiredId)
 
         assertThat(result)
             .hasSize(1)
@@ -182,7 +183,7 @@ class GroupMemberRepositoryTest {
     @Test
     @DisplayName("회원 ID로 해당 회원의 그룹 멤버 목록을 조회한다")
     fun findAllByMemberId() {
-        val result = groupMemberRepository.findAllByMemberId(member.id)
+        val result = groupMemberRepository.findAllByMemberId(member.requiredId)
 
         assertThat(result)
             .hasSize(1)
@@ -195,8 +196,8 @@ class GroupMemberRepositoryTest {
     @DisplayName("그룹 ID와 회원 ID로 그룹 멤버를 잠금 조회한다")
     fun findByGroupIdAndMemberIdForUpdate() {
         val result = groupMemberRepository.findByGroupIdAndMemberIdForUpdate(
-            group.id,
-            member.id
+            group.requiredId,
+            member.requiredId
         )
 
         assertThat(result).isPresent
@@ -220,7 +221,7 @@ class GroupMemberRepositoryTest {
 
         groupMemberRepository.flush()
 
-        val result = groupMemberRepository.findByGroupIdWithHabit(group.id)
+        val result = groupMemberRepository.findByGroupIdWithHabit(group.requiredId)
 
         assertThat(result).hasSize(2)
 
@@ -247,8 +248,8 @@ class GroupMemberRepositoryTest {
     @DisplayName("그룹 ID와 그룹 멤버 ID로 벌칙 횟수를 포함한 멤버 상세 정보를 조회한다")
     fun findMemberDetailWithPenaltyCount() {
         val result = groupMemberRepository.findMemberDetailWithPenaltyCount(
-            group.id,
-            groupMember.id
+            group.requiredId,
+            groupMember.requiredId
         )
 
         assertThat(result).isPresent
@@ -285,8 +286,8 @@ class GroupMemberRepositoryTest {
         penaltyVerifyRepository.flush()
 
         val result = groupMemberRepository.findMemberDetailWithPenaltyCount(
-            group.id,
-            groupMember.id
+            group.requiredId,
+            groupMember.requiredId
         )
 
         assertThat(result).isPresent
@@ -309,8 +310,8 @@ class GroupMemberRepositoryTest {
         )
 
         val result = groupMemberRepository.findMemberDetailWithPenaltyCount(
-            anotherGroup.id,
-            groupMember.id
+            anotherGroup.requiredId,
+            groupMember.requiredId
         )
 
         assertThat(result).isEmpty
@@ -319,7 +320,7 @@ class GroupMemberRepositoryTest {
     @Test
     @DisplayName("활성 습관이 없는 멤버도 그룹 멤버 목록에 포함된다")
     fun findByGroupIdWithHabit_withoutActiveHabit() {
-        val result = groupMemberRepository.findByGroupIdWithHabit(group.id)
+        val result = groupMemberRepository.findByGroupIdWithHabit(group.requiredId)
 
         assertThat(result).hasSize(1)
 
@@ -335,15 +336,15 @@ class GroupMemberRepositoryTest {
     @DisplayName("그룹 ID로 해당 그룹의 모든 멤버를 삭제한다")
     fun deleteGroupMembersByGroupId() {
         val deletedCount =
-            groupMemberRepository.deleteGroupMembersByGroupId(group.id)
+            groupMemberRepository.deleteGroupMembersByGroupId(group.requiredId)
 
         assertThat(deletedCount).isEqualTo(1)
-        assertThat(groupMemberRepository.countByGroupId(group.id)).isZero()
+        assertThat(groupMemberRepository.countByGroupId(group.requiredId)).isZero()
 
         // 그룹 자체는 삭제되지 않아야 한다.
-        assertThat(groupRepository.findById(group.id)).isPresent
+        assertThat(groupRepository.findById(group.requiredId)).isPresent
 
         // 회원 계정도 삭제되지 않아야 한다.
-        assertThat(memberRepository.findById(member.id)).isPresent
+        assertThat(memberRepository.findById(member.requiredId)).isPresent
     }
 }
