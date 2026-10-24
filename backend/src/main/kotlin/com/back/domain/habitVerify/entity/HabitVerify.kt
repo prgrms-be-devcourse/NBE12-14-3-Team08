@@ -69,7 +69,6 @@ class HabitVerify private constructor(
     }
 
     companion object {
-        @JvmStatic
         fun create(
             habit: Habit,
             verifyDate: LocalDate,
