@@ -95,36 +95,20 @@ class PenaltyVerifyService(
     }
 
     @Transactional
-    fun approve(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
-        val penaltyVerify = findById(id)
-        validateOwner(memberId, penaltyVerify.groupMember.group.requiredId)
-        penaltyVerify.approve()
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
-    }
+    fun approve(memberId: Long, id: Long): PenaltyVerifyDetailResponse =
+        review(memberId, id, PenaltyVerify::approve)
 
     @Transactional
-    fun reject(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
-        val penaltyVerify = findById(id)
-        validateOwner(memberId, penaltyVerify.groupMember.group.requiredId)
-        penaltyVerify.reject()
-        return PenaltyVerifyDetailResponse.from(penaltyVerify)
-    }
+    fun reject(memberId: Long, id: Long): PenaltyVerifyDetailResponse =
+        review(memberId, id, PenaltyVerify::reject)
 
     @Transactional
-    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<PenaltyVerifyDetailResponse> {
-        validateOwner(memberId, groupId)
-        val targets = penaltyVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(PenaltyVerify::approve)
-        return targets.map(PenaltyVerifyDetailResponse::from)
-    }
+    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<PenaltyVerifyDetailResponse> =
+        bulkReview(memberId, groupId, request, PenaltyVerify::approve)
 
     @Transactional
-    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<PenaltyVerifyDetailResponse> {
-        validateOwner(memberId, groupId)
-        val targets = penaltyVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(PenaltyVerify::reject)
-        return targets.map(PenaltyVerifyDetailResponse::from)
-    }
+    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<PenaltyVerifyDetailResponse> =
+        bulkReview(memberId, groupId, request, PenaltyVerify::reject)
 
     // 방장만 대기 목록 조회 가능
     fun getPendingByGroup(memberId: Long, groupId: Long): List<PenaltyVerifySummaryResponse> {
@@ -205,6 +189,26 @@ class PenaltyVerifyService(
             imageUrl,
             penaltyVerify.imageUrl,
         )
+    }
+
+    // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
+    private fun review(memberId: Long, id: Long, action: (PenaltyVerify) -> Unit): PenaltyVerifyDetailResponse {
+        val target = findById(id)
+        validateOwner(memberId, target.groupMember.group.requiredId)
+        action(target)
+        return PenaltyVerifyDetailResponse.from(target)
+    }
+
+    private fun bulkReview(
+        memberId: Long,
+        groupId: Long,
+        request: BulkActionRequest,
+        action: (PenaltyVerify) -> Unit,
+    ): List<PenaltyVerifyDetailResponse> {
+        validateOwner(memberId, groupId)
+        return penaltyVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
+            .onEach(action)
+            .map(PenaltyVerifyDetailResponse::from)
     }
 
     private fun findById(id: Long): PenaltyVerify =

@@ -157,35 +157,39 @@ class HabitVerifyService(
     }
 
     @Transactional
-    fun approve(memberId: Long, verificationId: Long): HabitVerifyResponse {
-        val habitVerify = findById(verificationId)
-        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
-        habitVerify.approve()
-        return HabitVerifyResponse.from(habitVerify)
-    }
+    fun approve(memberId: Long, verificationId: Long): HabitVerifyResponse =
+        review(memberId, verificationId, HabitVerify::approve)
 
     @Transactional
-    fun reject(memberId: Long, verificationId: Long): HabitVerifyResponse {
-        val habitVerify = findById(verificationId)
-        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
-        habitVerify.reject()
-        return HabitVerifyResponse.from(habitVerify)
-    }
+    fun reject(memberId: Long, verificationId: Long): HabitVerifyResponse =
+        review(memberId, verificationId, HabitVerify::reject)
 
     @Transactional
-    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> {
+    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> =
+        bulkReview(memberId, groupId, request, HabitVerify::approve)
+
+    @Transactional
+    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> =
+        bulkReview(memberId, groupId, request, HabitVerify::reject)
+
+    // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
+    private fun review(memberId: Long, verificationId: Long, action: (HabitVerify) -> Unit): HabitVerifyResponse {
+        val target = findById(verificationId)
+        validateOwner(memberId, target.habit.groupMember.group.requiredId)
+        action(target)
+        return HabitVerifyResponse.from(target)
+    }
+
+    private fun bulkReview(
+        memberId: Long,
+        groupId: Long,
+        request: BulkActionRequest,
+        action: (HabitVerify) -> Unit,
+    ): List<HabitVerifyResponse> {
         validateOwner(memberId, groupId)
-        val targets = habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(HabitVerify::approve)
-        return targets.map(HabitVerifyResponse::from)
-    }
-
-    @Transactional
-    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> {
-        validateOwner(memberId, groupId)
-        val targets = habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(HabitVerify::reject)
-        return targets.map(HabitVerifyResponse::from)
+        return habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
+            .onEach(action)
+            .map(HabitVerifyResponse::from)
     }
 
     private fun findById(verificationId: Long): HabitVerify =
