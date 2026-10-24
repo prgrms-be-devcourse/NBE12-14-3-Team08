@@ -23,12 +23,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.ResultActions
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.ResultActionsDsl
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.patch
+import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
@@ -77,25 +75,27 @@ class HabitVerifyDescriptionLengthTest {
     private fun body(description: String): String =
         """{"description":"$description","imageUrl":"https://example.com/habit.png"}"""
 
-    private fun submit(description: String): ResultActions =
-        mockMvc.perform(
-            post("/api/habits/{habitId}/verifications", habitId)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body(description))
-        )
+    private fun submit(description: String): ResultActionsDsl =
+        mockMvc.post("/api/habits/{habitId}/verifications", habitId) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = body(description)
+        }
 
-    private fun resubmit(verificationId: Long, description: String): ResultActions =
-        mockMvc.perform(
-            patch("/api/habits/{habitId}/verifications/{verificationId}/resubmit", habitId, verificationId)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body(description))
-        )
+    private fun resubmit(verificationId: Long, description: String): ResultActionsDsl =
+        mockMvc.patch("/api/habits/{habitId}/verifications/{verificationId}/resubmit", habitId, verificationId) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = body(description)
+        }
 
-    private fun verifications(): ResultActions =
-        mockMvc.perform(get("/api/habits/{habitId}/verifications", habitId).header("Authorization", "Bearer $token"))
-            .andExpect(status().isOk)
+    private fun verifications(): ResultActionsDsl =
+        mockMvc.get("/api/habits/{habitId}/verifications", habitId) {
+            header("Authorization", "Bearer $token")
+        }
+            .andExpect {
+                status { isOk() }
+            }
 
     // 반려된 인증을 만든다 (재제출은 반려된 인증만 가능)
     private fun rejectedVerification(): Long {
@@ -110,22 +110,26 @@ class HabitVerifyDescriptionLengthTest {
     @Test
     @DisplayName("제출: 설명이 255자면 제출되고 DB에도 저장된다 (컬럼 길이 한계)")
     fun 제출_255자는_성공한다() {
-        submit("가".repeat(255)).andExpect(status().isCreated)
+        submit("가".repeat(255)).andExpect { status { isCreated() } }
         habitVerifyRepository.flush()
 
         verifications()
-            .andExpect(jsonPath("$", hasSize<Any>(1)))
-            .andExpect(jsonPath("$[0].status").value("PENDING"))
+            .andExpect {
+                jsonPath("$") { value(hasSize<Any>(1)) }
+                jsonPath("$[0].status") { value("PENDING") }
+            }
     }
 
     @Test
     @DisplayName("제출: 설명이 256자면 400과 길이 메시지를 돌려주고 인증을 만들지 않는다")
     fun 제출_256자는_400이다() {
         submit("가".repeat(256))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.errors[0]").value("습관 인증 설명은 255자 이하여야 합니다."))
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.errors[0]") { value("습관 인증 설명은 255자 이하여야 합니다.") }
+            }
 
-        verifications().andExpect(jsonPath("$", hasSize<Any>(0)))
+        verifications().andExpect { jsonPath("$") { value(hasSize<Any>(0)) } }
     }
 
     @Test
@@ -133,10 +137,10 @@ class HabitVerifyDescriptionLengthTest {
     fun 재제출_255자는_성공한다() {
         val verificationId = rejectedVerification()
 
-        resubmit(verificationId, "나".repeat(255)).andExpect(status().isOk)
+        resubmit(verificationId, "나".repeat(255)).andExpect { status { isOk() } }
         habitVerifyRepository.flush()
 
-        verifications().andExpect(jsonPath("$[0].status").value("PENDING"))
+        verifications().andExpect { jsonPath("$[0].status") { value("PENDING") } }
     }
 
     @Test
@@ -145,9 +149,11 @@ class HabitVerifyDescriptionLengthTest {
         val verificationId = rejectedVerification()
 
         resubmit(verificationId, "나".repeat(256))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.errors[0]").value("습관 인증 설명은 255자 이하여야 합니다."))
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.errors[0]") { value("습관 인증 설명은 255자 이하여야 합니다.") }
+            }
 
-        verifications().andExpect(jsonPath("$[0].status").value("REJECTED"))
+        verifications().andExpect { jsonPath("$[0].status") { value("REJECTED") } }
     }
 }

@@ -22,8 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.get
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
 import java.time.LocalDate
@@ -76,8 +75,12 @@ class HabitVerifyResponseShapeTest {
     }
 
     private fun getJson(url: String, vararg vars: Any): String =
-        mockMvc.perform(get(url, *vars).header("Authorization", "Bearer $ownerToken"))
-            .andExpect(status().isOk)
+        mockMvc.get(url, *vars) {
+            header("Authorization", "Bearer $ownerToken")
+        }
+            .andExpect {
+                status { isOk() }
+            }
             .andReturn().response.contentAsString
 
     @Test

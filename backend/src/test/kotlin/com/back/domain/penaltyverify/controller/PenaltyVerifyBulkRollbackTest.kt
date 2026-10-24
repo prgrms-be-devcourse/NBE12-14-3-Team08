@@ -24,9 +24,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.patch
 import java.time.LocalDate
 import java.util.UUID
 
@@ -108,14 +106,15 @@ class PenaltyVerifyBulkRollbackTest {
         val first = savePenalty(PenaltyVerifyStatus.PENDING)
         val second = savePenalty(PenaltyVerifyStatus.PENDING)
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/penalties/bulk-approve", group.id)
-                .header("Authorization", "Bearer $ownerToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"ids": [${first.id}, ${second.id}]}""")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
+        mockMvc.patch("/api/groups/{groupId}/penalties/bulk-approve", group.id) {
+            header("Authorization", "Bearer $ownerToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids": [${first.id}, ${second.id}]}"""
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(2) }
+            }
 
         assertThat(statusInDb(first)).isEqualTo(PenaltyVerifyStatus.APPROVED)
         assertThat(statusInDb(second)).isEqualTo(PenaltyVerifyStatus.APPROVED)
@@ -127,13 +126,14 @@ class PenaltyVerifyBulkRollbackTest {
         val pending = savePenalty(PenaltyVerifyStatus.PENDING)
         val approved = savePenalty(PenaltyVerifyStatus.APPROVED)
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/penalties/bulk-approve", group.id)
-                .header("Authorization", "Bearer $ownerToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"ids": [${pending.id}, ${approved.id}]}""")
-        )
-            .andExpect(status().isConflict)
+        mockMvc.patch("/api/groups/{groupId}/penalties/bulk-approve", group.id) {
+            header("Authorization", "Bearer $ownerToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids": [${pending.id}, ${approved.id}]}"""
+        }
+            .andExpect {
+                status { isConflict() }
+            }
 
         assertThat(statusInDb(pending)).isEqualTo(PenaltyVerifyStatus.PENDING)
         assertThat(statusInDb(approved)).isEqualTo(PenaltyVerifyStatus.APPROVED)
@@ -145,13 +145,14 @@ class PenaltyVerifyBulkRollbackTest {
         val pending = savePenalty(PenaltyVerifyStatus.PENDING)
         val memberToken = authTokenService.createAccessToken(requireNotNull(member.id))
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/penalties/bulk-approve", group.id)
-                .header("Authorization", "Bearer $memberToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"ids": [${pending.id}]}""")
-        )
-            .andExpect(status().isForbidden)
+        mockMvc.patch("/api/groups/{groupId}/penalties/bulk-approve", group.id) {
+            header("Authorization", "Bearer $memberToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids": [${pending.id}]}"""
+        }
+            .andExpect {
+                status { isForbidden() }
+            }
 
         assertThat(statusInDb(pending)).isEqualTo(PenaltyVerifyStatus.PENDING)
     }

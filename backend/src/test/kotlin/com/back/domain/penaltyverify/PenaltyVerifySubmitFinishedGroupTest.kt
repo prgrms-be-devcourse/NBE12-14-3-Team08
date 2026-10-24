@@ -21,10 +21,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 
 // 가이드 규칙 "완료된 방은 조회만 가능" 중 벌칙 제출(POST /api/habits/{habitId}/penalties)을 API로 확인한다.
@@ -63,17 +61,22 @@ class PenaltyVerifySubmitFinishedGroupTest {
         val penalty = penaltyVerifyRepository.save(PenaltyVerify.create(groupMember, habit))
         val token = authTokenService.createAccessToken(requireNotNull(member.id))
 
-        mockMvc.perform(
-            post("/api/habits/{habitId}/penalties", habit.id)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"description":"벌칙 완료","imageUrl":"https://example.com/penalty.png"}""")
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다."))
+        mockMvc.post("/api/habits/{habitId}/penalties", habit.id) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"description":"벌칙 완료","imageUrl":"https://example.com/penalty.png"}"""
+        }
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.message") { value("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다.") }
+            }
 
-        mockMvc.perform(get("/api/penalties/{id}", penalty.id).header("Authorization", "Bearer $token"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("REQUIRED"))
+        mockMvc.get("/api/penalties/{id}", penalty.id) {
+            header("Authorization", "Bearer $token")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("REQUIRED") }
+            }
     }
 }
