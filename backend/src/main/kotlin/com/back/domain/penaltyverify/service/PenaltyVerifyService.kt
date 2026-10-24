@@ -14,6 +14,7 @@ import com.back.global.exception.ForbiddenException
 import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
+import com.back.global.entity.requiredId
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -95,7 +96,7 @@ class PenaltyVerifyService(
     @Transactional
     fun approve(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
         val penaltyVerify = findById(id)
-        validateOwner(memberId, penaltyVerify.groupMember.group.id)
+        validateOwner(memberId, penaltyVerify.groupMember.group.requiredId)
         penaltyVerify.approve()
         return PenaltyVerifyDetailResponse.from(penaltyVerify)
     }
@@ -103,7 +104,7 @@ class PenaltyVerifyService(
     @Transactional
     fun reject(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
         val penaltyVerify = findById(id)
-        validateOwner(memberId, penaltyVerify.groupMember.group.id)
+        validateOwner(memberId, penaltyVerify.groupMember.group.requiredId)
         penaltyVerify.reject()
         return PenaltyVerifyDetailResponse.from(penaltyVerify)
     }
@@ -140,7 +141,7 @@ class PenaltyVerifyService(
         val penaltyVerify = findById(id)
 
         val isMember = groupMemberRepository.existsByGroupIdAndMemberId(
-            penaltyVerify.habit.groupMember.group.id,
+            penaltyVerify.habit.groupMember.group.requiredId,
             memberId,
         )
 
@@ -174,7 +175,7 @@ class PenaltyVerifyService(
         val penaltyVerify = findById(id)
 
         val isAuthor = penaltyVerify.groupMember.member.id == memberId
-        val isOwner = isGroupOwner(memberId, penaltyVerify.groupMember.group.id)
+        val isOwner = isGroupOwner(memberId, penaltyVerify.groupMember.group.requiredId)
 
         if (!isAuthor && !isOwner) {
             throw ForbiddenException("벌칙 취소/초기화 권한이 없습니다.")
@@ -199,7 +200,7 @@ class PenaltyVerifyService(
         storageService.validateImageUrl(
             VerificationImageType.PENALTY,
             memberId,
-            penaltyVerify.id,
+            penaltyVerify.requiredId,
             imageUrl,
             penaltyVerify.imageUrl,
         )

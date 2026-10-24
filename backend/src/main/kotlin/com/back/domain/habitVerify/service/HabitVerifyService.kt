@@ -17,6 +17,8 @@ import com.back.global.exception.ForbiddenException
 import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
+import com.back.global.entity.requiredCreateDate
+import com.back.global.entity.requiredId
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -80,7 +82,7 @@ class HabitVerifyService(
         val habit = habitRepository.findById(habitId)
             .orElseThrow { EntityNotFoundException("존재하지 않는 습관입니다.") }
 
-        if (!groupMemberRepository.existsByGroupIdAndMemberId(habit.groupMember.group.id, memberId)) {
+        if (!groupMemberRepository.existsByGroupIdAndMemberId(habit.groupMember.group.requiredId, memberId)) {
             throw ForbiddenException("같은 그룹의 멤버만 조회할 수 있습니다.")
         }
 
@@ -129,8 +131,8 @@ class HabitVerifyService(
     // 방 생성 요일 기준 주간 판정 로직(HabitService.evaluateWeeklyResult)과 동일한 규칙을 사용해,
     // 반려된 인증은 그 주간 판정이 시작되기 전까지만 수정할 수 있도록 한다.
     private fun calculateEntryDeadline(habit: Habit, habitVerify: HabitVerify): LocalDateTime {
-        val deadlineDayOfWeek = habit.groupMember.group.createDate.dayOfWeek
-        val submittedAt = habitVerify.createDate
+        val deadlineDayOfWeek = habit.groupMember.group.requiredCreateDate.dayOfWeek
+        val submittedAt = habitVerify.requiredCreateDate
 
         val daysSincePeriodStart = (submittedAt.dayOfWeek.value - deadlineDayOfWeek.value + 7) % 7
         val periodStart = submittedAt.toLocalDate()
@@ -156,7 +158,7 @@ class HabitVerifyService(
     @Transactional
     fun approve(memberId: Long, verificationId: Long): HabitVerifyResponse {
         val habitVerify = findById(verificationId)
-        validateOwner(memberId, habitVerify.habit.groupMember.group.id)
+        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
         habitVerify.approve()
         return HabitVerifyResponse.from(habitVerify)
     }
@@ -164,7 +166,7 @@ class HabitVerifyService(
     @Transactional
     fun reject(memberId: Long, verificationId: Long): HabitVerifyResponse {
         val habitVerify = findById(verificationId)
-        validateOwner(memberId, habitVerify.habit.groupMember.group.id)
+        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
         habitVerify.reject()
         return HabitVerifyResponse.from(habitVerify)
     }

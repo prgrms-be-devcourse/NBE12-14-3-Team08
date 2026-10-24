@@ -12,6 +12,7 @@ import com.back.domain.member.entity.Member
 import com.back.domain.member.entity.MemberStatus
 import com.back.domain.member.repository.MemberRepository
 import com.back.global.exception.UnauthorizedException
+import com.back.global.entity.requiredId
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -42,7 +43,7 @@ class MemberService(
 
         val savedMember = memberRepository.save(member)
 
-        val refreshToken = authTokenService.createRefreshToken(savedMember.id)
+        val refreshToken = authTokenService.createRefreshToken(savedMember.requiredId)
 
         savedMember.updateRefreshToken(refreshToken)
 
@@ -64,7 +65,7 @@ class MemberService(
             throw UnauthorizedException("탈퇴한 회원은 로그인할 수 없습니다.")
         }
 
-        return member.id
+        return member.requiredId
     }
 
     fun getMember(memberId: Long): MemberResponse = MemberResponse.from(findMember(memberId))
