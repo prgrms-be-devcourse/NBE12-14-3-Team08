@@ -1,5 +1,22 @@
 # 부하 테스트 전용 설정: 실행할 때만 --spring.profiles.active=loadtest 로 켠다.
 # 개발용 DB(naegi)와 분리된 naegi_load DB를 쓰고, 측정을 왜곡하는 SQL·TRACE 로그를 끈다.
+#
+# 방 참여 측정(k6/join-concurrency.js)은 bootRun 대신 jar로 하고, 지표 수집기(k6/MetricsCollector.java)가 읽도록 JMX를 켠다.
+# bootRun은 devtools를 켜는데, 설정으로는 재시작 클래스 로더까지 끌 수 없다. (devtools는 developmentOnly라 jar에는 들어가지 않는다)
+# JMX는 내 PC 안(127.0.0.1)에서만 열리고, 이 옵션을 직접 붙여 실행할 때만 켜진다.
+# open-in-view는 팀 기본값(켬)을 그대로 두고, 끄고 잴 때만 실행 옵션으로 끈다.
+#   ./gradlew bootJar
+#   java -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.host=127.0.0.1 \
+#        -Djava.rmi.server.hostname=127.0.0.1 \
+#        -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false \
+#        -jar build/libs/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=loadtest \
+#        --spring.jpa.open-in-view=false
+server:
+  tomcat:
+    # 톰캣 스레드 상태(일하는 중인 스레드, 열린 연결)를 JMX로 읽을 수 있게 한다.
+    mbeanregistry:
+      enabled: true
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/naegi_load
@@ -9,6 +26,8 @@ spring:
     hikari:
       # 풀 크기를 명시해 결과 문서에 함께 기록한다. (환경변수로 바꿔 가며 비교할 수 있다)
       maximum-pool-size: ${LOADTEST_POOL_SIZE:10}
+      # 커넥션 풀 상태(사용 중, 기다리는 요청)를 JMX로 읽을 수 있게 한다. k6/MetricsCollector.java가 읽는다.
+      register-mbeans: true
   output:
     ansi:
       enabled: never
