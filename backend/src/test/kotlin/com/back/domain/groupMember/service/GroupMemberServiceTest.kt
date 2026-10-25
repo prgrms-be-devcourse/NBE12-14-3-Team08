@@ -18,6 +18,7 @@ import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
 import com.back.global.exception.GroupLimitExceededException
 import jakarta.persistence.EntityManager
+import jakarta.persistence.LockModeType
 import java.time.LocalDate
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThat
@@ -29,7 +30,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
+import org.mockito.Spy
 import org.mockito.BDDMockito.given
+import org.mockito.BDDMockito.willAnswer
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyList
 import org.mockito.Mockito.never
@@ -38,6 +41,11 @@ import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.util.ReflectionTestUtils
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
+import org.springframework.transaction.support.TransactionTemplate
 
 @ExtendWith(MockitoExtension::class)
 class GroupMemberServiceTest {
@@ -68,6 +76,19 @@ class GroupMemberServiceTest {
 
     @Mock
     private lateinit var entityManager: EntityManager
+
+    // 잠금 구간을 실제로 실행하도록, 트랜잭션 관리자만 아무것도 안 하는 가짜인 진짜 TransactionTemplate을 넣는다
+    @Spy
+    private val transactionTemplate = TransactionTemplate(
+        object : PlatformTransactionManager {
+            override fun getTransaction(definition: TransactionDefinition?): TransactionStatus =
+                SimpleTransactionStatus()
+
+            override fun commit(status: TransactionStatus) = Unit
+
+            override fun rollback(status: TransactionStatus) = Unit
+        }
+    )
 
     private val memberId = 1L
     private val groupId = 100L
@@ -109,7 +130,7 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(group)
                 given(
                     groupMemberRepository.existsByGroupIdAndMemberId(
@@ -136,7 +157,7 @@ class GroupMemberServiceTest {
                 val member = org.mockito.Mockito.mock(Member::class.java)
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(group)
                 given(
                     groupMemberRepository.existsByGroupIdAndMemberId(
@@ -165,6 +186,34 @@ class GroupMemberServiceTest {
                 verify(groupMemberRepository, times(1))
                     .save(any(GroupMember::class.java))
             }
+
+            @Test
+            @DisplayName("같은 회원의 요청이 먼저 잠금을 잡고 참여했으면 잠금 안에서 기존 그룹 ID를 반환한다")
+            fun joinGroup_JoinedWhileWaitingForLock() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("pass123")
+
+                given(groupRepository.findByInviteCode(inviteCode))
+                    .willReturn(group)
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId,
+                        memberId
+                    )
+                ).willReturn(false, true)
+                given(passwordEncoder.matches("pass123", "encoded_pass"))
+                    .willReturn(true)
+
+                val result = groupMemberService.joinGroup(
+                    inviteCode,
+                    memberId,
+                    request
+                )
+
+                assertThat(result).isEqualTo(groupId)
+                verify(groupMemberRepository, never())
+                    .save(any(GroupMember::class.java))
+            }
         }
 
         @Nested
@@ -176,7 +225,7 @@ class GroupMemberServiceTest {
             fun joinGroup_InvalidInviteCode() {
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(null)
 
                 assertThatThrownBy {
@@ -192,7 +241,7 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("wrong_pass")
 
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(group)
                 given(
                     groupMemberRepository.existsByGroupIdAndMemberId(
@@ -217,7 +266,7 @@ class GroupMemberServiceTest {
                 val request = GroupRequest.Join("pass123")
 
                 given(group.isFinished()).willReturn(true)
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(group)
 
                 assertThatThrownBy {
@@ -233,7 +282,7 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCodeForUpdate(inviteCode))
+                given(groupRepository.findByInviteCode(inviteCode))
                     .willReturn(group)
                 given(
                     groupMemberRepository.existsByGroupIdAndMemberId(
@@ -257,6 +306,63 @@ class GroupMemberServiceTest {
                     .hasMessageContaining(
                         "그룹의 최대 인원이 초과되어 입장할 수 없습니다."
                     )
+            }
+
+            @Test
+            @DisplayName("그룹 비밀번호가 틀리면 그룹 잠금을 잡지 않는다")
+            fun joinGroup_WrongPassword_DoesNotLock() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("wrong_pass")
+
+                given(groupRepository.findByInviteCode(inviteCode))
+                    .willReturn(group)
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId,
+                        memberId
+                    )
+                ).willReturn(false)
+                given(passwordEncoder.matches("wrong_pass", "encoded_pass"))
+                    .willReturn(false)
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(ForbiddenException::class.java)
+
+                verify(entityManager, never())
+                    .refresh(group, LockModeType.PESSIMISTIC_WRITE)
+            }
+
+            @Test
+            @DisplayName("비밀번호 확인 뒤 잠금을 잡기 전에 그룹 비밀번호가 바뀌면 바뀐 비밀번호로 다시 확인한다")
+            fun joinGroup_PasswordChangedBeforeLock() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("pass123")
+
+                given(groupRepository.findByInviteCode(inviteCode))
+                    .willReturn(group)
+                // 잠그며 다시 읽을 때(refresh) 다른 요청이 바꾼 비밀번호가 반영된 상황
+                willAnswer { group.password = "changed_encoded_pass" }
+                    .given(entityManager).refresh(group, LockModeType.PESSIMISTIC_WRITE)
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId,
+                        memberId
+                    )
+                ).willReturn(false)
+                given(passwordEncoder.matches("pass123", "encoded_pass"))
+                    .willReturn(true)
+                given(passwordEncoder.matches("pass123", "changed_encoded_pass"))
+                    .willReturn(false)
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(ForbiddenException::class.java)
+                    .hasMessageContaining("그룹 비밀번호가 일치하지 않습니다.")
+                verify(groupMemberRepository, never())
+                    .save(any(GroupMember::class.java))
             }
         }
     }
