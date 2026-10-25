@@ -168,9 +168,7 @@ class TestDataInit(
         habitRepository.save(Habit.create(groupMember, title, description, days))
 
     private fun createFailedHabit(groupMember: GroupMember, title: String, description: String, days: Int): Habit =
-        Habit.create(groupMember, title, description, days)
-            .apply { fail() }
-            .let(habitRepository::save)
+        habitRepository.save(Habit.create(groupMember, title, description, days).apply { fail() })
 
     // 습관 인증 대기 데이터 생성
     private fun createPendingHabitVerify(habit: Habit, description: String, imageUrl: String) {
@@ -178,8 +176,8 @@ class TestDataInit(
     }
 
     private fun createPendingPenalty(groupMember: GroupMember, habit: Habit, description: String, imageUrl: String) {
-        PenaltyVerify.create(groupMember, habit)
-            .apply { submit(LocalDate.now(), description, imageUrl) }
-            .let(penaltyVerifyRepository::save)
+        penaltyVerifyRepository.save(
+            PenaltyVerify.create(groupMember, habit).apply { submit(LocalDate.now(), description, imageUrl) }
+        )
     }
 }
