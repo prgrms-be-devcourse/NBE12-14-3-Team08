@@ -19,20 +19,17 @@ import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlRequest
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
+import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyLong
-import org.mockito.BDDMockito.given
-import org.mockito.BDDMockito.willThrow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.get
@@ -57,7 +54,8 @@ class PenaltyVerifyControllerTest {
     @Autowired private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
     // 인증 사진 URL 검사(Supabase 호출)는 StorageServiceTest에서 확인하므로 여기서는 통과시킨다
-    @MockitoBean private lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) private lateinit var storageService: StorageService
 
     private var ownerId: Long = 0
     private lateinit var ownerToken: String
@@ -295,13 +293,8 @@ class PenaltyVerifyControllerTest {
         @Test
         @DisplayName("사진을 확인하는 중 Supabase와 통신하지 못하면 502다")
         fun 사진_저장소_장애_502() {
-            // Mockito any()는 null을 돌려줘 Kotlin의 non-null 매개변수(type)에 넣으면 NPE가 난다.
-            // 매처는 any(...)가 이미 등록했으므로, 자리에는 null 대신 아무 값이나 넣는다.
-            willThrow(StorageUnavailableException("사진 저장소에 연결할 수 없습니다."))
-                .given(storageService).validateImageUrl(
-                    any(VerificationImageType::class.java) ?: VerificationImageType.PENALTY,
-                    anyLong(), anyLong(), any(), any(),
-                )
+            every { storageService.validateImageUrl(any(), any(), any(), any(), any()) } throws
+                StorageUnavailableException("사진 저장소에 연결할 수 없습니다.")
 
             submit(memberToken, memberHabitId, SubmitPenaltyVerifyRequest("오늘 러닝 완료", "https://example.com/run.jpg"))
                 .andExpect {
@@ -325,8 +318,8 @@ class PenaltyVerifyControllerTest {
         @Test
         @DisplayName("재제출할 수 있는(반려된) 내 벌칙이면 200이고 이 회원·이 벌칙 기준으로 발급한 URL을 돌려준다")
         fun 내_벌칙_200() {
-            given(storageService.createUploadUrl(VerificationImageType.PENALTY, memberId, rejectedPenaltyId, "penalty.png"))
-                .willReturn(UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png"))
+            every { storageService.createUploadUrl(VerificationImageType.PENALTY, memberId, rejectedPenaltyId, "penalty.png") } returns
+                UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png")
 
             requestUploadUrl(memberToken, rejectedPenaltyId)
                 .andExpect {

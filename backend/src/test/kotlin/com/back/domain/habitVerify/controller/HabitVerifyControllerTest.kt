@@ -17,16 +17,16 @@ import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlRequest
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
+import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.get
@@ -51,7 +51,8 @@ class HabitVerifyControllerTest {
     @Autowired private lateinit var habitVerifyRepository: HabitVerifyRepository
 
     // 인증 사진 URL 검사·업로드 URL 발급(Supabase 호출)은 StorageServiceTest에서 확인하므로 여기서는 통과시킨다
-    @MockitoBean private lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) private lateinit var storageService: StorageService
 
     private lateinit var ownerToken: String
     private var memberId: Long = 0
@@ -297,8 +298,8 @@ class HabitVerifyControllerTest {
         @Test
         @DisplayName("내 습관이면 200이고 이 회원·이 습관 기준으로 발급한 URL을 돌려준다")
         fun 내_습관_200() {
-            given(storageService.createUploadUrl(VerificationImageType.HABIT, memberId, memberHabitId, "today.png"))
-                .willReturn(UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png"))
+            every { storageService.createUploadUrl(VerificationImageType.HABIT, memberId, memberHabitId, "today.png") } returns
+                UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png")
 
             requestUploadUrl(memberToken, memberHabitId)
                 .andExpect {

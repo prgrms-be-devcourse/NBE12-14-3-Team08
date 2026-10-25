@@ -13,6 +13,7 @@ import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.member.service.AuthTokenService
 import com.back.global.storage.StorageService
+import com.ninjasquad.springmockk.MockkBean
 import org.hamcrest.Matchers.hasSize
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -21,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.get
@@ -47,7 +47,8 @@ class HabitVerifyDescriptionLengthTest {
     @Autowired lateinit var habitRepository: HabitRepository
     @Autowired lateinit var habitVerifyRepository: HabitVerifyRepository
 
-    @MockitoBean lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService
 
     private lateinit var token: String
     private lateinit var habit: Habit

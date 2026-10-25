@@ -13,6 +13,7 @@ import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.member.service.AuthTokenService
 import com.back.global.storage.StorageService
+import com.ninjasquad.springmockk.MockkBean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.transaction.annotation.Transactional
@@ -46,7 +46,8 @@ class HabitVerifyResponseShapeTest {
 
     // 이 테스트는 사진 저장소를 쓰지 않지만, 설정을 HabitVerifyControllerTest와 똑같이 맞춰 Spring 컨텍스트를 재사용한다.
     // 새 설정 조합이면 컨텍스트(DB 커넥션 풀 최대 20개)가 하나 더 생겨 테스트 DB 접속 수 한도(100)를 넘길 수 있다.
-    @MockitoBean lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService
 
     private lateinit var ownerToken: String
     private var groupId: Long = 0

@@ -13,13 +13,13 @@ import com.back.domain.member.service.AuthTokenService
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.storage.StorageService
+import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
@@ -40,7 +40,8 @@ class PenaltyVerifySubmitFinishedGroupTest {
     @Autowired lateinit var habitRepository: HabitRepository
     @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
-    @MockitoBean lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService
 
     @Test
     @DisplayName("종료된 방에서 벌칙을 제출하면 400이고, 벌칙은 미제출(REQUIRED) 그대로다")
