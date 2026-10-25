@@ -112,16 +112,16 @@ class PenaltyVerifyService(
         return penaltyVerifyRepository.findPendingByGroupId(groupId).map(::PenaltyVerifySummaryResponse)
     }
 
-    // 찾고 → 같은 그룹 멤버인지 확인하고 → 응답으로
-    fun getDetail(memberId: Long, id: Long): PenaltyVerifyDetailResponse =
-        findById(id)
-            .also {
-                val groupId = it.habit.groupMember.group.requiredId
-                requireAccess(groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
-                    "같은 그룹의 멤버만 조회할 수 있습니다."
-                }
-            }
-            .let(::PenaltyVerifyDetailResponse)
+    fun getDetail(memberId: Long, id: Long): PenaltyVerifyDetailResponse {
+        val penaltyVerify = findById(id)
+        val groupId = penaltyVerify.habit.groupMember.group.requiredId
+
+        requireAccess(groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
+            "같은 그룹의 멤버만 조회할 수 있습니다."
+        }
+
+        return PenaltyVerifyDetailResponse(penaltyVerify)
+    }
 
     fun getCount(groupId: Long, memberId: Long): Long =
         penaltyVerifyRepository.countByGroupMember_Group_IdAndGroupMember_Member_Id(groupId, memberId)
@@ -172,12 +172,12 @@ class PenaltyVerifyService(
     }
 
     // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
-    // 찾고 → 방장인지 확인하고 → 승인(또는 반려)하고 → 응답으로
-    private fun review(memberId: Long, id: Long, action: (PenaltyVerify) -> Unit): PenaltyVerifyDetailResponse =
-        findById(id)
-            .also { validateOwner(memberId, it.groupMember.group.requiredId) }
-            .apply(action)
-            .let(::PenaltyVerifyDetailResponse)
+    private fun review(memberId: Long, id: Long, action: (PenaltyVerify) -> Unit): PenaltyVerifyDetailResponse {
+        val penaltyVerify = findById(id)
+        validateOwner(memberId, penaltyVerify.groupMember.group.requiredId)
+        action(penaltyVerify)
+        return PenaltyVerifyDetailResponse(penaltyVerify)
+    }
 
     private fun bulkReview(
         memberId: Long,

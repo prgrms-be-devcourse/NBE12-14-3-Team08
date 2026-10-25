@@ -72,10 +72,9 @@ class HabitVerifyService(
 
         validateHabitImage(memberId, habitId, request.imageUrl, null)
 
-        // 만들고 → 저장하고 → 응답으로
-        return HabitVerify.create(habit, verifyDate, request.description, request.imageUrl)
-            .let(habitVerifyRepository::save)
-            .let(::HabitVerifyResponse)
+        val habitVerify = HabitVerify.create(habit, verifyDate, request.description, request.imageUrl)
+
+        return HabitVerifyResponse(habitVerifyRepository.save(habitVerify))
     }
 
     @Transactional(readOnly = true)
@@ -169,12 +168,12 @@ class HabitVerifyService(
         bulkReview(memberId, groupId, request, HabitVerify::reject)
 
     // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
-    // 찾고 → 방장인지 확인하고 → 승인(또는 반려)하고 → 응답으로
-    private fun review(memberId: Long, verificationId: Long, action: (HabitVerify) -> Unit): HabitVerifyResponse =
-        findById(verificationId)
-            .also { validateOwner(memberId, it.habit.groupMember.group.requiredId) }
-            .apply(action)
-            .let(::HabitVerifyResponse)
+    private fun review(memberId: Long, verificationId: Long, action: (HabitVerify) -> Unit): HabitVerifyResponse {
+        val habitVerify = findById(verificationId)
+        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
+        action(habitVerify)
+        return HabitVerifyResponse(habitVerify)
+    }
 
     private fun bulkReview(
         memberId: Long,
