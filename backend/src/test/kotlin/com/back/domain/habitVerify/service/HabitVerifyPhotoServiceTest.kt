@@ -57,12 +57,20 @@ class HabitVerifyPhotoServiceTest {
         every { groupMemberRepository.existsByGroupIdAndMemberId(GROUP_ID, LOGIN_ID) } returns true
     }
 
-    private fun photo(id: Long, date: LocalDate, memberId: Long = 7L, nickname: String = "철수", title: String = "스트레칭"): HabitVerify {
+    private fun photo(
+        id: Long,
+        date: LocalDate,
+        memberId: Long = 7L,
+        nickname: String = "철수",
+        title: String = "스트레칭",
+        width: Int? = null,
+        height: Int? = null,
+    ): HabitVerify {
         val member = Member.create(nickname, "user$memberId", "pw")
         ReflectionTestUtils.setField(member, "id", memberId)
         val group = Group.builder().title("그룹").penalty("벌칙").password("1234").inviteCode("code").memberLimit(10).build()
         val habit = Habit.create(GroupMember.create(group, member, GroupMemberRole.MEMBER), title, "설명", 3)
-        val verify = HabitVerify.create(habit, date, "설명 $id", "https://example.com/$id.png")
+        val verify = HabitVerify.create(habit, date, "설명 $id", "https://example.com/$id.png", width, height)
         ReflectionTestUtils.setField(verify, "id", id)
         return verify
     }
@@ -270,5 +278,19 @@ class HabitVerifyPhotoServiceTest {
         assertThat(item.memberNickname).isEqualTo("영희")
         assertThat(item.description).isEqualTo("설명 30")
         assertThat(item.imageUrl).isEqualTo("https://example.com/30.png")
+        assertThat(item.imageWidth).isNull()
+        assertThat(item.imageHeight).isNull()
+    }
+
+    @Test
+    @DisplayName("저장된 사진 크기를 그대로 담는다")
+    fun 응답_항목_크기() {
+        allowAccess()
+        stubQuery(listOf(photo(30, LocalDate.of(2026, 10, 26), width = 4032, height = 3024)))
+
+        val item = service.getPhotos(LOGIN_ID, GROUP_ID, 60, null, null).items.single()
+
+        assertThat(item.imageWidth).isEqualTo(4032)
+        assertThat(item.imageHeight).isEqualTo(3024)
     }
 }

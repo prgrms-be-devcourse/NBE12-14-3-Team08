@@ -9,6 +9,7 @@ import com.back.domain.habit.entity.Habit
 import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.habitVerify.dto.HabitVerifyRequest
 import com.back.domain.habitVerify.entity.HabitVerify
+import com.back.domain.habitVerify.entity.HabitVerifyStatus
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
+import org.assertj.core.api.Assertions.assertThat
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -126,6 +128,55 @@ class HabitVerifyControllerTest {
             postVerification(memberToken, memberHabitId, HabitVerifyRequest("스트레칭 완료", " "))
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.errors[0]").value("인증 사진은 필수입니다."))
+        }
+
+        @Test
+        @DisplayName("사진 크기와 함께 인증하면 크기가 저장된다 (응답 모양은 그대로)")
+        fun 크기와_함께_등록() {
+            postVerification(
+                memberToken, memberHabitId,
+                HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png", 4032, 3024),
+            )
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.imageWidth").doesNotExist())
+
+            val saved = habitVerifyRepository.findAllByHabitIdOrderByVerifyDateDesc(memberHabitId).single()
+            assertThat(saved.imageWidth).isEqualTo(4032)
+            assertThat(saved.imageHeight).isEqualTo(3024)
+        }
+
+        @Test
+        @DisplayName("사진 크기 없이 인증해도 201이고 크기는 null로 저장된다")
+        fun 크기_없이_등록() {
+            postVerification(memberToken, memberHabitId, HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png"))
+                .andExpect(status().isCreated)
+
+            val saved = habitVerifyRepository.findAllByHabitIdOrderByVerifyDateDesc(memberHabitId).single()
+            assertThat(saved.imageWidth).isNull()
+            assertThat(saved.imageHeight).isNull()
+        }
+
+        @Test
+        @DisplayName("가로만 보내면 400이고 인증은 저장되지 않는다")
+        fun 가로만_보내면_400() {
+            postVerification(memberToken, memberHabitId, HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png", 4032, null))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.errors[0]").value("사진의 가로와 세로 크기는 함께 보내야 합니다."))
+
+            assertThat(habitVerifyRepository.findAllByHabitIdOrderByVerifyDateDesc(memberHabitId)).isEmpty()
+        }
+
+        @Test
+        @DisplayName("크기가 0이거나 20000을 넘으면 400이고 인증은 저장되지 않는다")
+        fun 크기_범위_밖_400() {
+            postVerification(memberToken, memberHabitId, HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png", 0, 3024))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.errors[0]").value("사진 가로 크기는 1 이상이어야 합니다."))
+            postVerification(memberToken, memberHabitId, HabitVerifyRequest("스트레칭 완료", "https://example.com/stretch.png", 4032, 20001))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.errors[0]").value("사진 세로 크기는 20000 이하여야 합니다."))
+
+            assertThat(habitVerifyRepository.findAllByHabitIdOrderByVerifyDateDesc(memberHabitId)).isEmpty()
         }
 
         @Test
@@ -237,6 +288,41 @@ class HabitVerifyControllerTest {
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.description").value("다시 인증"))
                 .andExpect(jsonPath("$.imageUrl").value("https://example.com/new.png"))
+        }
+
+        @Test
+        @DisplayName("재제출에 새 크기를 주면 크기가 바뀌고, 크기 없이 다시 내면 크기가 비워진다")
+        fun 재제출_크기_갱신() {
+            val habitVerify = HabitVerify.create(memberHabit, LocalDate.now(), "처음 인증", "https://example.com/old.png", 100, 50)
+            habitVerify.reject()
+            val verificationId = requireNotNull(habitVerifyRepository.save(habitVerify).id)
+
+            resubmit(verificationId, HabitVerifyRequest("다시 인증", "https://example.com/new.png", 1080, 1920))
+                .andExpect(status().isOk)
+            val renewed = habitVerifyRepository.findById(verificationId).orElseThrow()
+            assertThat(renewed.imageWidth).isEqualTo(1080)
+            assertThat(renewed.imageHeight).isEqualTo(1920)
+
+            renewed.reject()
+            resubmit(verificationId, HabitVerifyRequest("또 다시", "https://example.com/newer.png"))
+                .andExpect(status().isOk)
+            val cleared = habitVerifyRepository.findById(verificationId).orElseThrow()
+            assertThat(cleared.imageWidth).isNull()
+            assertThat(cleared.imageHeight).isNull()
+        }
+
+        @Test
+        @DisplayName("재제출에서 가로만 보내면 400이고 인증은 그대로 반려 상태다")
+        fun 재제출_가로만_400() {
+            val verificationId = saveVerify(true)
+
+            resubmit(verificationId, HabitVerifyRequest("다시 인증", "https://example.com/new.png", 1080, null))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.errors[0]").value("사진의 가로와 세로 크기는 함께 보내야 합니다."))
+
+            val unchanged = habitVerifyRepository.findById(verificationId).orElseThrow()
+            assertThat(unchanged.status).isEqualTo(HabitVerifyStatus.REJECTED)
+            assertThat(unchanged.imageUrl).isEqualTo("https://example.com/old.png")
         }
 
         @Test
