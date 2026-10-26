@@ -24,3 +24,58 @@ body {
   color: var(--foreground);
   font-family: 'Pretendard', sans-serif;
 }
+
+/* 인증 달력 상세/앨범 전환 모션 */
+@keyframes slide-in-from-left {
+  from { opacity: 0; transform: translateX(calc(var(--slide-distance, 18px) * -1)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-in-from-right {
+  from { opacity: 0; transform: translateX(var(--slide-distance, 18px)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes modal-pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(14px) scale(0.96); }
+}
+
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* backwards: 끝난 뒤에는 애니메이션이 transform을 붙잡지 않아 hover 확대 등이 그대로 동작한다 */
+.anim-slide-from-left { animation: slide-in-from-left 0.32s ease backwards; }
+.anim-slide-from-right { animation: slide-in-from-right 0.32s ease backwards; }
+.anim-slide-children-from-left > * { animation: slide-in-from-left 0.32s ease backwards; }
+.anim-slide-children-from-right > * { animation: slide-in-from-right 0.32s ease backwards; }
+.anim-backdrop-in { animation: backdrop-in 0.3s ease both; }
+/* 닫는 모션은 별도 keyframes: 같은 이름에 reverse만 바꾸면 이미 끝난 애니메이션이 곧바로 끝값으로 점프한다 */
+.anim-backdrop-out { animation: backdrop-out 0.3s ease both; }
+.anim-modal-pop-in { animation: modal-pop-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-modal-pop-out { animation: modal-pop-out 0.3s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-slide-from-left,
+  .anim-slide-from-right,
+  .anim-slide-children-from-left > *,
+  .anim-slide-children-from-right > *,
+  .anim-backdrop-in,
+  .anim-backdrop-out,
+  .anim-modal-pop-in,
+  .anim-modal-pop-out {
+    animation: none;
+  }
+}
