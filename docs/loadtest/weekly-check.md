@@ -1,6 +1,6 @@
 # 주간 판정 스케줄러 부하 테스트 결과 (#93)
 
-`HabitService.autoCheckAllActiveHabits`(매일 00:05)가 습관 수에 따라 얼마나 오래 걸리고, 도는 동안 다른 요청에 어떤 영향을 주는지 측정했습니다.
+`HabitService.autoCheckAllActiveHabits`(매일 00:05, 측정 당시 코드이며 이후 묶음 방식으로 전환하며 제거)가 습관 수에 따라 얼마나 오래 걸리고, 도는 동안 다른 요청에 어떤 영향을 주는지 측정했습니다.
 
 ## 요약
 
@@ -95,7 +95,7 @@
 
 ## 개선안: 습관을 묶음으로 나눠 트랜잭션 분리
 
-`HabitService.checkWeeklyChunk(habitIds)`를 추가했습니다. 습관 id 목록을 100개씩 나눠 묶음마다 별도 트랜잭션으로 판정합니다. (판정 로직은 그대로이고, 아직 스케줄러에는 연결하지 않았습니다. 이 PR은 측정과 근거 마련이 목적입니다.)
+`HabitService.checkWeeklyChunk(habitIds)`를 추가했습니다. 습관 id 목록을 100개씩 나눠 묶음마다 별도 트랜잭션으로 판정합니다. 판정 로직은 그대로입니다. 이 개선은 `HabitWeeklyCheckScheduler`로 스케줄러에 적용했습니다. (아래 "적용 후 확인" 참고)
 
 - 영속성 컨텍스트가 묶음마다 새로 시작되어 플러시 비용이 묶음 크기로 한정됩니다.
 - 잠금과 연결을 묶음 시간(약 0.3초)만 쥡니다.
@@ -103,6 +103,27 @@
 
 ### 판정 결과가 같은지 확인
 같은 시드에서 한 트랜잭션, 100개씩, 7개씩으로 판정한 뒤 **습관, 벌칙, 인증 상태 전체의 요약값(md5)**을 비교했습니다. 3가지 모두 일치했습니다. (습관 2,000개: 실패 600, 벌칙 600, 승인된 인증 4,380, 대기 420)
+
+## 적용 후 확인 (스케줄러 전환)
+
+`autoCheckAllActiveHabits`(한 트랜잭션)를 없애고, 스케줄러를 `HabitWeeklyCheckScheduler`로 옮겼습니다. 매일 00시 05분에 활성 습관 id를 조회해 100개씩 `checkWeeklyChunk`를 호출합니다. (묶음 크기: `app.habit.weekly-check.chunk-size`, 기본 100)
+
+- **묶음 단위 오류 격리**: 한 묶음이 실패하면 그 묶음을 습관별로 다시 판정하고 문제가 된 습관만 건너뜁니다. 건너뛴 습관은 경고 로그에 남습니다. 기존에는 한 습관의 예외가 전체를 롤백했습니다. 판정은 다시 실행해도 결과가 같습니다. (이미 실패한 습관은 `ALREADY_FAILED`)
+- **진행 로그**: `주간 판정을 마쳤습니다. 습관 N개, 묶음 M개, X ms`
+- **비교 기준선 유지**: 측정용 컨트롤러의 `mode=single`은 `checkWeeklyChunk`에 전체 id를 한 번에 넘겨 개선 전 방식(한 트랜잭션)을 그대로 재현하고, `mode=chunked`는 실제 `HabitWeeklyCheckScheduler`를 호출합니다.
+
+실제 스케줄러 클래스로 다시 측정한 결과입니다.
+
+| 습관 수 | 방식 | 소요 시간 | 판정 중 일반 조회 평균 | 판정 중 습관 포기 평균 |
+|---|---|---|---|---|
+| 3,000 | 한 트랜잭션 (개선 전) | 35.6초 | - | - |
+| 3,000 | `HabitWeeklyCheckScheduler` | **9.4초** | - | - |
+| 5,000 | 한 트랜잭션 (개선 전, 앞의 측정) | 90.1초 | 35,061ms | 33,734ms |
+| 5,000 | `HabitWeeklyCheckScheduler` | **17.0초** | **5.5ms** | **27.7ms** |
+
+- 3,000개에서 두 방식의 최종 상태 요약값(md5)이 같습니다. (실패 900, 벌칙 900, 승인된 인증 6,570)
+- 5,000개 판정 중 습관 포기 요청은 평균 27.7ms, p95 196ms로, 앞의 묶음 측정(평균 9.2ms)보다 약간 높았습니다. 한 번씩만 측정해 노이즈와 구분하지 못했습니다.
+- 습관 포기 요청이 판정 중인 묶음의 행과 겹치면 그 묶음이 끝날 때까지(약 0.3초) 기다립니다. 기존에는 전체가 끝날 때까지(수십 초~분) 기다렸습니다.
 
 ## 해석할 때 주의할 점
 - **풀 고갈의 직접 원인은 추정입니다.** 판정 중 습관 포기 요청이 잠금에 막힌 채 연결을 붙잡아 풀이 고갈된다고 보지만, 습관 포기 요청 없이 일반 조회만 보낸 실행으로 따로 확인하지는 않았습니다. (일반 조회가 느려진 시점과 풀 로그 `active=10, waiting=189`가 일치합니다.)
@@ -113,7 +134,7 @@
 - 실제 서비스에서는 스케줄러가 자정 5분에 도므로 동시 요청이 적을 수 있습니다. 다만 습관이 수천 개를 넘으면 판정만으로 연결 하나를 분 단위로 쥐게 됩니다.
 
 ## 후속 제안
-1. 스케줄러(`autoCheckAllActiveHabits`)를 묶음 단위 트랜잭션으로 바꾸기. 한 건의 오류가 전체를 롤백하지 않도록 묶음 단위로 예외를 격리하는 것도 함께 정합니다.
+1. ~~스케줄러를 묶음 단위 트랜잭션으로 바꾸기~~ → 적용했습니다. (`HabitWeeklyCheckScheduler`, 묶음 단위 오류 격리 포함)
 2. 풀 고갈 시 응답이 401로 나가는 문제 확인. 인증 필터의 DB 조회 예외가 `/error` 디스패치에서 인증 거절로 바뀌는 것으로 추정하지만 **원인은 확인이 필요**합니다. 프론트가 401을 토큰 갱신 신호로 쓰므로 영향이 큽니다.
 3. 판정 쿼리 줄이기: 습관당 4~5회인 SQL(잠금 조회, 지연 로딩, 대기·승인 카운트)을 습관 id 묶음 단위의 일괄 조회로 줄이면 묶음 방식에서 남은 3ms도 낮출 수 있습니다.
 
@@ -145,7 +166,8 @@ loadtest/weekly-check/run-case.sh 3000 chunked 100 40 60
 |---|---|
 | `backend/src/main/resources/application-loadtest.yaml` | SQL 로그 끔, DB 분리, Hikari 풀 크기 명시 |
 | `backend/src/main/kotlin/com/back/global/loadtest/WeeklyCheckLoadTestController.kt` | 판정 실행 트리거와 지표 반환 (loadtest 프로파일 전용) |
-| `backend/src/main/kotlin/com/back/domain/habit/service/HabitService.kt` | `checkWeeklyChunk` 추가 (개선안) |
+| `backend/src/main/kotlin/com/back/domain/habit/service/HabitService.kt` | `checkWeeklyChunk`(묶음 판정). 한 트랜잭션 순회(`autoCheckAllActiveHabits`)는 제거 |
+| `backend/src/main/kotlin/com/back/domain/habit/service/HabitWeeklyCheckScheduler.kt` | 매일 00:05 스케줄러. 묶음 단위 트랜잭션과 오류 격리 |
 | `loadtest/weekly-check/seed.sql`, `seed.sh` | 규모별 시드 및 초기화 |
 | `loadtest/weekly-check/run-case.sh`, `analyze.mjs`, `token.sh` | 케이스 실행, 구간별 집계, 토큰 생성 |
 | `k6/weekly-check.js`, `k6/lib/jwt.js` | k6 시나리오와 토큰 helper |
