@@ -41,3 +41,5 @@ db_dev.mv.db
 db_dev.trace.db
 .DS_Store
 **/.DS_Store
+# k6 부하 테스트 원본 결과(크기가 커서 저장소에 넣지 않는다)
+k6/results/
