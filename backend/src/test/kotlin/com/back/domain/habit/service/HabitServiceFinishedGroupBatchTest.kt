@@ -100,7 +100,7 @@ class HabitServiceFinishedGroupBatchTest {
         val result = habitWeeklyCheckScheduler.checkAllActiveHabits(chunkSize = 2)
 
         assertThat(habits.map { it.status }).containsOnly(HabitStatus.FAILED)
-        assertThat(habits.map { penaltyVerifyRepository.findByHabitId(it.requiredId).isPresent }).containsOnly(true)
+        assertThat(habits.map { penaltyVerifyRepository.findByHabitId(it.requiredId) != null }).containsOnly(true)
         assertThat(result.chunks).isGreaterThanOrEqualTo(3)
         assertThat(result.skippedHabitIds).isEmpty()
     }
