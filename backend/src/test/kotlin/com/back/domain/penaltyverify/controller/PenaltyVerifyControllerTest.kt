@@ -19,27 +19,22 @@ import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlRequest
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
+import com.ninjasquad.springmockk.MockkBean
+import io.mockk.every
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyLong
-import org.mockito.BDDMockito.given
-import org.mockito.BDDMockito.willThrow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.ResultActions
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.ResultActionsDsl
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.patch
+import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
 import java.time.LocalDate
@@ -59,7 +54,8 @@ class PenaltyVerifyControllerTest {
     @Autowired private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
     // 인증 사진 URL 검사(Supabase 호출)는 StorageServiceTest에서 확인하므로 여기서는 통과시킨다
-    @MockitoBean private lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) private lateinit var storageService: StorageService
 
     private var ownerId: Long = 0
     private lateinit var ownerToken: String
@@ -125,16 +121,17 @@ class PenaltyVerifyControllerTest {
     fun submit_성공() {
         val request = SubmitPenaltyVerifyRequest("오늘 러닝 완료", "https://example.com/run.jpg")
 
-        mockMvc.perform(
-            post("/api/habits/{habitId}/penalties", memberHabitId)
-                .header("Authorization", "Bearer $memberToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.status").value("PENDING"))
-            .andExpect(jsonPath("$.description").value("오늘 러닝 완료"))
-            .andExpect(jsonPath("$.imageUrl").value("https://example.com/run.jpg"))
+        mockMvc.post("/api/habits/{habitId}/penalties", memberHabitId) {
+            header("Authorization", "Bearer $memberToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = jsonMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isCreated() }
+                jsonPath("$.status") { value("PENDING") }
+                jsonPath("$.description") { value("오늘 러닝 완료") }
+                jsonPath("$.imageUrl") { value("https://example.com/run.jpg") }
+            }
     }
 
     @Test
@@ -142,72 +139,78 @@ class PenaltyVerifyControllerTest {
     fun resubmit_성공() {
         val request = SubmitPenaltyVerifyRequest("물 다시 마시고 재인증합니다.", "https://example.com/water2.jpg")
 
-        mockMvc.perform(
-            patch("/api/penalties/{id}/resubmit", rejectedPenaltyId)
-                .header("Authorization", "Bearer $memberToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("PENDING"))
-            .andExpect(jsonPath("$.description").value("물 다시 마시고 재인증합니다."))
+        mockMvc.patch("/api/penalties/{id}/resubmit", rejectedPenaltyId) {
+            header("Authorization", "Bearer $memberToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = jsonMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("PENDING") }
+                jsonPath("$.description") { value("물 다시 마시고 재인증합니다.") }
+            }
     }
 
     @Test
     @DisplayName("벌칙 단건 상세 조회 성공")
     fun getDetail_성공() {
-        mockMvc.perform(
-            get("/api/penalties/{id}", pendingPenaltyId)
-                .header("Authorization", "Bearer $memberToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.id").value(pendingPenaltyId))
-            .andExpect(jsonPath("$.status").value("PENDING"))
+        mockMvc.get("/api/penalties/{id}", pendingPenaltyId) {
+            header("Authorization", "Bearer $memberToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.id") { value(pendingPenaltyId) }
+                jsonPath("$.status") { value("PENDING") }
+            }
     }
 
     @Test
     @DisplayName("그룹 멤버별 벌칙 목록 최신순 조회 성공")
     fun getPenaltyList_성공() {
-        mockMvc.perform(
-            get("/api/groups/{groupId}/members/{groupMemberId}/penalties", groupId, memberGroupMemberId)
-                .header("Authorization", "Bearer $memberToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(3))
+        mockMvc.get("/api/groups/{groupId}/members/{groupMemberId}/penalties", groupId, memberGroupMemberId) {
+            header("Authorization", "Bearer $memberToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(3) }
+            }
     }
 
     @Test
     @DisplayName("방장의 벌칙 단건 승인 성공 시 APPROVED 반환")
     fun approve_성공() {
-        mockMvc.perform(
-            patch("/api/penalties/{id}/approve", pendingPenaltyId)
-                .header("Authorization", "Bearer $ownerToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("APPROVED"))
+        mockMvc.patch("/api/penalties/{id}/approve", pendingPenaltyId) {
+            header("Authorization", "Bearer $ownerToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("APPROVED") }
+            }
     }
 
     @Test
     @DisplayName("방장의 벌칙 단건 거절 성공 시 REJECTED 반환")
     fun reject_성공() {
-        mockMvc.perform(
-            patch("/api/penalties/{id}/reject", pendingPenaltyId)
-                .header("Authorization", "Bearer $ownerToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("REJECTED"))
+        mockMvc.patch("/api/penalties/{id}/reject", pendingPenaltyId) {
+            header("Authorization", "Bearer $ownerToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("REJECTED") }
+            }
     }
 
     @Test
     @DisplayName("방장의 그룹 내 벌칙 승인 대기 목록 조회 성공")
     fun getPending_성공() {
-        mockMvc.perform(
-            get("/api/groups/{groupId}/penalties/pending", groupId)
-                .header("Authorization", "Bearer $ownerToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].id").value(pendingPenaltyId))
+        mockMvc.get("/api/groups/{groupId}/penalties/pending", groupId) {
+            header("Authorization", "Bearer $ownerToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(1) }
+                jsonPath("$[0].id") { value(pendingPenaltyId) }
+            }
     }
 
     @Test
@@ -215,27 +218,29 @@ class PenaltyVerifyControllerTest {
     fun bulkApprove_성공() {
         val request = BulkActionRequest(listOf(pendingPenaltyId))
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/penalties/bulk-approve", groupId)
-                .header("Authorization", "Bearer $ownerToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].status").value("APPROVED"))
+        mockMvc.patch("/api/groups/{groupId}/penalties/bulk-approve", groupId) {
+            header("Authorization", "Bearer $ownerToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = jsonMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(1) }
+                jsonPath("$[0].status") { value("APPROVED") }
+            }
     }
 
     @Test
     @DisplayName("벌칙 작성자가 PENDING 벌칙을 제출 취소하면 200 OK 및 REQUIRED 반환, 기록은 남는다")
     fun cancel_성공() {
-        mockMvc.perform(
-            patch("/api/penalties/{id}/cancel", pendingPenaltyId)
-                .header("Authorization", "Bearer $memberToken")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("REQUIRED"))
-            .andExpect(jsonPath("$.imageUrl").doesNotExist())
+        mockMvc.patch("/api/penalties/{id}/cancel", pendingPenaltyId) {
+            header("Authorization", "Bearer $memberToken")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("REQUIRED") }
+                jsonPath("$.imageUrl") { doesNotExist() }
+            }
 
         assertThat(penaltyVerifyRepository.findById(pendingPenaltyId)).isPresent
     }
@@ -244,27 +249,30 @@ class PenaltyVerifyControllerTest {
     @DisplayName("벌칙 인증 제출 실패 POST /api/habits/{habitId}/penalties")
     inner class SubmitFailure {
 
-        private fun submit(token: String, habitId: Long, request: SubmitPenaltyVerifyRequest): ResultActions =
-            mockMvc.perform(
-                post("/api/habits/{habitId}/penalties", habitId)
-                    .header("Authorization", "Bearer $token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(request))
-            )
+        private fun submit(token: String, habitId: Long, request: SubmitPenaltyVerifyRequest): ResultActionsDsl =
+            mockMvc.post("/api/habits/{habitId}/penalties", habitId) {
+                header("Authorization", "Bearer $token")
+                contentType = MediaType.APPLICATION_JSON
+                content = jsonMapper.writeValueAsString(request)
+            }
 
         @Test
         @DisplayName("사진 없이 제출하면 400이다 (컨트롤러가 @Valid로 사진 필수 검사를 한다)")
         fun 사진_없으면_400() {
             submit(memberToken, memberHabitId, SubmitPenaltyVerifyRequest("오늘 러닝 완료", " "))
-                .andExpect(status().isBadRequest)
-                .andExpect(jsonPath("$.errors[0]").value("인증 사진은 필수입니다."))
+                .andExpect {
+                    status { isBadRequest() }
+                    jsonPath("$.errors[0]") { value("인증 사진은 필수입니다.") }
+                }
         }
 
         @Test
         @DisplayName("같은 방 방장이 남의 벌칙을 제출하면 403이다")
         fun 남의_벌칙_403() {
             submit(ownerToken, memberHabitId, SubmitPenaltyVerifyRequest("대신 제출", "https://example.com/run.jpg"))
-                .andExpect(status().isForbidden)
+                .andExpect {
+                    status { isForbidden() }
+                }
         }
 
         @Test
@@ -276,24 +284,23 @@ class PenaltyVerifyControllerTest {
             )
 
             submit(memberToken, habitWithoutPenaltyId, SubmitPenaltyVerifyRequest("제출", "https://example.com/run.jpg"))
-                .andExpect(status().isNotFound)
-                .andExpect(jsonPath("$.message").value("해당 습관에 대한 벌칙 정보가 존재하지 않습니다."))
+                .andExpect {
+                    status { isNotFound() }
+                    jsonPath("$.message") { value("해당 습관에 대한 벌칙 정보가 존재하지 않습니다.") }
+                }
         }
 
         @Test
         @DisplayName("사진을 확인하는 중 Supabase와 통신하지 못하면 502다")
         fun 사진_저장소_장애_502() {
-            // Mockito any()는 null을 돌려줘 Kotlin의 non-null 매개변수(type)에 넣으면 NPE가 난다.
-            // 매처는 any(...)가 이미 등록했으므로, 자리에는 null 대신 아무 값이나 넣는다.
-            willThrow(StorageUnavailableException("사진 저장소에 연결할 수 없습니다."))
-                .given(storageService).validateImageUrl(
-                    any(VerificationImageType::class.java) ?: VerificationImageType.PENALTY,
-                    anyLong(), anyLong(), any(), any(),
-                )
+            every { storageService.validateImageUrl(any(), any(), any(), any(), any()) } throws
+                StorageUnavailableException("사진 저장소에 연결할 수 없습니다.")
 
             submit(memberToken, memberHabitId, SubmitPenaltyVerifyRequest("오늘 러닝 완료", "https://example.com/run.jpg"))
-                .andExpect(status().isBadGateway)
-                .andExpect(jsonPath("$.message").value("사진 저장소에 연결할 수 없습니다."))
+                .andExpect {
+                    status { isBadGateway() }
+                    jsonPath("$.message") { value("사진 저장소에 연결할 수 없습니다.") }
+                }
         }
     }
 
@@ -301,24 +308,25 @@ class PenaltyVerifyControllerTest {
     @DisplayName("벌칙 인증 사진 업로드 URL 발급 POST /api/penalties/{id}/upload-url")
     inner class UploadUrl {
 
-        private fun requestUploadUrl(token: String, penaltyId: Long): ResultActions =
-            mockMvc.perform(
-                post("/api/penalties/{id}/upload-url", penaltyId)
-                    .header("Authorization", "Bearer $token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(UploadUrlRequest("penalty.png")))
-            )
+        private fun requestUploadUrl(token: String, penaltyId: Long): ResultActionsDsl =
+            mockMvc.post("/api/penalties/{id}/upload-url", penaltyId) {
+                header("Authorization", "Bearer $token")
+                contentType = MediaType.APPLICATION_JSON
+                content = jsonMapper.writeValueAsString(UploadUrlRequest("penalty.png"))
+            }
 
         @Test
         @DisplayName("재제출할 수 있는(반려된) 내 벌칙이면 200이고 이 회원·이 벌칙 기준으로 발급한 URL을 돌려준다")
         fun 내_벌칙_200() {
-            given(storageService.createUploadUrl(VerificationImageType.PENALTY, memberId, rejectedPenaltyId, "penalty.png"))
-                .willReturn(UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png"))
+            every { storageService.createUploadUrl(VerificationImageType.PENALTY, memberId, rejectedPenaltyId, "penalty.png") } returns
+                UploadUrlResponse("https://storage/upload-signed", "https://storage/public.png")
 
             requestUploadUrl(memberToken, rejectedPenaltyId)
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$.uploadUrl").value("https://storage/upload-signed"))
-                .andExpect(jsonPath("$.publicUrl").value("https://storage/public.png"))
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.uploadUrl") { value("https://storage/upload-signed") }
+                    jsonPath("$.publicUrl") { value("https://storage/public.png") }
+                }
         }
 
         @Test
@@ -327,27 +335,32 @@ class PenaltyVerifyControllerTest {
             penaltyVerifyRepository.findById(pendingPenaltyId).orElseThrow().approve()
 
             requestUploadUrl(memberToken, pendingPenaltyId)
-                .andExpect(status().isConflict)
+                .andExpect {
+                    status { isConflict() }
+                }
         }
 
         @Test
         @DisplayName("같은 방 방장이 남의 벌칙에 요청하면 403이다")
         fun 남의_벌칙_403() {
             requestUploadUrl(ownerToken, rejectedPenaltyId)
-                .andExpect(status().isForbidden)
+                .andExpect {
+                    status { isForbidden() }
+                }
         }
 
         @Test
         @DisplayName("파일명이 비어 있으면 400이다 (UploadUrlRequest의 @NotBlank 검사)")
         fun 파일명_없으면_400() {
-            mockMvc.perform(
-                post("/api/penalties/{id}/upload-url", rejectedPenaltyId)
-                    .header("Authorization", "Bearer $memberToken")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(jsonMapper.writeValueAsString(UploadUrlRequest(" ")))
-            )
-                .andExpect(status().isBadRequest)
-                .andExpect(jsonPath("$.message").value("입력값 검증에 실패했습니다."))
+            mockMvc.post("/api/penalties/{id}/upload-url", rejectedPenaltyId) {
+                header("Authorization", "Bearer $memberToken")
+                contentType = MediaType.APPLICATION_JSON
+                content = jsonMapper.writeValueAsString(UploadUrlRequest(" "))
+            }
+                .andExpect {
+                    status { isBadRequest() }
+                    jsonPath("$.message") { value("입력값 검증에 실패했습니다.") }
+                }
         }
     }
 }
