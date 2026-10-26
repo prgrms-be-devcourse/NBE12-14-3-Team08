@@ -149,6 +149,16 @@ class HabitService(
         }
     }
 
+    // 습관 묶음 하나를 별도 트랜잭션으로 판정한다. autoCheckAllActiveHabits와 같은 판정이며, 묶음마다 커밋해서
+    // 습관 행 잠금을 묶음 시간만큼만 쥐고(전체 순회 시간 동안 쥐지 않고) 영속성 컨텍스트도 묶음마다 새로 시작한다.
+    // 스케줄러에는 아직 연결하지 않았고, 부하 테스트(#93)가 전체 순회와 같은 결과가 나오는지 비교하는 데 쓴다.
+    @Transactional
+    fun checkWeeklyChunk(habitIds: List<Long>) {
+        for (habitId in habitIds) {
+            judgeLocked(habitId)
+        }
+    }
+
     // 습관 행을 잠근 뒤 최신 상태로 판정한다.
     // 스케줄러와 방장의 수동 판정이 같은 습관을 동시에 처리해도 먼저 온 쪽이 실패 처리와 벌칙 생성을 끝내고,
     // 늦은 쪽은 잠금이 풀린 뒤 FAILED 상태를 읽어 ALREADY_FAILED로 넘어간다. (벌칙 중복 제약 위반이 일어나지 않음)

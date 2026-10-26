@@ -3,10 +3,8 @@ package com.back.domain.group.controller
 
 import com.back.domain.group.dto.GroupRequest
 import com.back.domain.group.dto.GroupResponse
-import com.back.domain.group.dto.SettlementResponse
 import com.back.domain.group.entity.GroupStatus
 import com.back.domain.group.service.GroupService
-import com.back.domain.group.service.SettlementService
 import com.back.global.security.LoginMemberId
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -30,8 +28,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/groups")
 class GroupController(
-    private val groupService: GroupService,
-    private val settlementService: SettlementService
+    private val groupService: GroupService
 ) {
 
     @Operation(
@@ -65,23 +62,6 @@ class GroupController(
         @RequestParam(value = "status", defaultValue = "ACTIVE") status: GroupStatus
     ): ResponseEntity<List<GroupResponse.Simple>> {
         val response = groupService.getGroupSimpleList(memberId, status)
-        return ResponseEntity.ok(response)
-    }
-
-    @Operation(
-        summary = "그룹 결산 데이터 조회",
-        description = """
-            챌린지가 마감된 특정 그룹의 최종 정산 데이터를 확인합니다. (그룹 가입자만 조회 가능)
-
-            - 해당 방의 전체 챌린지 성공률, 멤버별 달성 통계, 최종 정산 내역을 종합하여 반환합니다.
-        """
-    )
-    @GetMapping("/{groupId}/settlement")
-    fun getSettlement(
-        @PathVariable groupId: Long,
-        @LoginMemberId memberId: Long
-    ): ResponseEntity<SettlementResponse> {
-        val response = settlementService.getSettlement(groupId, memberId)
         return ResponseEntity.ok(response)
     }
 

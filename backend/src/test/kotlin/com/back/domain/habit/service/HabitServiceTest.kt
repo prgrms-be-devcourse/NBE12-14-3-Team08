@@ -513,6 +513,53 @@ class HabitServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("묶음 판정(checkWeeklyChunk)")
+    inner class CheckWeeklyChunk {
+
+        @Test
+        @DisplayName("묶음의 습관을 각각 잠그고 전체 순회(autoCheckAllActiveHabits)와 같은 판정을 한다")
+        fun 묶음의_습관을_판정한다() {
+            val habit = overdueHabit(activeGroup())
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
+            every {
+                habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(any(), any(), any(), any())
+            } returns 0L
+            justRun { penaltyVerifyService.createPenaltyVerify(habit) }
+
+            habitService.checkWeeklyChunk(listOf(HABIT_ID))
+
+            assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
+            verify { penaltyVerifyService.createPenaltyVerify(habit) }
+            // 대상 id는 호출하는 쪽이 정해서 넘기므로 전체 조회는 하지 않는다.
+            verify(exactly = 0) { habitRepository.findIdsByStatusInProgressGroup(any()) }
+        }
+
+        @Test
+        @DisplayName("빈 묶음은 아무것도 하지 않는다")
+        fun 빈_묶음() {
+            habitService.checkWeeklyChunk(emptyList())
+
+            verify(exactly = 0) { habitRepository.findByIdForUpdate(any()) }
+        }
+
+        @Test
+        @DisplayName("묶음 안에서 삭제된 습관은 건너뛰고 나머지를 판정한다")
+        fun 삭제된_습관은_건너뛴다() {
+            val habit = overdueHabit(activeGroup())
+            every { habitRepository.findByIdForUpdate(999L) } returns null
+            every { habitRepository.findByIdForUpdate(HABIT_ID) } returns habit
+            every {
+                habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(any(), any(), any(), any())
+            } returns 0L
+            justRun { penaltyVerifyService.createPenaltyVerify(habit) }
+
+            habitService.checkWeeklyChunk(listOf(999L, HABIT_ID))
+
+            assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
+        }
+    }
+
     // 그룹 생성 요일이 "오늘 - d일"의 요일일 때(d = 0..6), 이번 주 마감(그 요일 00시)과 판정 구간이 맞게 계산되는지 확인한다.
     // 마감 시각은 시계가 아니라 날짜에서 계산되므로 Clock 없이도 기대값을 정확히 만들 수 있다.
     // (오늘이 일요일이면 요일 번호 순환이 일어나지 않아 +7 제거 같은 실수를 이 테스트로 못 잡는다. Clock 주입 후 보완)

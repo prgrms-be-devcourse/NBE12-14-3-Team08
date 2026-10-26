@@ -3,7 +3,6 @@ package com.back.global.loadtest
 import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.habit.service.HabitService
-import com.back.domain.habit.service.HabitWeeklyCheckScheduler
 import jakarta.persistence.EntityManagerFactory
 import org.hibernate.SessionFactory
 import org.springframework.context.annotation.Profile
@@ -15,14 +14,13 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.concurrent.CompletableFuture
 
-// 주간 판정을 크론을 기다리지 않고 바로 실행해 소요 시간과 부하 지표를 돌려준다.
+// 주간 판정 스케줄러를 크론을 기다리지 않고 바로 실행해 소요 시간과 부하 지표를 돌려준다.
 // loadtest 프로파일에서만 만들어지므로 운영·개발·로컬 실행에는 존재하지 않는다. (인증은 일반 API와 같다)
 @Profile("loadtest")
 @RestController
 @RequestMapping("/loadtest/weekly-check")
 class WeeklyCheckLoadTestController(
     private val habitService: HabitService,
-    private val habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler,
     private val habitRepository: HabitRepository,
     private val jdbc: JdbcTemplate,
     entityManagerFactory: EntityManagerFactory,
@@ -35,8 +33,8 @@ class WeeklyCheckLoadTestController(
     @GetMapping("/state")
     fun state(): Map<String, Any> = counts() + mapOf("checksum" to checksum())
 
-    // mode=single : 개선 전 방식. 활성 습관 전체를 한 트랜잭션으로 순회한다. (비교 기준선)
-    // mode=chunked: 실제 스케줄러(HabitWeeklyCheckScheduler)가 도는 방식. 습관 chunk개씩 별도 트랜잭션으로 순회한다.
+    // mode=single: 현재 스케줄러와 같은 방식(autoCheckAllActiveHabits, 한 트랜잭션으로 전체 순회)
+    // mode=chunked: 습관 chunk개씩 별도 트랜잭션으로 나눠 순회 (개선안)
     @PostMapping("/run")
     fun run(
         @RequestParam(defaultValue = "single") mode: String,
@@ -94,11 +92,13 @@ class WeeklyCheckLoadTestController(
     // 판정 실행 본체. 만들어진 트랜잭션 수를 돌려준다.
     private fun execute(mode: String, chunk: Int): Int {
         if (mode == "single") {
-            // 전체 id를 묶음 하나로 넘기면 개선 전과 같이 한 트랜잭션으로 순회한다. 소요 시간이 곧 습관 행 잠금을 쥐고 있는 시간이다.
-            habitService.checkWeeklyChunk(habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE))
+            // 판정은 한 트랜잭션이라 소요 시간이 곧 습관 행 잠금을 쥐고 있는 시간이다.
+            habitService.autoCheckAllActiveHabits()
             return 1
         }
-        return habitWeeklyCheckScheduler.checkAllActiveHabits(chunk).chunks
+        val chunks = habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE).chunked(chunk)
+        chunks.forEach { habitService.checkWeeklyChunk(it) }
+        return chunks.size
     }
 
     private fun counts(): Map<String, Long> = linkedMapOf(
