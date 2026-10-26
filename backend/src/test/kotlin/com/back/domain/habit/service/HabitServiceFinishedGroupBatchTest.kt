@@ -26,14 +26,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.UUID
 
-// 주간 판정 배치가 종료된 그룹의 습관을 판정하지 않는지 확인한다. (Testcontainers PostgreSQL, 테스트 종료 시 롤백)
+// 주간 판정 배치(HabitWeeklyCheckScheduler)가 종료된 그룹의 습관을 판정하지 않는지 확인한다. (Testcontainers PostgreSQL, 테스트 종료 시 롤백)
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class HabitServiceFinishedGroupBatchTest {
 
     @Autowired
-    private lateinit var habitService: HabitService
+    private lateinit var habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler
 
     @Autowired
     private lateinit var memberRepository: MemberRepository
@@ -86,10 +86,23 @@ class HabitServiceFinishedGroupBatchTest {
     fun 진행중인_그룹은_판정된다() {
         val habit = createOverdueHabit(GroupStatus.ACTIVE, LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(30))
 
-        habitService.autoCheckAllActiveHabits()
+        habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
         assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isPresent()
+    }
+
+    @Test
+    @DisplayName("묶음 크기보다 습관이 많아도 모든 습관이 판정된다 (묶음 경계를 넘어 처리)")
+    fun 묶음을_나눠도_모두_판정된다() {
+        val habits = List(5) { createOverdueHabit(GroupStatus.ACTIVE, LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(30)) }
+
+        val result = habitWeeklyCheckScheduler.checkAllActiveHabits(chunkSize = 2)
+
+        assertThat(habits.map { it.status }).containsOnly(HabitStatus.FAILED)
+        assertThat(habits.map { penaltyVerifyRepository.findByHabitId(it.requiredId).isPresent }).containsOnly(true)
+        assertThat(result.chunks).isGreaterThanOrEqualTo(3)
+        assertThat(result.skippedHabitIds).isEmpty()
     }
 
     @Test
@@ -97,7 +110,7 @@ class HabitServiceFinishedGroupBatchTest {
     fun 종료된_그룹은_판정하지_않는다() {
         val habit = createOverdueHabit(GroupStatus.FINISH, LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1))
 
-        habitService.autoCheckAllActiveHabits()
+        habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
         assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
@@ -108,7 +121,7 @@ class HabitServiceFinishedGroupBatchTest {
     fun 마감일이_지난_그룹도_판정하지_않는다() {
         val habit = createOverdueHabit(GroupStatus.ACTIVE, LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1))
 
-        habitService.autoCheckAllActiveHabits()
+        habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
         assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
