@@ -147,10 +147,54 @@ class TestDataInit(
         createPendingPenalty(gmOther2, hFailedOther2, "[다른 팀 데이터] 단백질 대신 피자 먹고 말았습니다... 벌칙으로 치킨 배달 주문 인증합니다.", "https://images.unsplash.com/photo-1562967914-608f82629710?w=600&auto=format&fit=crop&q=60")
         createPendingPenalty(gmOtherOwner, hFailedOtherOwner, "[다른 팀 데이터] 방장인데 하체 운동 실패했네요. 솔선수범해서 레드콤보 모바일 상품권 올립니다!", "https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=600&auto=format&fit=crop&q=60")
 
+        // ====================================================
+        // [GROUP 3] 완료된 챌린지 (FINISH 상태, 기간: 2026-10-01 ~ 2026-10-14)
+        // ====================================================
+        val finishOwner = getOrCreateMember("finish_owner", "완료방장", encodedPassword)
+        val finishMember1 = getOrCreateMember("finish_member1", "완료멤버1", encodedPassword)
+        val finishMember2 = getOrCreateMember("finish_member2", "완료멤버2", encodedPassword)
+
+        val group3 = groupRepository.save(
+            Group(
+                title = "독서 챌린지 10월 완료",
+                description = "10월 한 달 동안 매일 책 30페이지 읽기",
+                deadline = LocalDate.of(2026, 10, 14),
+                penalty = "스타벅스 아메리카노 쏘기",
+                password = encodedPassword,
+                inviteCode = "FINISH300",
+                memberLimit = 5,
+                status = GroupStatus.FINISH,
+            )
+        )
+
+        val gmFinishOwner = createGroupMember(group3, finishOwner, GroupMemberRole.OWNER)
+        val gmFinish1 = createGroupMember(group3, finishMember1, GroupMemberRole.MEMBER)
+        val gmFinish2 = createGroupMember(group3, finishMember2, GroupMemberRole.MEMBER)
+
+        // 완료된 습관들 (SUCCESS 상태)
+        val hFinishOwner = createActiveHabit(gmFinishOwner, "매일 책 30페이지 읽기", "기술 서적 독서", 14)
+        val hFinish1 = createActiveHabit(gmFinish1, "영어 단어 50개 외우기", "토익 단어 암기", 14)
+        val hFinish2 = createActiveHabit(gmFinish2, "매일 10분 명상", "마음챙김 명상", 14)
+
+        // 완료된 습관 인증 데이터 (APPROVED 상태)
+        for (day in 1..14) {
+            val verifyDate = LocalDate.of(2026, 10, day)
+            createApprovedHabitVerify(hFinishOwner, verifyDate, "${day}일차 독서 완료 - 기술 서적 30페이지 읽음", "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=60")
+
+            if (day <= 12) { // 멤버1은 12일만 완료
+                createApprovedHabitVerify(hFinish1, verifyDate, "${day}일차 단어 암기 완료 - 50개 외움", "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=600&auto=format&fit=crop&q=60")
+            }
+
+            if (day <= 10) { // 멤버2는 10일만 완료
+                createApprovedHabitVerify(hFinish2, verifyDate, "${day}일차 명상 완료 - 10분 집중", "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&auto=format&fit=crop&q=60")
+            }
+        }
+
         println("=================================================================")
         println(">>> [TEST DATA INITIALIZED] 습관/벌칙 PENDING 데이터 세팅 완료!")
         println(">>> [Group 1] ID: ${group1.id} (습관 인증 5건, 스타벅스 벌칙 8건)")
         println(">>> [Group 2] ID: ${group2.id} (치킨 벌칙 3건)")
+        println(">>> [Group 3] ID: ${group3.id} (FINISH 상태, 완료된 인증 36건)")
         println("=================================================================")
     }
 
@@ -179,5 +223,9 @@ class TestDataInit(
         penaltyVerifyRepository.save(
             PenaltyVerify.create(groupMember, habit).apply { submit(LocalDate.now(), description, imageUrl) }
         )
+    }
+
+    private fun createApprovedHabitVerify(habit: Habit, verifyDate: LocalDate, description: String, imageUrl: String) {
+        habitVerifyRepository.save(HabitVerify.create(habit, verifyDate, description, imageUrl).apply { approve() })
     }
 }
