@@ -24,7 +24,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
-// 매일 00시 05분 스케줄러(autoCheckAllActiveHabits)와 방장의 수동 주간 판정(checkWeeklyFailureForGroup)이
+// 매일 00시 05분 스케줄러(HabitWeeklyCheckScheduler)와 방장의 수동 주간 판정(checkWeeklyFailureForGroup)이
 // 같은 습관을 동시에 판정할 때 실패 처리와 벌칙이 한 번만 일어나고 어느 쪽도 예외 없이 끝나는지 확인한다.
 // 실제로 커밋되는 트랜잭션이 필요해서 @Transactional 없이 실행하고, 끝나면 만든 데이터를 직접 지운다.
 @SpringBootTest
@@ -33,6 +33,9 @@ class HabitServiceJudgementConcurrencyTest {
 
     @Autowired
     private lateinit var habitService: HabitService
+
+    @Autowired
+    private lateinit var habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler
 
     @Autowired
     private lateinit var memberRepository: MemberRepository
@@ -126,7 +129,7 @@ class HabitServiceJudgementConcurrencyTest {
     private fun runConcurrently(): List<Throwable?> {
         val manual: List<() -> Unit> =
             List(MANUAL_CALLS) { { habitService.checkWeeklyFailureForGroup(main.ownerId, main.groupId) } }
-        val scheduler: List<() -> Unit> = List(SCHEDULER_CALLS) { { habitService.autoCheckAllActiveHabits() } }
+        val scheduler: List<() -> Unit> = List(SCHEDULER_CALLS) { { habitWeeklyCheckScheduler.checkAllActiveHabits() } }
         return ConcurrentRunner.runAll(manual + scheduler)
     }
 
@@ -151,7 +154,7 @@ class HabitServiceJudgementConcurrencyTest {
 
         // 일부 호출이 예외로 끝나더라도, 마지막에는 아직 처리되지 않은 습관이 없도록 한 번 더 판정한다.
         habitService.checkWeeklyFailureForGroup(main.ownerId, main.groupId)
-        habitService.autoCheckAllActiveHabits()
+        habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(failedHabitCount(main)).describedAs("실패 처리된 습관").isEqualTo(HABIT_COUNT)
         assertThat(penaltyCount(main)).describedAs("벌칙 개수").isEqualTo(HABIT_COUNT)

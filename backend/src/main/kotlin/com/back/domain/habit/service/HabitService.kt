@@ -18,7 +18,6 @@ import com.back.global.exception.ForbiddenException
 import com.back.global.entity.requiredCreateDate
 import com.back.global.entity.requiredId
 import jakarta.transaction.Transactional
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -137,14 +136,14 @@ class HabitService(
         return habitIds.mapNotNull { judgeLocked(it) }
     }
 
-    // 매일 00시 05분에 모든 활성 습관을 순회하며 판정을 적용한다.
-    // 방장이 weekly-check를 직접 호출하지 않아도, 검토 유예시간이 지난 미검토 건은
-    // 이 스케줄러에 의해 자동 승인되고 그 결과로 PASSED/FAILED까지 자동 확정된다.
-    @Scheduled(cron = "0 5 0 * * *")
+    // 습관 묶음 하나를 한 트랜잭션으로 판정한다. 스케줄러(HabitWeeklyCheckScheduler)가 묶음마다 호출한다.
+    // 묶음마다 커밋하므로 습관 행 잠금과 DB 연결을 묶음 시간만큼만 쥐고, 영속성 컨텍스트도 묶음마다 새로 시작한다.
+    // (전체 습관을 한 트랜잭션으로 순회하면 쿼리마다 쌓인 엔티티 전체를 검사해 습관 수에 따라 시간이 제곱으로 늘고,
+    //  판정이 끝날 때까지 연결과 잠금을 쥐어 다른 요청이 막힌다. docs/loadtest/weekly-check.md)
+    // 방장이 weekly-check를 직접 호출하지 않아도, 검토 유예시간이 지난 미검토 건은 스케줄러의 이 판정으로
+    // 자동 승인되고 그 결과로 PASSED/FAILED까지 자동 확정된다.
     @Transactional
-    fun autoCheckAllActiveHabits() {
-        val habitIds = habitRepository.findIdsByStatusInProgressGroup(HabitStatus.ACTIVE)
-
+    fun checkWeeklyChunk(habitIds: List<Long>) {
         for (habitId in habitIds) {
             judgeLocked(habitId)
         }

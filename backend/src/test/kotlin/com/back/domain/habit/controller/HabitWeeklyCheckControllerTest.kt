@@ -9,6 +9,7 @@ import com.back.domain.habit.entity.Habit
 import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.habit.service.HabitService
+import com.back.domain.habit.service.HabitWeeklyCheckScheduler
 import com.back.domain.habitVerify.entity.HabitVerify
 import com.back.domain.habitVerify.entity.HabitVerifyStatus
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
@@ -50,6 +51,9 @@ class HabitWeeklyCheckControllerTest {
 
     @Autowired
     private lateinit var habitService: HabitService
+
+    @Autowired
+    private lateinit var habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler
 
     @Autowired
     private lateinit var authTokenService: AuthTokenService
@@ -245,7 +249,7 @@ class HabitWeeklyCheckControllerTest {
         val pendingVerifyId = createVerify(LocalDate.now().minusDays(4), HabitVerifyStatus.PENDING)
 
         // 컨트롤러/멤버 호출 없이 스케줄러가 하는 일만 직접 실행
-        habitService.autoCheckAllActiveHabits()
+        habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         val autoApproved = habitVerifyRepository.findById(pendingVerifyId).orElseThrow()
         Assertions.assertEquals(HabitVerifyStatus.APPROVED, autoApproved.status)
