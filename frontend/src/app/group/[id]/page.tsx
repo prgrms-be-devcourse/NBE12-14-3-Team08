@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
+import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
 
 interface GroupDetailData {
     id: number;
     title: string;
     description: string;
+    status?: string;
     startDate?: string;
     deadline?: string;
     penalty?: string;
@@ -57,6 +59,7 @@ export default function GroupDetailPage({
                 id: groupData.id || groupData.groupId || groupId,
                 title: groupData.title || '',
                 description: groupData.description || '',
+                status: groupData.status || (groupData.finished ? 'FINISH' : 'ACTIVE'),
                 startDate: groupData.startDate,
                 deadline: groupData.deadline,
                 penalty: groupData.penalty || '',
@@ -162,6 +165,8 @@ export default function GroupDetailPage({
             </div>
         );
     }
+
+    const isRoomFinished = group.status === 'FINISH' || (group.deadline && new Date(group.deadline) < new Date());
 
     return (
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -274,38 +279,48 @@ export default function GroupDetailPage({
                                 <div
                                     key={`member-${m.id}-${index}`}
                                     onClick={() => router.push(linkHref)}
-                                    className="group flex items-center justify-between rounded-3xl border border-slate-200/80 bg-white p-5 transition-all hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
+                                    className="group flex flex-col rounded-3xl border border-slate-200/80 bg-white p-5 transition-all hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
                                 >
-                                    <div className="flex items-center gap-3.5">
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-sm font-black text-emerald-600 border border-emerald-100">
-                                            {m.nickname.slice(0, 1)}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm font-extrabold text-slate-900 group-hover:text-emerald-600 transition-colors">
-                                                    {m.nickname}
-                                                </span>
-                                                {m.role === 'OWNER' && <span className="text-xs">👑</span>}
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-3.5">
+                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-sm font-black text-emerald-600 border border-emerald-100">
+                                                {m.nickname.slice(0, 1)}
                                             </div>
-                                            <span className="text-[11px] font-semibold text-slate-400">
-                                                {m.username}
+                                            <div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-sm font-extrabold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                                                        {m.nickname}
+                                                    </span>
+                                                    {m.role === 'OWNER' && <span className="text-xs">👑</span>}
+                                                </div>
+                                                <span className="text-[11px] font-semibold text-slate-400">
+                                                    {m.username}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-right">
+                                            <div className="hidden sm:block">
+                                                <div className="text-xs font-bold text-slate-800">
+                                                    {m.habitTitle || '등록된 습관 없음'}
+                                                </div>
+                                                <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                                                    {m.habitDescription || '습관 설명이 없습니다.'}
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-bold text-slate-300 group-hover:text-emerald-500 transition-colors">
+                                                →
                                             </span>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4 text-right">
-                                        <div className="hidden sm:block">
-                                            <div className="text-xs font-bold text-slate-800">
-                                                {m.habitTitle || '등록된 습관 없음'}
-                                            </div>
-                                            <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                                                {m.habitDescription || '습관 설명이 없습니다.'}
-                                            </div>
-                                        </div>
-                                        <span className="text-sm font-bold text-slate-300 group-hover:text-emerald-500 transition-colors">
-                                            →
-                                        </span>
-                                    </div>
+                                    {isRoomFinished && m.habitId && (
+                                        <MemberHabitHeatmap
+                                            habitId={m.habitId}
+                                            startDate={group.startDate}
+                                            deadline={group.deadline}
+                                        />
+                                    )}
                                 </div>
                             );
                         })}
