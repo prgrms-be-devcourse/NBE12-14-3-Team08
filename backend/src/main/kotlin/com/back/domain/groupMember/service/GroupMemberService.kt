@@ -47,6 +47,9 @@ class GroupMemberService(
     // - 트랜잭션 안에서 하면 그동안 DB 연결을 쥐고 있어, 연결을 기다리는 다른 API까지 멈춘다.
     // 그래서 ① 짧은 트랜잭션으로 조회 → ② 트랜잭션 밖에서 비밀번호 확인 → ③ 새 트랜잭션에서 그룹을 잠그고
     // 마감·참여 여부·정원 확인과 저장을 한다.
+    // ①에서 정원이 이미 찼으면 비밀번호를 확인하지 않고 바로 거절한다. 몰릴 때 대부분은 정원 초과라,
+    // 거절될 요청까지 BCrypt를 하면 CPU가 꽉 차 모두가 느려진다. (k6: 1000명 동시 참여 시 p95 약 12초)
+    // 정원은 초대 페이지에도 보이는 정보라 비밀번호보다 먼저 알려도 된다. 정확한 정원 확인은 ③의 잠금 안에서 다시 한다.
     // DB 접근은 반드시 ①·③ 안에서만 한다. 트랜잭션 밖에서 DB를 쓰면 그 연결을 메서드가 끝날 때까지 쥔 채
     // ③이 연결을 하나 더 기다려, 동시 요청이 연결 수만큼 오면 서로 기다리다 멈춘다(연결 풀 교착, k6로 확인).
     // SUPPORTS: 바깥 트랜잭션이 있으면(테스트 등) ①·③도 그 안에서 실행된다.
@@ -68,12 +71,17 @@ class GroupMemberService(
             JoinTarget(
                 groupId = groupId,
                 encodedPassword = group.password,
-                alreadyJoined = groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)
+                alreadyJoined = groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId),
+                full = isFull(groupId, group.memberLimit)
             )
         } ?: throw IllegalStateException("그룹 조회 트랜잭션이 결과를 돌려주지 않았습니다.")
 
         if (target.alreadyJoined) {
             return target.groupId
+        }
+
+        if (target.full) {
+            throw groupLimitExceeded()
         }
 
         validateGroupPassword(request.password, target.encodedPassword)
@@ -86,7 +94,8 @@ class GroupMemberService(
     private data class JoinTarget(
         val groupId: Long,
         val encodedPassword: String,
-        val alreadyJoined: Boolean
+        val alreadyJoined: Boolean,
+        val full: Boolean
     )
 
     private fun joinWithGroupLock(
@@ -118,15 +127,8 @@ class GroupMemberService(
             validateGroupPassword(rawPassword, group.password)
         }
 
-        val currentMemberCount = groupMemberRepository.countByGroupIdAndStatus(
-            groupId,
-            GroupMemberStatus.ACTIVE
-        )
-
-        if (currentMemberCount >= group.memberLimit) {
-            throw GroupLimitExceededException(
-                "그룹의 최대 인원이 초과되어 입장할 수 없습니다."
-            )
+        if (isFull(groupId, group.memberLimit)) {
+            throw groupLimitExceeded()
         }
 
         val member = memberRepository.findById(memberId)
@@ -144,6 +146,12 @@ class GroupMemberService(
 
         return groupId
     }
+
+    private fun isFull(groupId: Long, memberLimit: Int): Boolean =
+        groupMemberRepository.countByGroupIdAndStatus(groupId, GroupMemberStatus.ACTIVE) >= memberLimit
+
+    private fun groupLimitExceeded() =
+        GroupLimitExceededException("그룹의 최대 인원이 초과되어 입장할 수 없습니다.")
 
     private fun findGroupByInviteCode(inviteCode: String): Group =
         groupRepository.findByInviteCode(inviteCode)
