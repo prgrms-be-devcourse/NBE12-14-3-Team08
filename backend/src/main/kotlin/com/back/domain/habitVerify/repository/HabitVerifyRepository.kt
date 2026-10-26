@@ -2,6 +2,7 @@ package com.back.domain.habitVerify.repository
 
 import com.back.domain.habitVerify.entity.HabitVerify
 import com.back.domain.habitVerify.entity.HabitVerifyStatus
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -79,6 +80,35 @@ interface HabitVerifyRepository : JpaRepository<HabitVerify, Long> {
         """,
     )
     fun findAllByGroupId(@Param("groupId") groupId: Long): List<HabitVerify>
+
+    // 그룹 인증 사진 갤러리: 사진이 있는 인증을 (인증 날짜, id) 내림차순으로, 커서 뒤부터 읽는다.
+    // memberId, cursorDate, cursorId가 null이면 해당 조건은 적용하지 않는다. 다음 페이지 판단을 위해 호출하는 쪽이 pageable 크기를 한 건 크게 준다.
+    @Query(
+        """
+        SELECT hv
+        FROM HabitVerify hv
+        JOIN FETCH hv.habit h
+        JOIN FETCH h.groupMember gm
+        JOIN FETCH gm.member m
+        WHERE gm.group.id = :groupId
+          AND hv.status = :status
+          AND hv.imageUrl IS NOT NULL
+          AND hv.imageUrl <> ''
+          AND (:memberId IS NULL OR m.id = :memberId)
+          AND (cast(:cursorDate as LocalDate) IS NULL
+               OR hv.verifyDate < :cursorDate
+               OR (hv.verifyDate = :cursorDate AND hv.id < :cursorId))
+        ORDER BY hv.verifyDate DESC, hv.id DESC
+        """,
+    )
+    fun findPhotosByGroupId(
+        @Param("groupId") groupId: Long,
+        @Param("status") status: HabitVerifyStatus,
+        @Param("memberId") memberId: Long?,
+        @Param("cursorDate") cursorDate: LocalDate?,
+        @Param("cursorId") cursorId: Long?,
+        pageable: Pageable,
+    ): List<HabitVerify>
 
     @Modifying(flushAutomatically = true)
     @Query(
