@@ -120,6 +120,18 @@ cd backend
 - 테스트는 **Docker가 실행 중이어야** 합니다. Testcontainers가 PostgreSQL 컨테이너를 자동으로 띄우므로 로컬 DB(`docker compose`)와는 별개이며, 개발 데이터를 건드리지 않습니다.
 - Gradle로 실행하면 `test` 프로필이 자동 적용됩니다. IDE에서 Gradle이 아닌 JUnit 러너로 직접 실행한다면 VM 옵션 `-Dspring.profiles.active=test`를 추가하세요.
 
+#### k6 부하 테스트
+
+[k6](https://grafana.com/docs/k6/latest/set-up/install-k6/)를 설치한 뒤 백엔드를 실행하고, 프로젝트 루트에서 기본 부하 테스트를 실행합니다.
+
+```bash
+k6 run k6/smoke.js
+```
+
+- 테스트는 공개 연결 확인 API(`/api/connection-test`)를 호출합니다. 기본 대상은 `http://localhost:8080`입니다.
+- 다른 환경을 대상으로 실행하려면 `BASE_URL` 환경변수를 지정합니다. 예: `BASE_URL=https://api.example.com k6 run k6/smoke.js`
+- 부하는 30초간 최대 5 VU까지 증가하고 1분간 유지한 뒤 종료합니다. 요청 실패율 1% 미만, p95 응답 시간 500ms 미만을 기준으로 검사합니다.
+
 #### Kotlin 혼용 개발 (Java → Kotlin 전환 중)
 
 백엔드는 도메인별로 Java를 Kotlin으로 전환하는 중이라 **Java와 Kotlin이 함께 빌드**됩니다. (Kotlin 2.3.21, Spring Boot가 버전 관리)
