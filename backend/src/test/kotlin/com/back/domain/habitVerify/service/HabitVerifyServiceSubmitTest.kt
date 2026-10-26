@@ -187,7 +187,7 @@ class HabitVerifyServiceSubmitTest {
         fun 반려_아님_409() {
             val habitVerify = verifyIn(HabitVerifyStatus.APPROVED)
             every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
-            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns Optional.of(habitVerify)
+            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns habitVerify
 
             assertThatThrownBy {
                 habitVerifyService.resubmit(50L, 70L, HabitVerifyRequest("수정", "https://storage/a.png"), 2L)
@@ -202,7 +202,7 @@ class HabitVerifyServiceSubmitTest {
         fun 재제출_성공() {
             val habitVerify = verifyIn(HabitVerifyStatus.REJECTED)
             every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
-            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns Optional.of(habitVerify)
+            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns habitVerify
             imageValidationPasses()
 
             habitVerifyService.resubmit(50L, 70L, HabitVerifyRequest("수정", "https://storage/old.png"), 2L)
@@ -221,7 +221,7 @@ class HabitVerifyServiceSubmitTest {
         fun 사진_검사_실패() {
             val habitVerify = verifyIn(HabitVerifyStatus.REJECTED)
             every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
-            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns Optional.of(habitVerify)
+            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns habitVerify
             every { storageService.validateImageUrl(any(), any(), any(), any(), any()) } throws
                 IllegalArgumentException("본인이 업로드한 사진만 사용할 수 있습니다.")
 
@@ -243,7 +243,7 @@ class HabitVerifyServiceSubmitTest {
             val habitVerify = verifyIn(HabitVerifyStatus.REJECTED)
             ReflectionTestUtils.setField(habitVerify, "createDate", LocalDateTime.now().minusDays(8))
             every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
-            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns Optional.of(habitVerify)
+            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns habitVerify
 
             assertThatThrownBy {
                 habitVerifyService.resubmit(50L, 70L, HabitVerifyRequest("수정", "https://storage/new.png"), 2L)

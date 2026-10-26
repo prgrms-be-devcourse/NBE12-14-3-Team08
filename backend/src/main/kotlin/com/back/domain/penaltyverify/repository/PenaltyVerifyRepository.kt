@@ -12,11 +12,12 @@ import java.util.Optional
 @Repository
 interface PenaltyVerifyRepository : JpaRepository<PenaltyVerify, Long> {
 
+    // 서비스는 이 메서드를 직접 부른다. Spring Data의 findByIdOrNull(id)은 일반 findById를 불러 @EntityGraph가 빠진다.
     @EntityGraph(attributePaths = ["groupMember", "groupMember.group", "groupMember.member"])
     override fun findById(id: Long): Optional<PenaltyVerify>
 
     @EntityGraph(attributePaths = ["groupMember", "groupMember.member"])
-    fun findByHabitId(habitId: Long): Optional<PenaltyVerify>
+    fun findByHabitId(habitId: Long): PenaltyVerify?
 
     @Query(
         """

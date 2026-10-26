@@ -112,7 +112,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 본인의 습관에 대한 벌칙 제출 성공 시 PENDING 상태로 전환")
         fun submit_성공() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             imageValidationPasses()
 
             val request = SubmitPenaltyVerifyRequest("스트레칭 인증합니다.", "https://example.com/stretch.jpg")
@@ -129,7 +129,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 타인의 습관에 벌칙을 제출하려 하면 ForbiddenException(403), 사진 검사는 하지 않는다")
         fun submit_타인습관_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("타인의 벌칙 제출", "https://example.com/test.jpg")
 
@@ -143,7 +143,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: REQUIRED 상태가 아닌 벌칙에 제출 시도 시 IllegalStateException 발생")
         fun submit_REQUIRED아님_예외() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.APPROVED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             val request = SubmitPenaltyVerifyRequest("이미 승인된 벌칙", "https://example.com/test.jpg")
 
@@ -732,7 +732,7 @@ class PenaltyVerifyServiceTest {
         fun submit_사진검사_통과() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
             ReflectionTestUtils.setField(pv, "imageUrl", null)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             imageValidationPasses()
 
             penaltyVerifyService.submit(2L, 50L, SubmitPenaltyVerifyRequest("수행", "https://storage/new.png"))
@@ -745,7 +745,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 사진 URL 검사에 실패하면 400이고 벌칙 상태는 그대로다")
         fun submit_사진검사_실패() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.REQUIRED)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
             every { storageService.validateImageUrl(any(), any(), any(), any(), any()) } throws
                 IllegalArgumentException("업로드한 사진만 사용할 수 있습니다.")
 
@@ -761,7 +761,7 @@ class PenaltyVerifyServiceTest {
         @DisplayName("submit: 제출할 수 없는 상태(PENDING)면 사진 검사 전에 409")
         fun submit_상태먼저() {
             val pv = createFixturePenalty(1L, PenaltyVerifyStatus.PENDING)
-            every { penaltyVerifyRepository.findByHabitId(50L) } returns Optional.of(pv)
+            every { penaltyVerifyRepository.findByHabitId(50L) } returns pv
 
             assertThatThrownBy {
                 penaltyVerifyService.submit(2L, 50L, SubmitPenaltyVerifyRequest("수행", "https://storage/new.png"))

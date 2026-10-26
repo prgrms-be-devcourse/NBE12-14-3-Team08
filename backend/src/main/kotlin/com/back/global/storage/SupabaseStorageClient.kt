@@ -33,37 +33,22 @@ class SupabaseStorageClient(
         val endpoint =
             "${properties.url}/storage/v1/object/upload/sign/$bucket/$path?expiresIn=$expiresInSeconds"
 
-        val response = try {
+        val response = translatingFailures(alsoIllegalArgument = true) {
             val request = authorizedRequest(endpoint)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("""{"expiresIn":$expiresInSeconds}"""))
                 .build()
 
             httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
-        } catch (e: IOException) {
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
-        } catch (e: IllegalArgumentException) {
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
         }
 
         if (response.statusCode() !in 200..299) {
             throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE)
         }
 
-        val url = try {
-            objectMapper.readTree(response.body()).get("url")
-        } catch (e: IOException) {
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
-        }
+        val url = translatingFailures { objectMapper.readTree(response.body()).get("url")?.asText() }
 
-        if (url == null || url.asText().isBlank()) {
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE)
-        }
-
-        return url.asText()
+        return url?.takeIf { it.isNotBlank() } ?: throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE)
     }
 
     // Supabase Storage에 파일이 실제로 존재하는지 확인한다.
@@ -74,21 +59,37 @@ class SupabaseStorageClient(
         val endpoint = "${properties.url}/storage/v1/object/info/$bucket/$path"
 
         return try {
-            val request = authorizedRequest(endpoint)
-                .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                .build()
+            translatingFailures {
+                val request = authorizedRequest(endpoint)
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .build()
 
-            isFound(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
+                isFound(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
+            }
         } catch (e: IllegalArgumentException) {
             // URI로 만들 수 없는 경로 = 우리가 발급한 파일일 수 없음
             false
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
-        } catch (e: IOException) {
-            throw StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
         }
     }
+
+    // 통신 중 생기는 예외를 StorageUnavailableException(502)으로 바꾼다.
+    // alsoIllegalArgument: 요청을 만들다 나는 IllegalArgumentException(잘못된 URI 등)도 장애로 볼지 여부
+    // 그 외 예외(isFound가 던지는 StorageUnavailableException 등)는 그대로 다시 던진다.
+    private inline fun <T> translatingFailures(alsoIllegalArgument: Boolean = false, block: () -> T): T =
+        try {
+            block()
+        } catch (e: Exception) {
+            throw when (e) {
+                is InterruptedException -> {
+                    Thread.currentThread().interrupt()
+                    StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
+                }
+                is IOException -> StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e)
+                is IllegalArgumentException ->
+                    if (alsoIllegalArgument) StorageUnavailableException(STORAGE_UNAVAILABLE_MESSAGE, e) else e
+                else -> e
+            }
+        }
 
     // 두 요청에 공통인 주소, 시간 제한, 인증 헤더
     private fun authorizedRequest(endpoint: String): HttpRequest.Builder =
@@ -108,7 +109,6 @@ class SupabaseStorageClient(
         private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(5)
 
         // 200: 있음 / 400·404: 없음 (Supabase는 없는 파일에 400을 주기도 함) / 그 외: 저장소 장애
-        @JvmStatic
         fun isFound(statusCode: Int): Boolean =
             when (statusCode) {
                 200 -> true

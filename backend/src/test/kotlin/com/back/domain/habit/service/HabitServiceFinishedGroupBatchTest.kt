@@ -89,7 +89,7 @@ class HabitServiceFinishedGroupBatchTest {
         habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.FAILED)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isPresent()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isNotNull()
     }
 
     @Test
@@ -113,7 +113,7 @@ class HabitServiceFinishedGroupBatchTest {
         habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isNull()
     }
 
     @Test
@@ -124,6 +124,6 @@ class HabitServiceFinishedGroupBatchTest {
         habitWeeklyCheckScheduler.checkAllActiveHabits()
 
         assertThat(habit.status).isEqualTo(HabitStatus.ACTIVE)
-        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isEmpty()
+        assertThat(penaltyVerifyRepository.findByHabitId(habit.requiredId)).isNull()
     }
 }

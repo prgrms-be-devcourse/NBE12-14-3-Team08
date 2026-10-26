@@ -11,19 +11,23 @@ import com.back.domain.habitVerify.dto.HabitVerifyResponse
 import com.back.domain.habitVerify.dto.HabitVerifySummaryResponse
 import com.back.domain.habitVerify.entity.HabitVerify
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
-import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
+import com.back.global.exception.requireAccess
+import com.back.global.exception.requireAllowed
+import com.back.global.exception.requireBusinessRule
 import com.back.global.storage.StorageService
 import com.back.global.storage.UploadUrlResponse
 import com.back.global.storage.VerificationImageType
 import com.back.global.entity.requiredCreateDate
 import com.back.global.entity.requiredId
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class HabitVerifyService(
@@ -38,11 +42,9 @@ class HabitVerifyService(
     @Transactional(readOnly = true)
     fun createUploadUrl(memberId: Long, habitId: Long, filename: String?): UploadUrlResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관에만 사진을 올릴 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관에만 사진을 올릴 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증 사진을 올릴 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 습관 인증 사진을 올릴 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) {
             "진행 중인 습관에만 사진을 올릴 수 있습니다. 현재 상태: ${habit.status}"
@@ -54,11 +56,9 @@ class HabitVerifyService(
     @Transactional
     fun create(habitId: Long, request: HabitVerifyRequest, memberId: Long): HabitVerifyResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관에만 인증을 등록할 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관에만 인증을 등록할 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹에서는 습관 인증을 등록할 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) {
             "진행 중인 습관에만 인증을 등록할 수 있습니다. 현재 상태: ${habit.status}"
@@ -74,20 +74,20 @@ class HabitVerifyService(
 
         val habitVerify = HabitVerify.create(habit, verifyDate, request.description, request.imageUrl)
 
-        return HabitVerifyResponse.from(habitVerifyRepository.save(habitVerify))
+        return HabitVerifyResponse(habitVerifyRepository.save(habitVerify))
     }
 
     @Transactional(readOnly = true)
     fun findAll(habitId: Long, memberId: Long): List<HabitVerifyResponse> {
-        val habit = habitRepository.findById(habitId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 습관입니다.") }
+        val habit = habitRepository.findByIdOrNull(habitId)
+            ?: throw EntityNotFoundException("존재하지 않는 습관입니다.")
 
-        if (!groupMemberRepository.existsByGroupIdAndMemberId(habit.groupMember.group.requiredId, memberId)) {
-            throw ForbiddenException("같은 그룹의 멤버만 조회할 수 있습니다.")
+        requireAllowed(groupMemberRepository.existsByGroupIdAndMemberId(habit.groupMember.group.requiredId, memberId)) {
+            "같은 그룹의 멤버만 조회할 수 있습니다."
         }
 
         return habitVerifyRepository.findAllByHabitIdOrderByVerifyDateDesc(habitId)
-            .map(HabitVerifyResponse::from)
+            .map(::HabitVerifyResponse)
     }
 
     @Transactional
@@ -98,16 +98,14 @@ class HabitVerifyService(
         memberId: Long,
     ): HabitVerifyResponse {
         val habit = habitRepository.findByIdAndGroupMember_Member_Id(habitId, memberId)
-            .orElseThrow { ForbiddenException("본인의 습관 인증만 재제출할 수 있습니다.") }
+            .getOrNull() ?: throw ForbiddenException("본인의 습관 인증만 재제출할 수 있습니다.")
 
-        if (habit.groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹의 습관 인증은 수정할 수 없습니다.")
-        }
+        requireBusinessRule(!habit.groupMember.group.isFinished()) { "이미 종료된 그룹의 습관 인증은 수정할 수 없습니다." }
 
         check(habit.status == HabitStatus.ACTIVE) { "이미 종료된 습관의 인증은 수정할 수 없습니다." }
 
         val habitVerify = habitVerifyRepository.findByIdAndHabitId(verificationId, habitId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 인증 기록입니다.") }
+            ?: throw EntityNotFoundException("존재하지 않는 인증 기록입니다.")
 
         check(LocalDateTime.now().isBefore(calculateEntryDeadline(habit, habitVerify))) {
             "마감일이 지나 더 이상 수정할 수 없습니다."
@@ -118,7 +116,7 @@ class HabitVerifyService(
 
         habitVerify.resubmit(request.description, request.imageUrl)
 
-        return HabitVerifyResponse.from(habitVerify)
+        return HabitVerifyResponse(habitVerify)
     }
 
     // 사진 필수 여부는 HabitVerifyRequest의 @NotBlank가 막는다.
@@ -145,62 +143,60 @@ class HabitVerifyService(
     @Transactional(readOnly = true)
     fun getPendingByGroup(memberId: Long, groupId: Long): List<HabitVerifySummaryResponse> {
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { AccessDeniedException("해당 그룹의 멤버가 아닙니다.") }
+            .getOrNull() ?: throw AccessDeniedException("해당 그룹의 멤버가 아닙니다.")
 
-        if (groupMember.role != GroupMemberRole.OWNER) {
-            throw AccessDeniedException("방장만 대기 목록을 조회할 수 있습니다.")
-        }
+        requireAccess(groupMember.role == GroupMemberRole.OWNER) { "방장만 대기 목록을 조회할 수 있습니다." }
 
         return habitVerifyRepository.findPendingByGroupId(groupId)
-            .map(HabitVerifySummaryResponse::from)
+            .map(::HabitVerifySummaryResponse)
     }
 
     @Transactional
-    fun approve(memberId: Long, verificationId: Long): HabitVerifyResponse {
+    fun approve(memberId: Long, verificationId: Long): HabitVerifyResponse =
+        review(memberId, verificationId, HabitVerify::approve)
+
+    @Transactional
+    fun reject(memberId: Long, verificationId: Long): HabitVerifyResponse =
+        review(memberId, verificationId, HabitVerify::reject)
+
+    @Transactional
+    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> =
+        bulkReview(memberId, groupId, request, HabitVerify::approve)
+
+    @Transactional
+    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> =
+        bulkReview(memberId, groupId, request, HabitVerify::reject)
+
+    // 승인·반려는 "권한 확인 → 상태 변경 → 응답 변환" 흐름이 같고 상태를 바꾸는 동작만 다르다
+    private fun review(memberId: Long, verificationId: Long, action: (HabitVerify) -> Unit): HabitVerifyResponse {
         val habitVerify = findById(verificationId)
         validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
-        habitVerify.approve()
-        return HabitVerifyResponse.from(habitVerify)
+        action(habitVerify)
+        return HabitVerifyResponse(habitVerify)
     }
 
-    @Transactional
-    fun reject(memberId: Long, verificationId: Long): HabitVerifyResponse {
-        val habitVerify = findById(verificationId)
-        validateOwner(memberId, habitVerify.habit.groupMember.group.requiredId)
-        habitVerify.reject()
-        return HabitVerifyResponse.from(habitVerify)
-    }
-
-    @Transactional
-    fun bulkApprove(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> {
+    private fun bulkReview(
+        memberId: Long,
+        groupId: Long,
+        request: BulkActionRequest,
+        action: (HabitVerify) -> Unit,
+    ): List<HabitVerifyResponse> {
         validateOwner(memberId, groupId)
-        val targets = habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(HabitVerify::approve)
-        return targets.map(HabitVerifyResponse::from)
-    }
-
-    @Transactional
-    fun bulkReject(memberId: Long, groupId: Long, request: BulkActionRequest): List<HabitVerifyResponse> {
-        validateOwner(memberId, groupId)
-        val targets = habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
-        targets.forEach(HabitVerify::reject)
-        return targets.map(HabitVerifyResponse::from)
+        return habitVerifyRepository.findAllByIdInAndGroupId(request.ids, groupId)
+            .onEach(action)
+            .map(::HabitVerifyResponse)
     }
 
     private fun findById(verificationId: Long): HabitVerify =
-        habitVerifyRepository.findById(verificationId)
-            .orElseThrow { EntityNotFoundException("존재하지 않는 인증 기록입니다.") }
+        habitVerifyRepository.findByIdOrNull(verificationId)
+            ?: throw EntityNotFoundException("존재하지 않는 인증 기록입니다.")
 
     private fun validateOwner(memberId: Long, groupId: Long) {
         val groupMember = groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId)
-            .orElseThrow { AccessDeniedException("승인/거절 권한이 없습니다.") }
+            .getOrNull() ?: throw AccessDeniedException("승인/거절 권한이 없습니다.")
 
-        if (groupMember.role != GroupMemberRole.OWNER) {
-            throw AccessDeniedException("승인/거절 권한이 없습니다.")
-        }
+        requireAccess(groupMember.role == GroupMemberRole.OWNER) { "승인/거절 권한이 없습니다." }
 
-        if (groupMember.group.isFinished()) {
-            throw BusinessRuleException("이미 종료된 그룹은 인증을 검토할 수 없습니다.")
-        }
+        requireBusinessRule(!groupMember.group.isFinished()) { "이미 종료된 그룹은 인증을 검토할 수 없습니다." }
     }
 }
