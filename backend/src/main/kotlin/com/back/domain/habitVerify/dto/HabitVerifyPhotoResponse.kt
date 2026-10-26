@@ -13,6 +13,9 @@ data class HabitVerifyPhotoResponse(
     val memberNickname: String,
     val description: String?,
     val imageUrl: String,
+    // 크기를 저장하기 전에 올라온 인증은 둘 다 null이다. 화면은 null이면 정사각형으로 보여 준다.
+    val imageWidth: Int?,
+    val imageHeight: Int?,
 ) {
     companion object {
         // 목록 쿼리가 사진이 있는 인증만 골라 오므로 imageUrl은 null일 수 없다
@@ -28,6 +31,8 @@ data class HabitVerifyPhotoResponse(
                 memberNickname = member.nickname,
                 description = habitVerify.description,
                 imageUrl = requireNotNull(habitVerify.imageUrl) { "사진이 없는 인증은 사진 목록에 포함될 수 없습니다." },
+                imageWidth = habitVerify.imageWidth,
+                imageHeight = habitVerify.imageHeight,
             )
         }
     }

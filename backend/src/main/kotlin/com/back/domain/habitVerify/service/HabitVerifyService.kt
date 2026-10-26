@@ -72,7 +72,7 @@ class HabitVerifyService(
 
         validateHabitImage(memberId, habitId, request.imageUrl, null)
 
-        val habitVerify = HabitVerify.create(habit, verifyDate, request.description, request.imageUrl)
+        val habitVerify = HabitVerify.create(habit, verifyDate, request.description, request.imageUrl, request.imageWidth, request.imageHeight)
 
         return HabitVerifyResponse(habitVerifyRepository.save(habitVerify))
     }
@@ -114,7 +114,7 @@ class HabitVerifyService(
         habitVerify.validateResubmittable()
         validateHabitImage(memberId, habitId, request.imageUrl, habitVerify.imageUrl)
 
-        habitVerify.resubmit(request.description, request.imageUrl)
+        habitVerify.resubmit(request.description, request.imageUrl, request.imageWidth, request.imageHeight)
 
         return HabitVerifyResponse(habitVerify)
     }
