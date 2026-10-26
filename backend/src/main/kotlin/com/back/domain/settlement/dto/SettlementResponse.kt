@@ -1,5 +1,5 @@
 
-package com.back.domain.group.dto
+package com.back.domain.settlement.dto
 
 @JvmRecord
 data class SettlementResponse(
