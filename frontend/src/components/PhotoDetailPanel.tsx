@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { ArrowRight, ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { GroupPhoto } from '@/lib/habitApi';
 import { formatShortDate } from '@/lib/photoLibrary';
 import { ImageLightbox } from './ModalKit';
@@ -22,7 +22,8 @@ const iconButtonClass =
 
 // 사진 라이브러리에서 사진을 눌렀을 때 오른쪽에서 열리는 상세 패널.
 // 넓은 화면(lg 이상)에서는 페이지 본문을 밀지 않고 그 위에 겹쳐 오른쪽에 붙으며, 패널 밖의
-// 사진은 계속 눌러 고를 수 있다. 좁은 화면에서는 화면 전체를 덮는다. ← → 로 앞뒤 사진, Esc로 닫기.
+// 사진은 계속 눌러 고를 수 있다. 좁은 화면에서는 화면 전체를 덮는다. ← → 로 앞뒤 사진, Esc로 닫기,
+// 사진을 누르면 크게 본다.
 export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose }: PhotoDetailPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -78,7 +79,7 @@ export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose }: Ph
   return (
     <aside
       aria-label="인증 사진 상세"
-      className="anim-panel-in fixed inset-0 z-[60] flex flex-col bg-white lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[440px] lg:border-l lg:border-slate-200 lg:shadow-[-16px_0_32px_-12px_rgba(15,23,42,0.12)]"
+      className="anim-panel-in fixed inset-0 z-[60] flex flex-col bg-white lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[520px] xl:w-[600px] lg:border-l lg:border-slate-200 lg:shadow-[-16px_0_32px_-12px_rgba(15,23,42,0.12)]"
     >
       <div className="flex h-14 shrink-0 items-center border-b border-slate-100 pl-2 pr-2">
         <button type="button" onClick={onPrev ?? undefined} disabled={!onPrev} aria-label="이전 사진" className={iconButtonClass}>
@@ -88,22 +89,21 @@ export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose }: Ph
           <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
         </button>
         <span className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-100 cursor-pointer"
-        >
-          <Maximize2 className="h-4 w-4" />
-          크게 보기
-        </button>
         <button ref={closeRef} type="button" onClick={onClose} aria-label="상세 닫기" className={iconButtonClass}>
           <X className="h-5 w-5" strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="flex h-[min(45vh,340px)] shrink-0 items-center justify-center bg-slate-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img key={photo.id} src={photo.imageUrl} alt={altText} className="max-h-full max-w-full object-contain" />
+      <div className="h-[min(52vh,480px)] shrink-0 bg-slate-100">
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label="사진 크게 보기"
+          className="flex h-full w-full cursor-zoom-in items-center justify-center"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={photo.id} src={photo.imageUrl} alt={altText} className="max-h-full max-w-full object-contain" />
+        </button>
       </div>
 
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
