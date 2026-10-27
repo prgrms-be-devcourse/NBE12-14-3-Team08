@@ -43,6 +43,7 @@ class SecurityConfig(
                         "/api/members",
                         "/api/auth/login",
                         "/api/auth/refresh",
+                        "/api/auth/social/**",
                     ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/groups/invite/**").authenticated()
                     .requestMatchers(

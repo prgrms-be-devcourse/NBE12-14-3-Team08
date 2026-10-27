@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMember } from '../context/MemberContext';
+import { SocialLoginButtons } from '../components/SocialLoginButtons';
 
 export const AuthPage: React.FC<{
   initialMode?: 'login' | 'signup';
@@ -208,6 +209,8 @@ export const AuthPage: React.FC<{
             </div>
           </form>
         )}
+
+        <SocialLoginButtons redirectTo={redirectTo} />
       </div>
     </div>
   );

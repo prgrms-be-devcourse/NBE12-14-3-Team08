@@ -1,9 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+// 가입 방식. LOCAL은 아이디/비밀번호, 그 외는 소셜 로그인이다.
+export type MemberProvider = 'LOCAL' | 'GOOGLE';
+
 export interface MemberResponse {
   memberId: number;
   nickname: string;
   username: string;
+  provider: MemberProvider;
 }
 
 interface AuthSession {
@@ -100,6 +104,12 @@ export const memberApi = {
     apiRequest<AuthSession>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
+    }),
+  // 소셜 공급자 로그인 화면에서 받은 인가 코드로 로그인한다. redirectUri는 로그인을 시작할 때 쓴 주소와 같아야 한다.
+  socialLogin: (provider: string, code: string, redirectUri: string) =>
+    apiRequest<AuthSession>(`/auth/social/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify({ code, redirectUri }),
     }),
   getMe: () => apiRequest<MemberResponse>('/members/me', {}, true),
   updateMe: (nickname: string, currentPassword?: string, newPassword?: string) =>

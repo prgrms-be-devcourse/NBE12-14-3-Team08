@@ -91,6 +91,11 @@ class GlobalExceptionHandler {
     fun handleStorageUnavailable(e: StorageUnavailableException): ResponseEntity<ErrorResponse> =
         errorResponse(HttpStatus.BAD_GATEWAY, e.message)
 
+    // 소셜 로그인 공급자 통신 실패 또는 미설정 (502 BAD_GATEWAY)
+    @ExceptionHandler(SocialAuthUnavailableException::class)
+    fun handleSocialAuthUnavailable(e: SocialAuthUnavailableException): ResponseEntity<ErrorResponse> =
+        errorResponse(HttpStatus.BAD_GATEWAY, e.message)
+
     // 조회 대상 데이터가 존재하지 않음 (404 NOT_FOUND)
     @ExceptionHandler(EntityNotFoundException::class)
     fun handleEntityNotFound(e: EntityNotFoundException): ResponseEntity<ErrorResponse> =

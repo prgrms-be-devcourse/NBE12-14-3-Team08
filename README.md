@@ -159,6 +159,13 @@ npm run dev
 
 실행 후 [http://localhost:3000](http://localhost:3000) 에서 확인할 수 있습니다.
 
+#### 구글 소셜 로그인 설정 (선택)
+
+구글 로그인 버튼은 클라이언트 ID가 설정돼 있을 때만 나타납니다. 설정하지 않아도 아이디/비밀번호 로그인은 그대로 동작합니다.
+
+- 프론트 `frontend/.env.local`에 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, 백엔드 환경변수에 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`을 설정합니다. 값은 팀에서 비공개로 전달받으며, **시크릿은 절대 커밋하지 않습니다.**
+- 키를 받아 설정하는 방법, 구글 콘솔에서 키를 만드는 방법, 문제 해결은 [구글 소셜 로그인 설정 가이드](docs/social-login-setup.md)를 참고하세요.
+
 ## 🤝 우리가 협업하는 법
 
 * 결정은 다 같이

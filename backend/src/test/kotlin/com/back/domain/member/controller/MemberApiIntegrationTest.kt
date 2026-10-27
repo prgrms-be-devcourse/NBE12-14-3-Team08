@@ -25,7 +25,7 @@ class MemberApiIntegrationTest : MemberApiTestSupport() {
     }
 
     companion object {
-        private val MEMBER_KEYS = setOf("memberId", "nickname", "username", "createDate", "modifyDate")
+        private val MEMBER_KEYS = setOf("memberId", "nickname", "username", "provider", "createDate", "modifyDate")
         private val LOGIN_KEYS = setOf("accessToken", "refreshToken", "tokenType")
         private val ERROR_KEYS = setOf("status", "message", "timestamp")
         private val LOCAL_DATE_TIME = Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?$""")
@@ -45,6 +45,7 @@ class MemberApiIntegrationTest : MemberApiTestSupport() {
             assertThat(node.get("memberId").isNumber).isTrue()
             assertThat(node.get("nickname").asString()).isEqualTo("계약")
             assertThat(node.get("username").asString()).isEqualTo("contract-user")
+            assertThat(node.get("provider").asString()).isEqualTo("LOCAL")
             assertThat(node.get("createDate").asString()).matches(LOCAL_DATE_TIME.toPattern())
             assertThat(node.get("modifyDate").asString()).matches(LOCAL_DATE_TIME.toPattern())
         }

@@ -2,6 +2,7 @@ package com.back.domain.member.controller
 
 import com.back.domain.member.service.AuthTokenService
 import com.back.domain.member.service.MemberService
+import com.back.domain.member.social.SocialAuthService
 import com.back.global.exception.GlobalExceptionHandler
 import com.back.global.exception.UnauthorizedException
 import io.mockk.every
@@ -34,6 +35,9 @@ class AuthControllerTest {
 
     @MockK
     private lateinit var authTokenService: AuthTokenService
+
+    @MockK
+    private lateinit var socialAuthService: SocialAuthService
 
     @InjectMockKs
     private lateinit var authController: AuthController

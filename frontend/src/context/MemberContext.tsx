@@ -6,6 +6,7 @@ import {
   clearAuthSession,
   getAuthSession,
   memberApi,
+  type MemberProvider as LoginProvider,
   MemberResponse,
   saveAuthSession,
 } from '../lib/memberApi';
@@ -14,12 +15,14 @@ interface MemberUser {
   id: string;
   name: string;
   username: string;
+  provider: LoginProvider;
 }
 
 interface MemberContextValue {
   currentUser: MemberUser | null;
   authReady: boolean;
   login: (username: string, password: string, redirectTo?: string) => Promise<void>;
+  socialLogin: (provider: string, code: string, redirectUri: string, redirectTo?: string) => Promise<void>;
   signup: (nickname: string, username: string, password: string) => Promise<void>;
   updateProfile: (nickname: string, currentPassword?: string, newPassword?: string) => Promise<void>;
   logout: () => void;
@@ -33,6 +36,7 @@ function toUser(member: MemberResponse): MemberUser {
     id: String(member.memberId),
     name: member.nickname,
     username: member.username,
+    provider: member.provider ?? 'LOCAL',
   };
 }
 
@@ -52,8 +56,8 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setAuthReady(true));
   }, []);
 
-  const login = async (username: string, password: string, redirectTo = '/main') => {
-    const session = await memberApi.login(username, password);
+  // 세션을 저장하고 내 정보를 불러온 뒤 이동한다. 내 정보를 못 불러오면 세션을 지운다.
+  const completeLogin = async (session: Awaited<ReturnType<typeof memberApi.login>>, redirectTo: string) => {
     saveAuthSession(session);
     try {
       setCurrentUser(toUser(await memberApi.getMe()));
@@ -65,6 +69,14 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
       clearAuthSession();
       throw error;
     }
+  };
+
+  const login = async (username: string, password: string, redirectTo = '/main') => {
+    await completeLogin(await memberApi.login(username, password), redirectTo);
+  };
+
+  const socialLogin = async (provider: string, code: string, redirectUri: string, redirectTo = '/main') => {
+    await completeLogin(await memberApi.socialLogin(provider, code, redirectUri), redirectTo);
   };
 
   const signup = async (nickname: string, username: string, password: string) => {
@@ -97,7 +109,7 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MemberContext.Provider value={{ currentUser, authReady, login, signup, updateProfile, logout, deleteAccount }}>
+    <MemberContext.Provider value={{ currentUser, authReady, login, socialLogin, signup, updateProfile, logout, deleteAccount }}>
       {children}
     </MemberContext.Provider>
   );

@@ -1,6 +1,8 @@
 
 package com.back.domain.groupMember.dto
 
+import com.back.domain.member.entity.MemberProvider
+
 interface GroupMemberResponse {
 
     data class Simple(
@@ -11,7 +13,8 @@ interface GroupMemberResponse {
         val role: String,
         val habitId: Long?,
         val habitTitle: String?,
-        val habitDescription: String?
+        val habitDescription: String?,
+        val provider: MemberProvider = MemberProvider.LOCAL
     )
 
     data class Detail(
@@ -20,7 +23,8 @@ interface GroupMemberResponse {
         val nickname: String,
         val username: String,
         val role: String,
-        val penaltyCount: Long
+        val penaltyCount: Long,
+        val provider: MemberProvider = MemberProvider.LOCAL
     )
 
     data class JoinSuccess(

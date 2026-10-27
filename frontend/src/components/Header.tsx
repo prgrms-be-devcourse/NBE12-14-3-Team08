@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Target } from 'lucide-react';
 import { useMember } from '../context/MemberContext';
+import { memberHandle } from '../lib/memberDisplay';
 
 export default function Header() {
     const router = useRouter();
@@ -69,7 +70,7 @@ export default function Header() {
                 {currentUser?.name}
               </span>
                             <span className="text-xs text-slate-400 font-normal leading-tight">
-                @{currentUser?.username}
+                {memberHandle(currentUser?.provider, currentUser?.username ?? '')}
               </span>
                         </div>
                     </Link>

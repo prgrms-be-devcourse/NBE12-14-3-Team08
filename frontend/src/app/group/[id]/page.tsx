@@ -9,6 +9,8 @@ import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
 import { GroupContentBar } from '@/components/GroupContentBar';
+import { memberHandle } from '@/lib/memberDisplay';
+import type { MemberProvider } from '@/lib/memberApi';
 import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
 
@@ -45,6 +47,7 @@ interface GroupMemberItem {
     memberId: number;
     nickname: string;
     username: string;
+    provider: MemberProvider;
     role: 'OWNER' | 'MEMBER';
     habitId: number | null;
     habitTitle: string | null;
@@ -97,6 +100,7 @@ export default function GroupDetailPage({
                     memberId: m.memberId,
                     nickname: m.nickname || m.memberName || '',
                     username: m.username,
+                    provider: m.provider || 'LOCAL',
                     role: m.role || 'MEMBER',
                     habitId: m.habitId || null,
                     habitTitle: m.habitTitle || null,
@@ -323,7 +327,7 @@ export default function GroupDetailPage({
                                                     {m.role === 'OWNER' && <span className="text-xs">👑</span>}
                                                 </div>
                                                 <span className="text-[11px] font-semibold text-slate-400">
-                                                    {m.username}
+                                                    {memberHandle(m.provider, m.username)}
                                                 </span>
                                             </div>
                                         </div>

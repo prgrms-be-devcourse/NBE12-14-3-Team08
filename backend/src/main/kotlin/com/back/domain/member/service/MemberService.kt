@@ -81,6 +81,11 @@ class MemberService(
 
         val newPassword = request.newPassword
         if (!newPassword.isNullOrBlank()) {
+            // 소셜 회원은 비밀번호를 정한 적이 없어 기존 비밀번호를 확인할 수 없다.
+            if (member.isSocial()) {
+                throw IllegalArgumentException("소셜 로그인 회원은 비밀번호를 변경할 수 없습니다.")
+            }
+
             val currentPassword = request.currentPassword
 
             if (currentPassword.isNullOrBlank()) {
