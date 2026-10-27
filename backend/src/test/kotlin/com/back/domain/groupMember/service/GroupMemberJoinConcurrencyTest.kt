@@ -64,8 +64,9 @@ class GroupMemberJoinConcurrencyTest {
         )
 
         assertThat(results.count { it == JoinResult.SUCCESS }).isEqualTo(4)
-        assertThat(results.count { it == JoinResult.LIMIT_EXCEEDED }).isEqualTo(6)
-        assertThat(results.count { it == JoinResult.WRONG_PASSWORD }).isEqualTo(10)
+        // 정원이 찬 뒤에 도착한 요청은 비밀번호를 확인하기 전에 정원 초과로 거절되므로, 틀린 비밀번호 요청도 정원 초과가 될 수 있다
+        assertThat(results.count { it == JoinResult.LIMIT_EXCEEDED || it == JoinResult.WRONG_PASSWORD }).isEqualTo(16)
+        assertThat(results.count { it == JoinResult.WRONG_PASSWORD }).isLessThanOrEqualTo(10)
         assertThat(results.count { it == JoinResult.OTHER_ERROR }).isZero()
         assertThat(activeMemberCount(groupId)).isEqualTo(5)
 

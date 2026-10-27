@@ -35,6 +35,7 @@ import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.willAnswer
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyList
+import org.mockito.Mockito.anyString
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -277,8 +278,68 @@ class GroupMemberServiceTest {
             }
 
             @Test
-            @DisplayName("그룹 정원이 가득 차면 가입할 수 없다")
+            @DisplayName("그룹 정원이 가득 차면 비밀번호를 확인하지 않고 가입할 수 없다")
             fun joinGroup_LimitExceeded() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("pass123")
+
+                given(groupRepository.findByInviteCode(inviteCode))
+                    .willReturn(group)
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId,
+                        memberId
+                    )
+                ).willReturn(false)
+                given(
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId,
+                        GroupMemberStatus.ACTIVE
+                    )
+                ).willReturn(5L)
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(GroupLimitExceededException::class.java)
+                    .hasMessageContaining(
+                        "그룹의 최대 인원이 초과되어 입장할 수 없습니다."
+                    )
+                verify(passwordEncoder, never()).matches(anyString(), anyString())
+                verify(entityManager, never())
+                    .refresh(group, LockModeType.PESSIMISTIC_WRITE)
+            }
+
+            @Test
+            @DisplayName("그룹 정원이 가득 찼으면 비밀번호가 틀려도 정원 초과로 거절한다")
+            fun joinGroup_LimitExceeded_WrongPassword() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("wrong_pass")
+
+                given(groupRepository.findByInviteCode(inviteCode))
+                    .willReturn(group)
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId,
+                        memberId
+                    )
+                ).willReturn(false)
+                given(
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId,
+                        GroupMemberStatus.ACTIVE
+                    )
+                ).willReturn(5L)
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(GroupLimitExceededException::class.java)
+            }
+
+            @Test
+            @DisplayName("비밀번호를 확인하는 사이 마지막 자리가 차면 잠금 안에서 정원 초과로 거절한다")
+            fun joinGroup_FilledWhileCheckingPassword() {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
@@ -297,15 +358,14 @@ class GroupMemberServiceTest {
                         groupId,
                         GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(5L)
+                ).willReturn(4L, 5L)
 
                 assertThatThrownBy {
                     groupMemberService.joinGroup(inviteCode, memberId, request)
                 }
                     .isInstanceOf(GroupLimitExceededException::class.java)
-                    .hasMessageContaining(
-                        "그룹의 최대 인원이 초과되어 입장할 수 없습니다."
-                    )
+                verify(groupMemberRepository, never())
+                    .save(any(GroupMember::class.java))
             }
 
             @Test
