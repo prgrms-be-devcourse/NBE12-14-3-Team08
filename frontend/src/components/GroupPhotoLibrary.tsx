@@ -728,7 +728,7 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
   return (
     <section aria-label="인증 사진">
       {/* 아이콘 탭과 갤러리가 한 카드로 이어진다. 윗줄: 왼쪽 년/월/주, 가운데 탭, 오른쪽 멤버 필터 */}
-      <div className="@container rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+      <div className="@container">
         <GroupContentBar
           view={view}
           onViewChange={onViewChange}
@@ -747,7 +747,7 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
         <div id="group-view-panel" role="tabpanel" aria-label="인증 사진" className="group/frame relative h-[min(720px,78vh)]">
       <div
         ref={frameRef}
-        className="relative h-full overflow-hidden rounded-b-[23px]"
+        className="relative h-full overflow-hidden"
       >
         <div
           ref={scrollRef}
@@ -812,7 +812,7 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
         </div>
       </div>
 
-      <p className="mt-2 text-center text-xs font-medium text-slate-400">
+      <p className="border-t border-slate-200 px-4 py-2.5 text-center text-xs font-medium text-slate-400">
         −/+ 또는 Ctrl+휠(핀치)로 축소/확대 · 한 줄 {columns}장
       </p>
 

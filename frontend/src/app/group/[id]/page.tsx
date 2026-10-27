@@ -201,8 +201,9 @@ export default function GroupDetailPage({
                 </Link>
             </div>
 
-            {/* 그룹 기본 정보 배너 */}
-            <section className="rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-8">
+            {/* 그룹 정보와 인증 사진/멤버 탭을 경계 없이 한 카드로 통합 */}
+            <section className="rounded-[2rem] border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60">
+              <div className="p-6 sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0 flex-1 space-y-2">
                         <div className="flex items-center gap-2">
@@ -276,12 +277,16 @@ export default function GroupDetailPage({
                         </>
                     )}
                 </div>
-            </section>
+              </div>
 
-            {group.status === 'FINISH' && group.rankings && <GroupStatistics rankings={group.rankings} />}
+                {group.status === 'FINISH' && group.rankings && (
+                    <div className="-mt-4 px-6 pb-6 sm:px-8">
+                        <GroupStatistics rankings={group.rankings} />
+                    </div>
+                )}
 
-            {/* 인증 사진 / 멤버 목록: 아이콘 탭이 카드의 윗줄이 되어 갤러리와 이어진다 */}
-            <section className="mt-6">
+                {/* 인증 사진 / 멤버 목록: 아이콘 탭이 정보 바로 아래에서 갤러리와 이어진다 */}
+                <div>
                 {view === 'photos' && (
                     <GroupPhotoLibrary
                         groupId={group.id}
@@ -293,7 +298,7 @@ export default function GroupDetailPage({
                 )}
 
                 {view === 'members' && (
-                    <div className="@container rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+                    <div className="@container">
                         <GroupContentBar view={view} onViewChange={setView} memberCount={group.currentMemberCount} />
                         <div id="group-view-panel" role="tabpanel" aria-label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
                         {members.map((m, index) => {
@@ -357,6 +362,7 @@ export default function GroupDetailPage({
                         </div>
                     </div>
                 )}
+                </div>
             </section>
 
             {group && (
