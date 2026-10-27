@@ -233,6 +233,9 @@ export function MemberPage({ groupId, memberId }: Props) {
     );
 
     const openCert = (verify: HabitVerifyResponse) => {
+        // 오른쪽 패널은 한 번에 하나만 연다
+        setActivePenalty(null);
+        setPenaltyDetail(null);
         setCertDetail(verify);
         setCertDirection(null);
     };
@@ -240,6 +243,7 @@ export function MemberPage({ groupId, memberId }: Props) {
     const openPenaltyDetail = async (penaltyId: number) => {
         try {
             const detail = await habitApi.getPenaltyDetail(penaltyId);
+            setCertDetail(null);
             setPenaltyDetail(detail);
         } catch {
             // 상세 조회 실패 시 조용히 무시 (요약 정보는 이미 화면에 있음)
@@ -263,11 +267,12 @@ export function MemberPage({ groupId, memberId }: Props) {
         } else {
             setActivePenaltyDetail(null);
         }
+        setCertDetail(null);
         setActivePenalty(penalty);
     };
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 md:py-8">
             {/* Top Nav */}
             <div className="flex items-center justify-between mb-5">
                 <Link
@@ -275,7 +280,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                     className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>챌린지 방으로</span>
+                    <span>돌아가기</span>
                 </Link>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
                     멤버 상세 페이지
@@ -283,7 +288,7 @@ export function MemberPage({ groupId, memberId }: Props) {
             </div>
 
             {/* 요약 카드: 프로필, 이번 주 링, 도전 습관 */}
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0f3d2e] to-[#0a2a20] text-white p-6 sm:p-7 mb-6 shadow-[0_18px_40px_rgba(11,20,17,0.28)]">
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0f3d2e] to-[#0a2a20] text-white p-6 sm:p-8 mb-6 shadow-[0_18px_40px_rgba(11,20,17,0.28)]">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-3.5">
                         <div className="shrink-0 w-[60px] h-[60px] rounded-full p-[3px] bg-[conic-gradient(from_200deg,#c6f24a,#34e6a4,#c6f24a)]">
@@ -293,7 +298,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                         </div>
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="text-[22px] font-extrabold tracking-tight">{member.nickname}</h1>
+                                <h1 className="text-[22px] sm:text-2xl font-extrabold tracking-tight">{member.nickname}</h1>
                                 {isHost && (
                                     <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300">
                                         <Crown className="w-3 h-3 fill-amber-300" />
@@ -382,7 +387,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                         <div>
                             <span className="text-[11px] font-extrabold tracking-wider text-[#c6f24a]">도전 습관</span>
                             <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                <h2 className="text-xl font-extrabold tracking-tight">{habit.title}</h2>
+                                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">{habit.title}</h2>
                                 <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-white/10">
                                     주 {habit.days}회
                                 </span>
@@ -654,7 +659,7 @@ export function MemberPage({ groupId, memberId }: Props) {
             )}
 
             {activePenalty && (
-                <PenaltyCertModal
+                <PenaltyCertPanel
                     status={activePenalty.status}
                     initial={
                         activePenaltyDetail
@@ -695,7 +700,7 @@ export function MemberPage({ groupId, memberId }: Props) {
             )}
 
             {penaltyDetail && (
-                <PenaltyDetailModal item={penaltyDetail} onClose={() => setPenaltyDetail(null)} />
+                <PenaltyDetailPanel item={penaltyDetail} onClose={() => setPenaltyDetail(null)} />
             )}
         </div>
     );
@@ -703,7 +708,7 @@ export function MemberPage({ groupId, memberId }: Props) {
 
 function CenteredMessage({ text }: { text: string }) {
     return (
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-3">
+        <div className="max-w-5xl mx-auto px-4 py-16 text-center space-y-3">
             <p className="text-slate-500">{text}</p>
         </div>
     );
@@ -858,7 +863,7 @@ function WeekRing({ summary }: { summary: WeekSummary }) {
         <div
             role="img"
             aria-label={`이번 주 인증 ${summary.approved}회, 목표 ${summary.goal}회`}
-            className="relative w-[180px] h-[180px] sm:w-[210px] sm:h-[210px] shrink-0"
+            className="relative w-[180px] h-[180px] sm:w-[240px] sm:h-[240px] shrink-0"
         >
             <svg viewBox="0 0 210 210" className="w-full h-full -rotate-90">
                 <circle cx="105" cy="105" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="17" />
@@ -892,10 +897,10 @@ function WeekRing({ summary }: { summary: WeekSummary }) {
             </svg>
             {summary.goalReached && <span className="absolute inset-0 rounded-full anim-ring-pulse pointer-events-none" />}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xs font-extrabold text-white/55">이번 주</span>
-                <b className="text-[52px] sm:text-[56px] leading-none font-extrabold tracking-tight text-[#c6f24a] tabular-nums">
+                <span className="text-xs sm:text-sm font-extrabold text-white/55">이번 주</span>
+                <b className="text-[52px] sm:text-[68px] leading-none font-extrabold tracking-tight text-[#c6f24a] tabular-nums">
                     {summary.approved}
-                    <em className="not-italic text-[24px] sm:text-[26px] opacity-60 ml-0.5">/{summary.goal}</em>
+                    <em className="not-italic text-[24px] sm:text-[32px] opacity-60 ml-0.5">/{summary.goal}</em>
                 </b>
             </div>
         </div>
@@ -1153,7 +1158,7 @@ function VerifyAlbum({
             <div ref={gridRef} className="overflow-hidden transition-[height] duration-300 ease-out">
                 <div
                     key={currentMonth}
-                    className={`grid grid-cols-3 sm:grid-cols-4 gap-1.5 ${
+                    className={`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5 ${
                         direction === "left"
                             ? "anim-slide-children-from-left"
                             : direction === "right"
@@ -1836,9 +1841,73 @@ function CertDetailPanel({
     );
 }
 
-// ---------- 모달: 벌칙 인증하기 ----------
+// ---------- 오른쪽 패널: 벌칙 인증하기 ----------
 
-function PenaltyCertModal({
+// 오른쪽 패널의 공통 틀: 제목과 닫기 버튼이 있는 윗줄, 스크롤되는 본문, 선택적인 아랫줄(버튼).
+// 인증 상세 패널과 같은 위치·크기·모션을 쓰고, Esc로 닫는다(입력 중에는 건드리지 않는다).
+function SidePanel({
+    label,
+    title,
+    onClose,
+    onEscape,
+    footer,
+    children,
+}: {
+    label: string;
+    title: string;
+    onClose: () => void;
+    // Esc를 눌렀을 때의 동작. 기본은 패널 닫기 (크게 보기를 먼저 닫아야 할 때 바꾼다)
+    onEscape?: () => void;
+    footer?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    const closeRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        closeRef.current?.focus({ preventScroll: true });
+    }, []);
+
+    // 화면 전체를 덮는 좁은 화면에서는 뒤의 페이지가 같이 스크롤되지 않게 한다.
+    useEffect(() => {
+        if (!window.matchMedia("(max-width: 1023px)").matches) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, []);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.key !== "Escape") return;
+            const target = e.target;
+            if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+                return;
+            }
+            (onEscape ?? onClose)();
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [onEscape, onClose]);
+
+    return (
+        <aside
+            aria-label={label}
+            className="anim-panel-in fixed inset-0 z-[60] flex flex-col bg-white lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[520px] xl:w-[600px] lg:border-l lg:border-slate-200 lg:shadow-[-16px_0_32px_-12px_rgba(15,23,42,0.12)]"
+        >
+            <div className="flex h-14 shrink-0 items-center border-b border-slate-100 pl-6 pr-2">
+                <h2 className="flex-1 text-[15px] font-extrabold text-slate-900">{title}</h2>
+                <button ref={closeRef} type="button" onClick={onClose} aria-label="닫기" className={PANEL_ICON_BUTTON}>
+                    <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+            {footer && <div className="shrink-0 border-t border-slate-100 px-6 py-4">{footer}</div>}
+        </aside>
+    );
+}
+
+function PenaltyCertPanel({
     status,
     initial,
     onClose,
@@ -1881,35 +1950,55 @@ function PenaltyCertModal({
     };
 
     return (
-        <ModalShell borderClass="border-rose-100">
-            <ModalHeader
-                title={isEditing ? "✏️ 벌칙 인증 수정하기" : "벌칙 인증하기"}
-                subtitle={
-                    isEditing
-                        ? "반려된 내용을 수정해서 다시 제출해주세요."
-                        : "벌칙을 수행한 사진과 내용을 남겨주세요."
-                }
-                onClose={onClose}
-                titleClass="text-rose-600"
-            />
-            <span
-                className={`inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-xl ${PENALTY_STATUS_META[status].badgeClassName}`}
-            >
-                {PENALTY_STATUS_META[status].statusLabel}
-            </span>
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <SidePanel
+            label={isEditing ? "벌칙 인증 수정" : "벌칙 인증"}
+            title={isEditing ? "✏️ 벌칙 인증 수정하기" : "벌칙 인증하기"}
+            onClose={onClose}
+            footer={
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={submitting}
+                        className="h-11 flex-1 rounded-2xl bg-slate-100 text-sm font-extrabold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 cursor-pointer"
+                    >
+                        취소
+                    </button>
+                    <button
+                        type="submit"
+                        form="penalty-cert-form"
+                        disabled={submitting}
+                        className="h-11 flex-[2] rounded-2xl bg-[#0f3d2e] text-sm font-extrabold text-[#c6f24a] transition hover:bg-[#0a2a20] disabled:opacity-60 cursor-pointer"
+                    >
+                        {submitting ? "처리 중..." : isEditing ? "수정 후 재제출" : "벌칙 인증 등록"}
+                    </button>
+                </div>
+            }
+        >
+            <form id="penalty-cert-form" onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
                 <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <span
+                        className={`inline-block text-xs font-bold px-2.5 py-1 rounded-xl ${PENALTY_STATUS_META[status].badgeClassName}`}
+                    >
+                        {PENALTY_STATUS_META[status].statusLabel}
+                    </span>
+                    <p className="mt-2 text-sm text-slate-500">
+                        {isEditing ? "반려된 내용을 수정해서 다시 제출해주세요." : "벌칙을 수행한 사진과 내용을 남겨주세요."}
+                    </p>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
                         벌칙 수행 사진 <span className="text-rose-500">*</span>
                     </label>
-                    <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-100 border border-rose-200 flex items-center justify-center">
+                    <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center">
                         {preview ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={preview} alt="벌칙 인증 미리보기" className="w-full h-full object-cover" />
+                            <img src={preview} alt="벌칙 인증 미리보기" className="max-h-full max-w-full object-contain" />
                         ) : (
                             <span className="text-xs text-slate-400">사진을 선택해주세요</span>
                         )}
-                        <label className="absolute bottom-2 right-2 cursor-pointer px-3 py-1.5 bg-white/90 hover:bg-white text-slate-800 text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5">
+                        <label className="absolute bottom-3 right-3 cursor-pointer px-3 py-1.5 bg-white/90 hover:bg-white text-slate-800 text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5">
                             <Upload className="w-3.5 h-3.5" />
                             <span>{isEditing ? "사진 변경" : "사진 업로드"}</span>
                             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
@@ -1918,75 +2007,76 @@ function PenaltyCertModal({
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">인증 내용</label>
+                    <label htmlFor="penalty-description" className="block text-xs font-bold text-slate-700 mb-1.5">
+                        인증 내용
+                    </label>
                     <textarea
-                        rows={3}
+                        id="penalty-description"
+                        rows={5}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="어떻게 벌칙을 수행했는지 적어주세요."
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-[#0f3d2e]/40 resize-none"
                     />
                 </div>
 
                 {error && <p className="text-xs text-rose-500 font-semibold">{error}</p>}
-
-                <ModalActions
-                    onClose={onClose}
-                    submitting={submitting}
-                    submitLabel={isEditing ? "수정 후 재제출" : "벌칙 인증 등록"}
-                    tone="rose"
-                />
             </form>
-        </ModalShell>
+        </SidePanel>
     );
 }
 
-// ---------- 모달: 벌칙 수행 상세 ----------
+// ---------- 오른쪽 패널: 벌칙 수행 상세 ----------
 
-function PenaltyDetailModal({ item, onClose }: { item: PenaltyVerifyDetail; onClose: () => void }) {
-    const [showLightbox, setShowLightbox] = useState(false);
+function PenaltyDetailPanel({ item, onClose }: { item: PenaltyVerifyDetail; onClose: () => void }) {
+    const [expanded, setExpanded] = useState(false);
+    const altText = "벌칙 수행 사진";
 
     return (
-        <ModalShell borderClass="border-rose-100" widthClass="max-w-sm">
-            <ModalHeader
-                title="벌칙 수행 기록"
-                onClose={onClose}
-                titleClass="text-rose-600"
-            />
-            <span
-                className={`inline-block mt-2 text-xs font-bold px-2.5 py-1 rounded-xl ${PENALTY_STATUS_META[item.status].badgeClassName}`}
-            >
-                {PENALTY_STATUS_META[item.status].statusLabel}
-            </span>
-            <div className="mt-3">
-                <p className="text-xs font-bold text-slate-500">{item.habitTitle}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">벌칙: {item.penaltyText}</p>
-                {item.imageUrl && (
+        <SidePanel
+            label="벌칙 수행 기록"
+            title="벌칙 수행 기록"
+            onClose={onClose}
+            onEscape={() => (expanded ? setExpanded(false) : onClose())}
+        >
+            {item.imageUrl && (
+                <div className="h-[min(52vh,480px)] bg-slate-100">
                     <button
                         type="button"
-                        onClick={() => setShowLightbox(true)}
-                        className="block mt-2.5 w-full h-56 rounded-2xl overflow-hidden bg-slate-100 border border-rose-200 shadow-inner cursor-zoom-in"
+                        onClick={() => setExpanded(true)}
+                        aria-label="사진 크게 보기"
+                        className="flex h-full w-full cursor-zoom-in items-center justify-center"
                     >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.imageUrl} alt="벌칙 사진" className="w-full h-full object-cover" />
+                        <img src={item.imageUrl} alt={altText} className="max-h-full max-w-full object-contain" />
                     </button>
-                )}
-                {showLightbox && item.imageUrl && (
-                    <ImageLightbox src={item.imageUrl} alt="벌칙 사진" onClose={() => setShowLightbox(false)} />
-                )}
-                <div className="mt-3 bg-rose-50/50 p-3 rounded-xl border border-rose-100">
-                    <p className="text-xs font-semibold text-rose-900 leading-relaxed">
-                        {item.description || "등록된 내용이 없습니다."}
-                    </p>
                 </div>
-                <p className="mt-3 text-[11px] text-slate-400 text-right">인증 일자: {item.verifyDate ?? "-"}</p>
+            )}
+
+            <div className="px-6 py-5">
+                <div className="flex items-center justify-between gap-3">
+                    <span
+                        className={`inline-block text-xs font-bold px-2.5 py-1 rounded-xl ${PENALTY_STATUS_META[item.status].badgeClassName}`}
+                    >
+                        {PENALTY_STATUS_META[item.status].statusLabel}
+                    </span>
+                    <span className="flex-none text-xs font-semibold text-slate-500">{item.verifyDate ?? "-"}</span>
+                </div>
+
+                <h3 className="mt-4 text-sm font-extrabold text-[#0f3d2e]">{item.habitTitle}</h3>
+                <p className="mt-0.5 text-xs text-slate-500">벌칙: {item.penaltyText}</p>
+                <p
+                    className={`mt-3 whitespace-pre-wrap break-words text-sm leading-6 ${
+                        item.description ? "text-slate-700" : "text-slate-500"
+                    }`}
+                >
+                    {item.description || "등록된 내용이 없습니다."}
+                </p>
             </div>
-            <button
-                onClick={onClose}
-                className="mt-4 w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl shadow-xs"
-            >
-                확인
-            </button>
-        </ModalShell>
+
+            {expanded &&
+                item.imageUrl &&
+                createPortal(<ImageLightbox src={item.imageUrl} alt={altText} onClose={() => setExpanded(false)} />, document.body)}
+        </SidePanel>
     );
 }
