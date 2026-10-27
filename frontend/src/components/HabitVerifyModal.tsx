@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { habitApi, uploadFileToSignedUrl } from '../lib/habitApi';
+import { readImageSize, type ImageSize } from '../lib/imageSize';
 
 interface HabitVerifyModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface HabitVerifyModalProps {
   onSubmit: (data: {
     description: string;
     imageUrl: string;
+    imageWidth?: number;
+    imageHeight?: number;
   }) => Promise<void>;
 }
 
@@ -27,6 +30,7 @@ export function HabitVerifyModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageSize, setImageSize] = useState<ImageSize | null>(null);
 
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,6 +45,7 @@ export function HabitVerifyModal({
     setSelectedFile(null);
     setPreviewUrl('');
     setImageUrl('');
+    setImageSize(null);
     setError('');
     setIsUploading(false);
     setIsSubmitting(false);
@@ -98,6 +103,7 @@ export function HabitVerifyModal({
 
     setError('');
     setImageUrl('');
+    setImageSize(null);
 
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -112,6 +118,9 @@ export function HabitVerifyModal({
     try {
       setIsUploading(true);
 
+      // 갤러리가 사진 비율대로 자리를 잡도록 사진 크기를 읽어 둔다 (읽지 못해도 업로드는 진행)
+      const size = await readImageSize(file);
+
       // 1. 백엔드에 업로드 URL 요청
       const uploadResponse = await habitApi.getHabitUploadUrl(habitId, file.name);
 
@@ -120,8 +129,10 @@ export function HabitVerifyModal({
 
       // 3. DB에 저장할 publicUrl 저장
       setImageUrl(uploadResponse.publicUrl);
+      setImageSize(size);
     } catch (caught) {
       setImageUrl('');
+      setImageSize(null);
 
       setError(
         caught instanceof Error
@@ -162,6 +173,7 @@ export function HabitVerifyModal({
       await onSubmit({
         description: description.trim(),
         imageUrl,
+        ...imageSize,
       });
 
       onClose();

@@ -22,6 +22,8 @@ export default function ModalTestPage() {
   const handleVerifySubmit = async (data: {
     description: string;
     imageUrl: string;
+    imageWidth?: number;
+    imageHeight?: number;
   }) => {
     console.log('인증 등록 테스트:', data);
   };
