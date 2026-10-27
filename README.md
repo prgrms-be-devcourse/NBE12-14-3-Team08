@@ -163,20 +163,8 @@ npm run dev
 
 구글 로그인 버튼은 클라이언트 ID가 설정돼 있을 때만 나타납니다. 설정하지 않아도 아이디/비밀번호 로그인은 그대로 동작합니다.
 
-1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트를 만들고 **OAuth 동의 화면**(외부)을 설정합니다. 요청 범위는 `openid`, `profile`만 씁니다. (이메일은 받지 않습니다)
-2. **사용자 인증 정보 → OAuth 클라이언트 ID(웹 애플리케이션)** 를 만들고 **승인된 리디렉션 URI**를 등록합니다.
-   - 로컬: `http://localhost:3000/auth/callback/google`
-   - 배포: `https://<서비스 도메인>/auth/callback/google` (Vercel 미리보기 주소는 매번 바뀌어 미리 등록할 수 없으므로, 소셜 로그인은 등록한 주소에서만 동작합니다)
-3. 발급된 값을 환경변수로 설정합니다. **클라이언트 시크릿은 절대 커밋하지 마세요.**
-
-| 위치 | 환경변수 | 설명 |
-|---|---|---|
-| 프론트엔드 (`frontend/.env.local`) | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | 클라이언트 ID (공개 값) |
-| 백엔드 | `GOOGLE_CLIENT_ID` | 위와 같은 클라이언트 ID |
-| 백엔드 | `GOOGLE_CLIENT_SECRET` | 클라이언트 시크릿 (서버에서만 사용) |
-
-- 백엔드에 값이 없으면 구글 로그인 요청만 502로 거절되고 나머지 기능은 영향이 없습니다.
-- 소셜 회원은 공급자 + 공급자 식별자로만 구분하며, 이메일이 같아도 아이디/비밀번호 회원과 합쳐지지 않습니다.
+- 프론트 `frontend/.env.local`에 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, 백엔드 환경변수에 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`을 설정합니다. 값은 팀에서 비공개로 전달받으며, **시크릿은 절대 커밋하지 않습니다.**
+- 키를 받아 설정하는 방법, 구글 콘솔에서 키를 만드는 방법, 문제 해결은 [구글 소셜 로그인 설정 가이드](docs/social-login-setup.md)를 참고하세요.
 
 ## 🤝 우리가 협업하는 법
 
