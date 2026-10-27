@@ -16,6 +16,7 @@ import {
   stepColumns,
   type PhotoColumns,
 } from '@/lib/photoLibrary';
+import { MemberFilterDropdown } from './MemberFilterDropdown';
 import { PhotoDetailPanel } from './PhotoDetailPanel';
 
 interface GroupPhotoLibraryProps {
@@ -721,7 +722,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
 
   return (
     <section aria-label="인증 사진">
-      {/* 갤러리 위 줄: 왼쪽에 지금 보는 년/월/주, 오른쪽에 멤버 필터 */}
+      {/* 갤러리 위 줄: 왼쪽에 지금 보는 년/월/주, 오른쪽에 멤버 필터 드롭다운 */}
       <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-1">
         <p
           aria-live="polite"
@@ -730,39 +731,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
           {periodLabel && current !== null ? periodLabel : ''}
         </p>
 
-      <div
-        className="flex min-w-0 flex-1 basis-60 flex-wrap items-center justify-end gap-1.5"
-        role="group"
-        aria-label="멤버 필터"
-      >
-        <button
-          type="button"
-          aria-pressed={filter === null}
-          onClick={() => selectFilter(null)}
-          className={`rounded-full border px-3 py-1 text-xs font-bold transition cursor-pointer ${
-            filter === null
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-              : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          전체
-        </button>
-        {members.map((member) => (
-          <button
-            key={member.memberId}
-            type="button"
-            aria-pressed={filter === member.memberId}
-            onClick={() => selectFilter(member.memberId)}
-            className={`rounded-full border px-3 py-1 text-xs font-bold transition cursor-pointer ${
-              filter === member.memberId
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            {member.nickname}
-          </button>
-        ))}
-      </div>
+        <MemberFilterDropdown members={members} value={filter} onChange={selectFilter} />
       </div>
 
       <div className="group/frame relative">
