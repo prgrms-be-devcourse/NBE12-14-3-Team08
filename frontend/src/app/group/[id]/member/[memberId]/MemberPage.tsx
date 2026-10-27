@@ -30,7 +30,7 @@ import {
 } from "@/lib/habitApi";
 import { readImageSize } from "@/lib/imageSize";
 import { groupApi, type GroupDetailResponse } from "@/lib/groupApi";
-import { daysSince, summarizeThisWeek, type WeekSummary } from "@/lib/habitWeek";
+import { daysSince, formatWeekRange, summarizeThisWeek, type WeekSummary } from "@/lib/habitWeek";
 
 type Props = { groupId: string; memberId: string };
 
@@ -335,6 +335,12 @@ export function MemberPage({ groupId, memberId }: Props) {
                         <div className="mt-6 flex flex-wrap items-center justify-center gap-7">
                             <WeekRing summary={weekSummary} />
                             <div className="grid gap-2.5 text-[13px] font-extrabold text-white/70">
+                                <p
+                                    className="text-[12px] font-bold text-white/55"
+                                    title="방을 만든 요일부터 7일씩 한 주로 센다"
+                                >
+                                    {formatWeekRange(weekSummary.weekStart, weekSummary.weekEnd)}
+                                </p>
                                 <div className="flex items-center gap-2">
                                     <i className="w-[22px] h-2 rounded-full bg-[#c6f24a]" />
                                     승인 <b className="text-base text-white">{weekSummary.approved}</b>
@@ -348,7 +354,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                             </div>
                         </div>
 
-                        {weekSummary.isFirstWeek && (
+                        {weekSummary.isExempt && (
                             <p className="mt-4 mx-auto max-w-md text-center text-[13px] font-bold text-white/85 bg-white/10 ring-1 ring-white/20 rounded-2xl px-4 py-2.5">
                                 🌱 습관을 만든 이번 주는 판정하지 않아요
                             </p>
@@ -421,7 +427,13 @@ export function MemberPage({ groupId, memberId }: Props) {
             </div>
 
             {/* 인증 기록: 달력과 앨범을 토글로 전환 */}
-            {(habit || verifies.length > 0) && <VerifyRecords verifies={verifies} onSelect={setCertDetail} />}
+            {(habit || verifies.length > 0) && (
+                <VerifyRecords
+                    verifies={verifies}
+                    onSelect={setCertDetail}
+                    thisWeek={weekSummary ? { start: weekSummary.weekStart, end: weekSummary.weekEnd } : null}
+                />
+            )}
 
             {/* 벌칙 기록 (실패한 습관 종류와 무관하게 이 멤버의 전체 벌칙) */}
             <div className="bg-white rounded-[28px] shadow-[0_10px_30px_rgba(14,21,18,0.07),0_1px_2px_rgba(14,21,18,0.05)] p-6">
@@ -737,9 +749,13 @@ const verifiesOfMonth = (verifies: HabitVerifyResponse[], month: string) =>
         .filter((v) => monthOf(v.verifyDate) === month)
         .sort((a, b) => b.verifyDate.localeCompare(a.verifyDate) || b.id - a.id);
 
-function VerifyLegend() {
+// 달력에서 링이 세는 이번 주 칸: 링과 같은 라임색의 얇은 후광과 옅은 그림자
+const THIS_WEEK_OUTLINE =
+    "ring-2 ring-[#c6f24a] ring-offset-2 shadow-[0_6px_14px_-6px_rgba(110,160,0,0.5)]";
+
+function VerifyLegend({ showThisWeek = false }: { showThisWeek?: boolean }) {
     return (
-        <div className="flex items-center justify-end gap-2.5 text-[11px] font-bold text-slate-500">
+        <div className="flex items-center justify-end gap-x-2.5 whitespace-nowrap text-[11px] font-bold text-slate-500">
             <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                 성공
@@ -756,6 +772,12 @@ function VerifyLegend() {
                 <span className="w-2.5 h-2.5 rounded-full bg-slate-100 ring-1 ring-slate-300 inline-block" />
                 미인증
             </span>
+            {showThisWeek && (
+                <span className="flex items-center gap-1">
+                    <span className="w-3 h-2.5 rounded-[3px] bg-white ring-2 ring-[#c6f24a] inline-block" />
+                    이번 주
+                </span>
+            )}
         </div>
     );
 }
@@ -764,9 +786,11 @@ function VerifyLegend() {
 function VerifyRecords({
     verifies,
     onSelect,
+    thisWeek,
 }: {
     verifies: HabitVerifyResponse[];
     onSelect: (v: HabitVerifyResponse) => void;
+    thisWeek: { start: string; end: string } | null;
 }) {
     const [view, setView] = useState<"calendar" | "album">("calendar");
 
@@ -794,7 +818,7 @@ function VerifyRecords({
 
             <div key={view} className="anim-modal-pop-in">
                 {view === "calendar" ? (
-                    <VerifyCalendar verifies={verifies} onSelectDay={onSelect} />
+                    <VerifyCalendar verifies={verifies} onSelectDay={onSelect} thisWeek={thisWeek} />
                 ) : (
                     <VerifyAlbum verifies={verifies} onSelect={onSelect} />
                 )}
@@ -868,9 +892,12 @@ function WeekRing({ summary }: { summary: WeekSummary }) {
 function VerifyCalendar({
     verifies,
     onSelectDay,
+    thisWeek,
 }: {
     verifies: HabitVerifyResponse[];
     onSelectDay: (v: HabitVerifyResponse) => void;
+    // 링이 세는 이번 주 기간. 달력에서 같은 칸들을 표시해 링 숫자와 맞춰 볼 수 있게 한다.
+    thisWeek: { start: string; end: string } | null;
 }) {
     const now = new Date();
     const todayYear = now.getFullYear();
@@ -911,6 +938,7 @@ function VerifyCalendar({
         day: number;
         dateStr: string;
         isToday: boolean;
+        inThisWeek: boolean;
         verify?: HabitVerifyResponse;
     } | null> = [];
 
@@ -921,15 +949,15 @@ function VerifyCalendar({
             day,
             dateStr,
             isToday: year === todayYear && month === todayMonth && day === todayDate,
+            inThisWeek: !!thisWeek && dateStr >= thisWeek.start && dateStr <= thisWeek.end,
             verify: verifyByDate.get(dateStr),
         });
     }
 
     return (
         <div>
-            <div className="grid grid-cols-3 items-center mb-4">
-                <div />
-                <div className="flex items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-4">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={goPrevMonth}
                         className="p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
@@ -949,7 +977,7 @@ function VerifyCalendar({
                         <ChevronRight className="w-4 h-4 text-slate-500" />
                     </button>
                 </div>
-                <VerifyLegend />
+                <VerifyLegend showThisWeek={!!thisWeek} />
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400">
@@ -964,7 +992,7 @@ function VerifyCalendar({
                 {cells.map((cell, idx) => {
                     if (!cell) return <div key={idx} className="aspect-[4/3] rounded-xl bg-transparent" />;
 
-                    const { day, isToday, verify } = cell;
+                    const { day, isToday, inThisWeek, verify } = cell;
 
                     if (!verify) {
                         return (
@@ -973,8 +1001,10 @@ function VerifyCalendar({
                                 className={`relative aspect-[4/3] rounded-xl border select-none ${
                                     isToday
                                         ? "border-2 border-dashed border-amber-400"
-                                        : "bg-slate-50 border-slate-200/70"
-                                }`}
+                                        : inThisWeek
+                                          ? "bg-[#f6fbe2] border-transparent"
+                                          : "bg-slate-50 border-slate-200/70"
+                                } ${inThisWeek ? THIS_WEEK_OUTLINE : ""}`}
                             >
                                 <span
                                     className={`absolute top-1 left-1.5 text-[11px] font-bold ${
@@ -998,7 +1028,7 @@ function VerifyCalendar({
                             type="button"
                             onClick={() => onSelectDay(verify)}
                             aria-label={`${month + 1}월 ${day}일 인증 ${VERIFY_STATUS_LABEL[verify.status]}`}
-                            className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 cursor-pointer select-none transition-transform hover:scale-105 hover:z-10 hover:shadow-lg"
+                            className={`group relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 cursor-pointer select-none transition-transform hover:scale-105 hover:z-10 hover:shadow-lg ${inThisWeek ? THIS_WEEK_OUTLINE : ""}`}
                         >
                             <VerifyThumb verify={verify} />
                             <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/35 to-transparent" />

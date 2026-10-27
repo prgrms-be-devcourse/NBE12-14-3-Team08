@@ -20,11 +20,14 @@ export function weekStartOf(date: Date, groupCreateDate: string): Date {
 }
 
 export interface WeekSummary {
+  // 이번 주의 시작과 끝 날짜 (YYYY-MM-DD, 양쪽 모두 포함)
+  weekStart: string;
+  weekEnd: string;
   approved: number;
   pending: number;
   goal: number;
-  // 습관을 만든 주는 판정하지 않는다
-  isFirstWeek: boolean;
+  // 습관을 만든 뒤 처음 맞는 부분 주라 판정하지 않는다 (서버 규칙: 이번 주의 시작 요일 다음 날부터 만든 습관)
+  isExempt: boolean;
   goalReached: boolean;
 }
 
@@ -38,19 +41,25 @@ interface WeekSummaryInput {
 }
 
 export function summarizeThisWeek({ verifies, goal, habitCreateDate, groupCreateDate, today }: WeekSummaryInput): WeekSummary {
-  const weekStart = toDateKey(weekStartOf(today, groupCreateDate));
+  const weekStartDate = weekStartOf(today, groupCreateDate);
+  const weekStart = toDateKey(weekStartDate);
+  const weekEnd = toDateKey(new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6));
   const todayKey = toDateKey(today);
   const inWeek = verifies.filter((v) => v.verifyDate >= weekStart && v.verifyDate <= todayKey);
 
   const approved = inWeek.filter((v) => v.status === 'APPROVED').length;
   const pending = inWeek.filter((v) => v.status === 'PENDING').length;
-  const habitWeekStart = toDateKey(weekStartOf(parseDate(habitCreateDate), groupCreateDate));
+  // 이번 주 도중(시작 요일 다음 날부터)에 만든 습관은 부분 주라서 판정하지 않는다.
+  // 시작 요일 당일에 만들었다면 한 주를 온전히 쓸 수 있어 그 주에 판정한다.
+  const habitCreateKey = toDateKey(parseDate(habitCreateDate));
 
   return {
+    weekStart,
+    weekEnd,
     approved,
     pending,
     goal,
-    isFirstWeek: habitWeekStart === weekStart,
+    isExempt: habitCreateKey > weekStart && habitCreateKey <= weekEnd,
     goalReached: approved >= goal,
   };
 }
@@ -60,4 +69,15 @@ export function daysSince(date: string, today: Date): number {
   const start = parseDate(date);
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+// "10/24(토) ~ 10/30(금)"
+export function formatWeekRange(weekStart: string, weekEnd: string): string {
+  const format = (key: string) => {
+    const date = parseDate(key);
+    return `${date.getMonth() + 1}/${date.getDate()}(${DAY_NAMES[date.getDay()]})`;
+  };
+  return `${format(weekStart)} ~ ${format(weekEnd)}`;
 }
