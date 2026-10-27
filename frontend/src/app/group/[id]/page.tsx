@@ -9,7 +9,21 @@ import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
 import { GroupContentBar } from '@/components/GroupContentBar';
+import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+
+interface RankingItem {
+    rank: number;
+    memberId: number;
+    nickname: string | null;
+    count: number;
+}
+
+interface GroupRankings {
+    habitVerifyTop3: RankingItem[];
+    penaltyVerifyTop3: RankingItem[];
+    habitSuccessTop3: RankingItem[];
+}
 
 interface GroupDetailData {
     id: number;
@@ -23,6 +37,7 @@ interface GroupDetailData {
     memberLimit: number;
     inviteLink?: string;
     currentMemberCount: number;
+    rankings: GroupRankings | null;
 }
 
 interface GroupMemberItem {
@@ -71,6 +86,7 @@ export default function GroupDetailPage({
                 memberLimit: groupData.memberLimit || 10,
                 inviteLink: groupData.inviteLink,
                 currentMemberCount: groupData.currentMemberCount || 1,
+                rankings: groupData.rankings ?? null,
             });
 
             try {
@@ -261,6 +277,8 @@ export default function GroupDetailPage({
                     )}
                 </div>
             </section>
+
+            {group.status === 'FINISH' && group.rankings && <GroupStatistics rankings={group.rankings} />}
 
             {/* 인증 사진 / 멤버 목록: 아이콘 탭이 카드의 윗줄이 되어 갤러리와 이어진다 */}
             <section className="mt-6">
