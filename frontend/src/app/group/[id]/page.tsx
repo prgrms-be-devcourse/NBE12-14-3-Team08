@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
@@ -171,20 +172,21 @@ export default function GroupDetailPage({
     const isRoomFinished = group.status === 'FINISH' || (group.deadline && new Date(group.deadline) < new Date());
 
     return (
-        <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-            <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
-                {/* 상단 네비게이션 & 헤더 */}
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                    <Link
-                        href="/main"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-700 transition"
-                    >
-                        <span>←</span> 방 목록으로
-                    </Link>
-                </div>
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 md:py-8">
+            {/* Top Nav */}
+            <div className="mb-5 flex items-center justify-between">
+                <Link
+                    href="/main"
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 transition-colors hover:text-slate-900"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>방 목록으로</span>
+                </Link>
+            </div>
 
+            <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
                 {/* 그룹 기본 정보 카드 */}
-                <section className="mt-6 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 transition-all">
+                <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 transition-all">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
