@@ -27,7 +27,8 @@ interface GroupMemberRepository : JpaRepository<GroupMember, Long> {
             cast(gm.role as string),
             h.id,
             h.title,
-            h.description
+            h.description,
+            m.provider
         )
         from GroupMember gm
         join gm.member m
@@ -49,7 +50,8 @@ interface GroupMemberRepository : JpaRepository<GroupMember, Long> {
             m.nickname,
             m.username,
             cast(gm.role as string),
-            count(pv)
+            count(pv),
+            m.provider
         )
         from GroupMember gm
         join gm.member m
@@ -62,6 +64,7 @@ interface GroupMemberRepository : JpaRepository<GroupMember, Long> {
             m.id,
             m.nickname,
             m.username,
+            m.provider,
             gm.role
         """
     )
