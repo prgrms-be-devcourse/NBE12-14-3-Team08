@@ -67,6 +67,7 @@ export interface GroupMemberSimple {
   habitId: number | null;
   habitTitle: string | null;
   habitDescription: string | null;
+  provider?: 'LOCAL' | 'GOOGLE';
 }
 
 export interface PenaltyVerifySummary {

@@ -7,6 +7,7 @@ import { DeleteAccountModal } from '../components/DeleteAccountModal';
 import { MemberNavigation } from '../components/MemberNavigation';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { ProfileUpdateModal } from '../components/ProfileUpdateModal';
+import { isSocialProvider, memberHandle } from '../lib/memberDisplay';
 
 export const MyPage: React.FC = () => {
   const { currentUser, authReady, updateProfile, deleteAccount } = useMember();
@@ -19,6 +20,8 @@ export const MyPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // 소셜 로그인 회원은 아이디와 비밀번호가 없어 그 입력칸을 숨긴다.
+  const isSocial = isSocialProvider(currentUser?.provider);
 
 
   if (!authReady) {
@@ -99,12 +102,17 @@ export const MyPage: React.FC = () => {
           <ProfileAvatar nickname={currentUser.name} />
           <div>
             <p className="text-lg font-extrabold text-slate-900">{currentUser.name}</p>
-            <p className="mt-0.5 text-sm text-slate-400">@{currentUser.username}</p>
+            <p className="mt-0.5 text-sm text-slate-400">{memberHandle(currentUser.provider, currentUser.username)}</p>
           </div>
         </div>
 
         <form onSubmit={handleSave} className="mt-8">
           <div className="max-w-md space-y-5">
+            {isSocial ? (
+              <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+                {memberHandle(currentUser.provider, currentUser.username)}으로 로그인한 회원입니다. 아이디와 비밀번호는 따로 없어요.
+              </p>
+            ) : (
             <div>
               <label htmlFor="mypage-username" className="mb-1.5 block text-sm font-bold text-slate-700">아이디</label>
               <input
@@ -116,6 +124,7 @@ export const MyPage: React.FC = () => {
               />
               <p className="mt-1.5 text-xs text-slate-400">아이디는 변경할 수 없습니다.</p>
             </div>
+            )}
             <div>
               <label htmlFor="mypage-name" className="mb-1.5 block text-sm font-bold text-slate-700">닉네임</label>
               <input
@@ -129,6 +138,8 @@ export const MyPage: React.FC = () => {
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+            {!isSocial && (
+              <>
             <div>
               <label htmlFor="mypage-current-password" className="mb-1.5 block text-sm font-bold text-slate-700">기존 비밀번호</label>
               <input
@@ -165,6 +176,8 @@ export const MyPage: React.FC = () => {
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+              </>
+            )}
           </div>
 
           <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-6">
