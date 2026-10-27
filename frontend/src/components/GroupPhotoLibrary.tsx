@@ -16,12 +16,15 @@ import {
   stepColumns,
   type PhotoColumns,
 } from '@/lib/photoLibrary';
-import { PhotoDetailModal } from './PhotoDetailModal';
+import { PhotoDetailPanel } from './PhotoDetailPanel';
 
 interface GroupPhotoLibraryProps {
   groupId: number | string;
   members: { memberId: number; nickname: string }[];
 }
+
+// 상세 패널에서 다음 사진으로 넘기다 끝에 닿기 전에 미리 다음 페이지를 불러올 남은 장 수
+const PREFETCH_REMAINING = 6;
 
 interface LoadedPhotos {
   memberId: number | null;
@@ -97,6 +100,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
   const rows = useMemo(() => chunkRows(items, columns), [items, columns]);
   const monthStarts = useMemo(() => (columns === 15 ? monthStartRows(rows) : []), [columns, rows]);
   const hasMore = current !== null && current.nextCursor !== null && current.moreError === null;
+  const selectedIndex = selected ? items.findIndex((photo) => photo.id === selected.id) : -1;
 
   // 첫 페이지: 그룹이나 멤버 필터가 바뀔 때마다 처음부터 다시 불러온다.
   useEffect(() => {
@@ -365,15 +369,44 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
     setFilter(memberId);
   };
 
-  const openPhoto = (photo: GroupPhoto) => {
-    lastFocusRef.current = document.activeElement as HTMLElement | null;
+  // 사진을 고른다. 끝에 가까워지면 다음 페이지를 미리 불러와 계속 넘겨 볼 수 있게 한다.
+  const selectPhoto = (photo: GroupPhoto) => {
     setSelected(photo);
+    const index = items.findIndex((item) => item.id === photo.id);
+    if (hasMore && index >= items.length - PREFETCH_REMAINING) void loadMore();
   };
 
-  const closePhoto = useCallback(() => {
+  const openPhoto = (photo: GroupPhoto) => {
+    if (!selected) lastFocusRef.current = document.activeElement as HTMLElement | null;
+    selectPhoto(photo);
+  };
+
+  const closePhoto = () => {
     setSelected(null);
-    lastFocusRef.current?.focus();
-  }, []);
+
+    // 넘겨 보다 닫았다면 마지막으로 보던 사진 칸으로 포커스를 돌려준다.
+    const cell = selected
+      ? scrollRef.current?.querySelector<HTMLElement>(`[data-photo-id="${selected.id}"]`)
+      : null;
+    (cell ?? lastFocusRef.current)?.focus({ preventScroll: true });
+  };
+
+  // 앞뒤로 넘긴 사진이 갤러리 안에서 잘려 보이면 갤러리만 스크롤해 보이게 한다. (페이지는 움직이지 않는다)
+  const revealPhoto = (photo: GroupPhoto) => {
+    const scroller = scrollRef.current;
+    const cell = scroller?.querySelector<HTMLElement>(`[data-photo-id="${photo.id}"]`);
+    if (!scroller || !cell) return;
+
+    const view = scroller.getBoundingClientRect();
+    const box = cell.getBoundingClientRect();
+    if (box.top < view.top) scroller.scrollTop -= view.top - box.top;
+    else if (box.bottom > view.bottom) scroller.scrollTop += Math.min(box.bottom - view.bottom, box.top - view.top);
+  };
+
+  const stepPhoto = (photo: GroupPhoto) => {
+    selectPhoto(photo);
+    revealPhoto(photo);
+  };
 
   const levelIndex = PHOTO_LEVELS.indexOf(columns);
   const gap = PHOTO_GAP[columns];
@@ -427,6 +460,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
                   data-date={photo.verifyDate}
                   onClick={() => openPhoto(photo)}
                   aria-label={`${photo.memberNickname} ${photo.habitTitle} ${formatShortDate(photo.verifyDate)}`}
+                  aria-current={selected?.id === photo.id ? 'true' : undefined}
                   className={`group/cell relative block w-full overflow-hidden bg-slate-200 p-0 cursor-pointer ${
                     columns === 1 ? 'rounded-[18px]' : ''
                   }`}
@@ -457,6 +491,13 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
                       {formatShortDate(photo.verifyDate)}
                     </span>
                   </span>
+                  {selected?.id === photo.id && (
+                    <span
+                      className={`pointer-events-none absolute inset-0 z-[1] ring-inset ring-emerald-500 ${
+                        columns === 15 ? 'ring-2' : 'ring-4'
+                      }`}
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -585,7 +626,17 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
         −/+ 또는 Ctrl+휠(핀치)로 축소/확대 · 한 줄 {columns}장
       </p>
 
-      {selected && <PhotoDetailModal groupId={groupId} photo={selected} onClose={closePhoto} />}
+      {selected && (
+        <PhotoDetailPanel
+          groupId={groupId}
+          photo={selected}
+          onPrev={selectedIndex > 0 ? () => stepPhoto(items[selectedIndex - 1]) : null}
+          onNext={
+            selectedIndex >= 0 && selectedIndex < items.length - 1 ? () => stepPhoto(items[selectedIndex + 1]) : null
+          }
+          onClose={closePhoto}
+        />
+      )}
     </section>
   );
 }
