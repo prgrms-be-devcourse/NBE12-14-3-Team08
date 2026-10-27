@@ -7,7 +7,21 @@ import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
+import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+
+interface RankingItem {
+    rank: number;
+    memberId: number;
+    nickname: string | null;
+    count: number;
+}
+
+interface GroupRankings {
+    habitVerifyTop3: RankingItem[];
+    penaltyVerifyTop3: RankingItem[];
+    habitSuccessTop3: RankingItem[];
+}
 
 interface GroupDetailData {
     id: number;
@@ -21,6 +35,7 @@ interface GroupDetailData {
     memberLimit: number;
     inviteLink?: string;
     currentMemberCount: number;
+    rankings: GroupRankings | null;
 }
 
 interface GroupMemberItem {
@@ -69,6 +84,7 @@ export default function GroupDetailPage({
                 memberLimit: groupData.memberLimit || 10,
                 inviteLink: groupData.inviteLink,
                 currentMemberCount: groupData.currentMemberCount || 1,
+                rankings: groupData.rankings ?? null,
             });
 
             try {
@@ -264,6 +280,10 @@ export default function GroupDetailPage({
                         )}
                     </div>
                 </section>
+
+                {group.status === 'FINISH' && group.rankings && (
+                    <GroupStatistics rankings={group.rankings} />
+                )}
 
                 {/* 인증 사진 라이브러리 / 멤버별 습관 목록 전환 */}
                 <section className="mt-8">
