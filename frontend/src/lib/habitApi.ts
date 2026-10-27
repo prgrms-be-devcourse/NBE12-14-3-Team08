@@ -1,4 +1,5 @@
 import { apiRequest } from './memberApi';
+import type { ImageSize } from './imageSize';
 
 export type HabitStatus = 'ACTIVE' | 'FAILED';
 export type HabitVerifyStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -23,6 +24,12 @@ export interface HabitVerifyResponse {
   status: HabitVerifyStatus;
   description: string | null;
   imageUrl: string | null;
+}
+
+// 습관 인증 등록·재제출 요청 본문. 사진 크기는 선택이지만 보낼 때는 가로·세로를 함께 보낸다.
+export interface HabitVerifyBody extends Partial<ImageSize> {
+  description: string | null;
+  imageUrl: string;
 }
 
 // 그룹 메인 페이지의 인증 사진 라이브러리용 항목. imageWidth/imageHeight는 크기를 저장하기 전의 인증이면 null이다.
@@ -136,7 +143,7 @@ export const habitApi = {
 
   createHabitVerification: (
     habitId: number | string,
-    body: { description: string | null; imageUrl: string }
+    body: HabitVerifyBody
   ) =>
     apiRequest<HabitVerifyResponse>(`/habits/${habitId}/verifications`, {
       method: 'POST',
@@ -146,7 +153,7 @@ export const habitApi = {
   resubmitHabitVerification: (
     habitId: number | string,
     verificationId: number | string,
-    body: { description: string | null; imageUrl: string }
+    body: HabitVerifyBody
   ) =>
     apiRequest<HabitVerifyResponse>(`/habits/${habitId}/verifications/${verificationId}/resubmit`, {
       method: 'PATCH',
