@@ -149,7 +149,7 @@ class HabitServiceMidWeekCreationTest {
 
     @ParameterizedTest(name = "경계 {0}일 전에 만든 습관")
     @ValueSource(longs = [1, 2, 3, 6])
-    @DisplayName("판정 구간 도중(경계 6일 전까지)에 만든 습관은 부분 주라서 면제된다")
+    @DisplayName("경계 요일 다음 날 이후, 구간 도중에 만든 습관은 부분 주라서 면제된다")
     fun 구간_도중에_만든_습관은_면제된다(daysBeforeDeadline: Long) {
         val fixture = Fixture(days = 5) { it.minusDays(daysBeforeDeadline) }
 
@@ -173,15 +173,45 @@ class HabitServiceMidWeekCreationTest {
     }
 
     @Test
-    @DisplayName("구간이 시작한 직후(1나노초 뒤)에 만든 습관은 거의 한 주를 채웠어도 면제된다")
-    fun 구간_시작_직후에_만든_습관은_면제된다() {
-        val fixture = Fixture(days = 5) { it.minusWeeks(1).plusNanos(1) }
+    @DisplayName("구간이 시작한 날(경계 요일 당일)의 다음 날 00시에 만든 습관부터 면제된다")
+    fun 경계_요일_다음_날_정각에_만든_습관은_면제된다() {
+        val fixture = Fixture(days = 5) { it.minusWeeks(1).plusDays(1) }
 
         val results = fixture.check()
 
         fixture.assumeSameDay()
         assertThat(results).containsExactly(WeeklyCheckResult.FIRST_WEEK_EXEMPT)
         verifyNeverJudged()
+    }
+
+    @ParameterizedTest(name = "경계 요일 00시로부터 {0}시간 뒤에 만든 습관")
+    @ValueSource(longs = [0, 1, 12, 23])
+    @DisplayName("경계 요일 당일에 만든 습관은 한 주를 온전히 쓸 수 있으므로 면제하지 않고 판정한다")
+    fun 경계_요일_당일에_만든_습관은_판정한다(hoursAfterBoundary: Long) {
+        val fixture = Fixture(days = 5) { it.minusWeeks(1).plusHours(hoursAfterBoundary) }
+        fixture.stubCount(HabitVerifyStatus.PENDING, 0L)
+        fixture.stubCount(HabitVerifyStatus.APPROVED, 5L)
+
+        val results = fixture.check()
+
+        fixture.assumeSameDay()
+        assertThat(results).containsExactly(WeeklyCheckResult.PASSED)
+        assertThat(fixture.habit.status).isEqualTo(HabitStatus.ACTIVE)
+    }
+
+    @Test
+    @DisplayName("경계 요일 당일의 마지막 순간(다음 날 00시 1나노초 전)에 만든 습관도 판정한다")
+    fun 경계_요일_당일의_마지막_순간에_만든_습관은_판정한다() {
+        val fixture = Fixture(days = 5) { it.minusWeeks(1).plusDays(1).minusNanos(1) }
+        fixture.stubCount(HabitVerifyStatus.PENDING, 0L)
+        fixture.stubCount(HabitVerifyStatus.APPROVED, 2L)
+        justRun { penaltyVerifyService.createPenaltyVerify(fixture.habit) }
+
+        val results = fixture.check()
+
+        fixture.assumeSameDay()
+        assertThat(results).containsExactly(WeeklyCheckResult.FAILED_INSUFFICIENT_SUBMISSION)
+        assertThat(fixture.habit.status).isEqualTo(HabitStatus.FAILED)
     }
 
     @Test

@@ -201,8 +201,10 @@ class HabitService(
 
         // 습관이 이번 판정 구간 도중에 만들어졌다면(= 습관을 만든 뒤 처음 맞는 주 경계) 부분 주이므로 판정을 면제한다.
         // 주 경계 이틀 전에 만든 주 5회 습관처럼 남은 날이 days보다 적은 주에 횟수 전체를 요구하지 않기 위해서다.
-        // 다음 경계부터는 구간 시작 시각 이전에 만든 습관이 되어 온전한 한 주로 판정한다.
-        if (habit.requiredCreateDate.isAfter(weekStart)) {
+        // 다만 구간이 시작하는 경계 요일 당일(그날 00시~24시)에 만든 습관은 한 주를 온전히 쓸 수 있으므로
+        // 면제하지 않고 판정한다. 면제는 경계 요일 다음 날부터 만든 습관에만 적용된다.
+        // 다음 경계부터는 모든 습관이 온전한 한 주로 판정된다.
+        if (!habit.requiredCreateDate.isBefore(weekStart.plusDays(1))) {
             // 면제된 주의 인증도 미검토로 남지 않도록, 검토 유예시간이 지났다면 자동 승인한다.
             if (!now.isBefore(currentDeadline.plusDays(1))) {
                 autoApprovePendingVerifies(habitId, weekStart, currentDeadline)
