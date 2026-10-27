@@ -13,6 +13,7 @@ import com.back.domain.member.service.AuthTokenService
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.storage.StorageService
+import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -20,14 +21,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.ResultActions
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.ResultActionsDsl
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.patch
+import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
@@ -48,7 +46,8 @@ class PenaltyVerifyDescriptionLengthTest {
     @Autowired lateinit var habitRepository: HabitRepository
     @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
-    @MockitoBean lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService
 
     private lateinit var token: String
     private lateinit var penalty: PenaltyVerify
@@ -77,26 +76,28 @@ class PenaltyVerifyDescriptionLengthTest {
     private fun body(description: String): String =
         """{"description":"$description","imageUrl":"https://example.com/penalty.png"}"""
 
-    private fun submit(description: String): ResultActions =
-        mockMvc.perform(
-            post("/api/habits/{habitId}/penalties", habitId)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body(description))
-        )
+    private fun submit(description: String): ResultActionsDsl =
+        mockMvc.post("/api/habits/{habitId}/penalties", habitId) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = body(description)
+        }
 
-    private fun resubmit(description: String): ResultActions =
-        mockMvc.perform(
-            patch("/api/penalties/{id}/resubmit", penalty.id)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body(description))
-        )
+    private fun resubmit(description: String): ResultActionsDsl =
+        mockMvc.patch("/api/penalties/{id}/resubmit", penalty.id) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = body(description)
+        }
 
     private fun expectStatus(expected: String) {
-        mockMvc.perform(get("/api/penalties/{id}", penalty.id).header("Authorization", "Bearer $token"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value(expected))
+        mockMvc.get("/api/penalties/{id}", penalty.id) {
+            header("Authorization", "Bearer $token")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value(expected) }
+            }
     }
 
     // 반려된 상태를 만든다 (재제출은 반려된 벌칙만 가능)
@@ -109,7 +110,7 @@ class PenaltyVerifyDescriptionLengthTest {
     @Test
     @DisplayName("제출: 설명이 255자면 제출되고 DB에도 저장된다 (컬럼 길이 한계)")
     fun 제출_255자는_성공한다() {
-        submit("가".repeat(255)).andExpect(status().isCreated)
+        submit("가".repeat(255)).andExpect { status { isCreated() } }
         penaltyVerifyRepository.flush()
 
         expectStatus("PENDING")
@@ -119,8 +120,10 @@ class PenaltyVerifyDescriptionLengthTest {
     @DisplayName("제출: 설명이 256자면 400과 길이 메시지를 돌려주고 미제출(REQUIRED) 그대로다")
     fun 제출_256자는_400이다() {
         submit("가".repeat(256))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.errors[0]").value("벌칙 인증 설명은 255자 이하여야 합니다."))
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.errors[0]") { value("벌칙 인증 설명은 255자 이하여야 합니다.") }
+            }
 
         expectStatus("REQUIRED")
     }
@@ -130,7 +133,7 @@ class PenaltyVerifyDescriptionLengthTest {
     fun 재제출_255자는_성공한다() {
         rejectPenalty()
 
-        resubmit("나".repeat(255)).andExpect(status().isOk)
+        resubmit("나".repeat(255)).andExpect { status { isOk() } }
         penaltyVerifyRepository.flush()
 
         expectStatus("PENDING")
@@ -142,8 +145,10 @@ class PenaltyVerifyDescriptionLengthTest {
         rejectPenalty()
 
         resubmit("나".repeat(256))
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.errors[0]").value("벌칙 인증 설명은 255자 이하여야 합니다."))
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.errors[0]") { value("벌칙 인증 설명은 255자 이하여야 합니다.") }
+            }
 
         expectStatus("REJECTED")
     }

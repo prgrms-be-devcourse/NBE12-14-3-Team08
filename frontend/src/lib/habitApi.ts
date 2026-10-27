@@ -25,6 +25,24 @@ export interface HabitVerifyResponse {
   imageUrl: string | null;
 }
 
+// 그룹 메인 페이지의 인증 사진 라이브러리용 항목. imageWidth/imageHeight는 크기를 저장하기 전의 인증이면 null이다.
+export interface GroupPhoto {
+  id: number;
+  verifyDate: string;
+  habitTitle: string;
+  memberId: number;
+  memberNickname: string;
+  description: string | null;
+  imageUrl: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+}
+
+export interface GroupPhotoPage {
+  items: GroupPhoto[];
+  nextCursor: string | null;
+}
+
 export interface GroupMemberDetail {
   groupMemberId: number;
   memberId: number;
@@ -99,6 +117,22 @@ export const habitApi = {
 
   getHabitVerifications: (habitId: number | string) =>
     apiRequest<HabitVerifyResponse[]>(`/habits/${habitId}/verifications`, {}, true),
+
+  // 그룹에서 승인된 인증 사진을 최신순으로 한 페이지씩 가져온다. nextCursor를 다음 요청의 cursor로 그대로 보낸다.
+  getGroupPhotos: (
+    groupId: number | string,
+    params: { size?: number; cursor?: string | null; memberId?: number | null } = {}
+  ) => {
+    const query = new URLSearchParams();
+    if (params.size) query.set('size', String(params.size));
+    if (params.cursor) query.set('cursor', params.cursor);
+    if (params.memberId != null) query.set('memberId', String(params.memberId));
+    const queryString = query.toString();
+
+    return apiRequest<GroupPhotoPage>(
+      `/groups/${groupId}/habits/verifications/photos${queryString ? `?${queryString}` : ''}`, {}, true
+    );
+  },
 
   createHabitVerification: (
     habitId: number | string,

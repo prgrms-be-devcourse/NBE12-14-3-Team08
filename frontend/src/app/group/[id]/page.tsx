@@ -7,6 +7,7 @@ import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
+import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
 
 interface GroupDetailData {
     id: number;
@@ -48,6 +49,7 @@ export default function GroupDetailPage({
     const [loading, setLoading] = useState(true);
     const [currentRole, setCurrentRole] = useState<'OWNER' | 'MEMBER'>('MEMBER');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [view, setView] = useState<'photos' | 'members'>('photos');
 
     const fetchGroupData = useCallback(async () => {
         if (!rawId || isNaN(Number(rawId))) return;
@@ -263,14 +265,43 @@ export default function GroupDetailPage({
                     </div>
                 </section>
 
-                {/* 멤버별 습관 목록 */}
+                {/* 인증 사진 라이브러리 / 멤버별 습관 목록 전환 */}
                 <section className="mt-8">
-                    <div className="flex items-center justify-between mb-4 px-1">
-                        <h2 className="text-base font-extrabold text-slate-900">
-                            도전 중인 멤버 <span className="text-emerald-600 text-sm font-bold">({group.currentMemberCount})</span>
-                        </h2>
+                    <div
+                        className="mb-4 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1"
+                        role="group"
+                        aria-label="보기 전환"
+                    >
+                        <button
+                            type="button"
+                            aria-pressed={view === 'photos'}
+                            onClick={() => setView('photos')}
+                            className={`rounded-xl px-4 py-1.5 text-sm font-extrabold transition cursor-pointer ${
+                                view === 'photos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-700'
+                            }`}
+                        >
+                            인증 사진
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={view === 'members'}
+                            onClick={() => setView('members')}
+                            className={`rounded-xl px-4 py-1.5 text-sm font-extrabold transition cursor-pointer ${
+                                view === 'members' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-700'
+                            }`}
+                        >
+                            도전 중인 멤버 <span className="text-emerald-600 text-xs font-bold">({group.currentMemberCount})</span>
+                        </button>
                     </div>
 
+                    {view === 'photos' && (
+                        <GroupPhotoLibrary
+                            groupId={group.id}
+                            members={members.map((m) => ({ memberId: m.memberId, nickname: m.nickname }))}
+                        />
+                    )}
+
+                    {view === 'members' && (
                     <div className="grid grid-cols-1 gap-3.5">
                         {members.map((m, index) => {
                             const linkHref = `/group/${rawId}/member/${m.memberId}`;
@@ -331,6 +362,7 @@ export default function GroupDetailPage({
                             </div>
                         )}
                     </div>
+                    )}
                 </section>
             </div>
 

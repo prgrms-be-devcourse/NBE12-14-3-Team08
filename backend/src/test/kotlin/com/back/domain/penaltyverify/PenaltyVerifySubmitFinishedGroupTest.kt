@@ -13,18 +13,16 @@ import com.back.domain.member.service.AuthTokenService
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.storage.StorageService
+import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 
 // 가이드 규칙 "완료된 방은 조회만 가능" 중 벌칙 제출(POST /api/habits/{habitId}/penalties)을 API로 확인한다.
@@ -42,7 +40,8 @@ class PenaltyVerifySubmitFinishedGroupTest {
     @Autowired lateinit var habitRepository: HabitRepository
     @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
-    @MockitoBean lateinit var storageService: StorageService
+    // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
+    @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService
 
     @Test
     @DisplayName("종료된 방에서 벌칙을 제출하면 400이고, 벌칙은 미제출(REQUIRED) 그대로다")
@@ -63,17 +62,22 @@ class PenaltyVerifySubmitFinishedGroupTest {
         val penalty = penaltyVerifyRepository.save(PenaltyVerify.create(groupMember, habit))
         val token = authTokenService.createAccessToken(requireNotNull(member.id))
 
-        mockMvc.perform(
-            post("/api/habits/{habitId}/penalties", habit.id)
-                .header("Authorization", "Bearer $token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"description":"벌칙 완료","imageUrl":"https://example.com/penalty.png"}""")
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다."))
+        mockMvc.post("/api/habits/{habitId}/penalties", habit.id) {
+            header("Authorization", "Bearer $token")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"description":"벌칙 완료","imageUrl":"https://example.com/penalty.png"}"""
+        }
+            .andExpect {
+                status { isBadRequest() }
+                jsonPath("$.message") { value("이미 종료된 그룹에서는 벌칙을 제출할 수 없습니다.") }
+            }
 
-        mockMvc.perform(get("/api/penalties/{id}", penalty.id).header("Authorization", "Bearer $token"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("REQUIRED"))
+        mockMvc.get("/api/penalties/{id}", penalty.id) {
+            header("Authorization", "Bearer $token")
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.status") { value("REQUIRED") }
+            }
     }
 }

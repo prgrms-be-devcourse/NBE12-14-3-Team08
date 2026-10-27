@@ -18,10 +18,13 @@ import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
 import com.back.global.exception.GroupLimitExceededException
 import jakarta.persistence.EntityManager
+import jakarta.persistence.LockModeType
 import jakarta.persistence.PersistenceContext
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 
 @Service
 @Transactional(readOnly = true)
@@ -32,35 +35,87 @@ class GroupMemberService(
     private val habitRepository: HabitRepository,
     private val habitVerifyRepository: HabitVerifyRepository,
     private val penaltyVerifyRepository: PenaltyVerifyRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val transactionTemplate: TransactionTemplate
 ) {
 
     @field:PersistenceContext
     private lateinit var entityManager: EntityManager
 
-    @Transactional
+    // 비밀번호 확인(BCrypt, 한 번에 약 80ms)은 그룹 잠금을 잡기 전에, DB 연결도 쥐지 않은 채로 한다.
+    // - 잠금 안에서 하면 참여 요청이 한 명씩 그 시간만큼 줄을 선다. (k6: 300명 동시 참여 시 가장 느린 요청 약 23초)
+    // - 트랜잭션 안에서 하면 그동안 DB 연결을 쥐고 있어, 연결을 기다리는 다른 API까지 멈춘다.
+    // 그래서 ① 짧은 트랜잭션으로 조회 → ② 트랜잭션 밖에서 비밀번호 확인 → ③ 새 트랜잭션에서 그룹을 잠그고
+    // 마감·참여 여부·정원 확인과 저장을 한다.
+    // DB 접근은 반드시 ①·③ 안에서만 한다. 트랜잭션 밖에서 DB를 쓰면 그 연결을 메서드가 끝날 때까지 쥔 채
+    // ③이 연결을 하나 더 기다려, 동시 요청이 연결 수만큼 오면 서로 기다리다 멈춘다(연결 풀 교착, k6로 확인).
+    // SUPPORTS: 바깥 트랜잭션이 있으면(테스트 등) ①·③도 그 안에서 실행된다.
+    // (open-in-view가 켜져 있으면 요청이 끝날 때까지 연결을 쥐므로, 연결을 놓는 효과는 open-in-view를 꺼야 난다)
+    @Transactional(propagation = Propagation.SUPPORTS)
     fun joinGroup(
         inviteCode: String,
         memberId: Long,
         request: GroupRequest.Join
     ): Long {
-        val group = groupRepository.findByInviteCodeForUpdate(inviteCode)
-            ?: throw EntityNotFoundException("유효하지 않거나 존재하지 않는 초대 코드입니다.")
+        val target = transactionTemplate.execute {
+            val group = findGroupByInviteCode(inviteCode)
+            validateNotFinished(group)
 
-        if (group.isFinished()) {
-            throw BusinessRuleException("이미 마감된 그룹입니다.")
+            val groupId = requireNotNull(group.id) {
+                "그룹 ID가 아직 생성되지 않았습니다."
+            }
+
+            JoinTarget(
+                groupId = groupId,
+                encodedPassword = group.password,
+                alreadyJoined = groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)
+            )
+        } ?: throw IllegalStateException("그룹 조회 트랜잭션이 결과를 돌려주지 않았습니다.")
+
+        if (target.alreadyJoined) {
+            return target.groupId
         }
 
-        val groupId = requireNotNull(group.id) {
-            "그룹 ID가 아직 생성되지 않았습니다."
+        validateGroupPassword(request.password, target.encodedPassword)
+
+        return transactionTemplate.execute {
+            joinWithGroupLock(inviteCode, target.groupId, memberId, request.password, target.encodedPassword)
+        } ?: throw IllegalStateException("그룹 참여 트랜잭션이 결과를 돌려주지 않았습니다.")
+    }
+
+    private data class JoinTarget(
+        val groupId: Long,
+        val encodedPassword: String,
+        val alreadyJoined: Boolean
+    )
+
+    private fun joinWithGroupLock(
+        inviteCode: String,
+        groupId: Long,
+        memberId: Long,
+        rawPassword: String,
+        verifiedPassword: String
+    ): Long {
+        // 그룹을 잠그면서 최신 값으로 다시 읽는다. (SELECT ... FOR UPDATE)
+        // 잠금 조회 쿼리를 쓰면 이미 영속성 컨텍스트에 있는 옛 값을 그대로 돌려주고(open-in-view가 켜진 경우),
+        // detach로 빼면 이 그룹을 참조하던 다른 엔티티가 옛 상태에 묶인다.
+        val group = findGroupByInviteCode(inviteCode)
+        try {
+            entityManager.refresh(group, LockModeType.PESSIMISTIC_WRITE)
+        } catch (e: jakarta.persistence.EntityNotFoundException) {
+            throw EntityNotFoundException("유효하지 않거나 존재하지 않는 초대 코드입니다.")
         }
 
+        validateNotFinished(group)
+
+        // 같은 회원의 요청이 동시에 들어온 경우, 먼저 잠금을 잡은 요청이 이미 저장했을 수 있다
         if (groupMemberRepository.existsByGroupIdAndMemberId(groupId, memberId)) {
             return groupId
         }
 
-        if (!passwordEncoder.matches(request.password, group.password)) {
-            throw ForbiddenException("그룹 비밀번호가 일치하지 않습니다.")
+        // 확인한 뒤 잠금을 잡기 전에 방 비밀번호가 바뀐 드문 경우에만 다시 확인한다
+        if (group.password != verifiedPassword) {
+            validateGroupPassword(rawPassword, group.password)
         }
 
         val currentMemberCount = groupMemberRepository.countByGroupIdAndStatus(
@@ -89,6 +144,10 @@ class GroupMemberService(
 
         return groupId
     }
+
+    private fun findGroupByInviteCode(inviteCode: String): Group =
+        groupRepository.findByInviteCode(inviteCode)
+            ?: throw EntityNotFoundException("유효하지 않거나 존재하지 않는 초대 코드입니다.")
 
     fun getGroupMembers(
         groupId: Long,
@@ -310,5 +369,17 @@ class GroupMemberService(
 
         currentOwner.changeRole(GroupMemberRole.MEMBER)
         nextOwner.changeRole(GroupMemberRole.OWNER)
+    }
+
+    private fun validateNotFinished(group: Group) {
+        if (group.isFinished()) {
+            throw BusinessRuleException("이미 마감된 그룹입니다.")
+        }
+    }
+
+    private fun validateGroupPassword(rawPassword: String, encodedPassword: String) {
+        if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
+            throw ForbiddenException("그룹 비밀번호가 일치하지 않습니다.")
+        }
     }
 }

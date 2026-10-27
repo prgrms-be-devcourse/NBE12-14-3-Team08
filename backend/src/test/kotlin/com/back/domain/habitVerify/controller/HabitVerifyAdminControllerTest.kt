@@ -25,11 +25,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.ResultActions
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.ResultActionsDsl
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.patch
 import java.time.LocalDate
 import java.util.UUID
 
@@ -107,14 +105,15 @@ class HabitVerifyAdminControllerTest {
         val first = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
         val second = saveVerify(LocalDate.of(2026, 10, 21), HabitVerifyStatus.PENDING)
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/habits/verifications/bulk-approve", group.id)
-                .header("Authorization", "Bearer $ownerToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"ids": [${first.id}, ${second.id}]}""")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
+        mockMvc.patch("/api/groups/{groupId}/habits/verifications/bulk-approve", group.id) {
+            header("Authorization", "Bearer $ownerToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids": [${first.id}, ${second.id}]}"""
+        }
+            .andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(2) }
+            }
 
         assertThat(statusInDb(first)).isEqualTo(HabitVerifyStatus.APPROVED)
         assertThat(statusInDb(second)).isEqualTo(HabitVerifyStatus.APPROVED)
@@ -126,13 +125,14 @@ class HabitVerifyAdminControllerTest {
         val pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
         val approved = saveVerify(LocalDate.of(2026, 10, 21), HabitVerifyStatus.APPROVED)
 
-        mockMvc.perform(
-            patch("/api/groups/{groupId}/habits/verifications/bulk-approve", group.id)
-                .header("Authorization", "Bearer $ownerToken")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"ids": [${pending.id}, ${approved.id}]}""")
-        )
-            .andExpect(status().isConflict)
+        mockMvc.patch("/api/groups/{groupId}/habits/verifications/bulk-approve", group.id) {
+            header("Authorization", "Bearer $ownerToken")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"ids": [${pending.id}, ${approved.id}]}"""
+        }
+            .andExpect {
+                status { isConflict() }
+            }
 
         assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING)
         assertThat(statusInDb(approved)).isEqualTo(HabitVerifyStatus.APPROVED)
@@ -142,11 +142,10 @@ class HabitVerifyAdminControllerTest {
     @DisplayName("단건 승인 PATCH /api/habits/verifications/{id}/approve")
     inner class Approve {
 
-        private fun approve(token: String, verificationId: Long?): ResultActions =
-            mockMvc.perform(
-                patch("/api/habits/verifications/{id}/approve", verificationId)
-                    .header("Authorization", "Bearer $token")
-            )
+        private fun approve(token: String, verificationId: Long?): ResultActionsDsl =
+            mockMvc.patch("/api/habits/verifications/{id}/approve", verificationId) {
+                header("Authorization", "Bearer $token")
+            }
 
         @Test
         @DisplayName("방장이 검토 대기 인증을 승인하면 200이고 DB에 APPROVED로 저장된다")
@@ -154,8 +153,10 @@ class HabitVerifyAdminControllerTest {
             val pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
 
             approve(ownerToken, pending.id)
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.status") { value("APPROVED") }
+                }
 
             assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.APPROVED)
         }
@@ -166,7 +167,9 @@ class HabitVerifyAdminControllerTest {
             val pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
 
             approve(memberToken, pending.id)
-                .andExpect(status().isForbidden)
+                .andExpect {
+                    status { isForbidden() }
+                }
 
             assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING)
         }
@@ -175,8 +178,10 @@ class HabitVerifyAdminControllerTest {
         @DisplayName("없는 인증이면 404다")
         fun 없는_인증_404() {
             approve(ownerToken, Long.MAX_VALUE)
-                .andExpect(status().isNotFound)
-                .andExpect(jsonPath("$.message").value("존재하지 않는 인증 기록입니다."))
+                .andExpect {
+                    status { isNotFound() }
+                    jsonPath("$.message") { value("존재하지 않는 인증 기록입니다.") }
+                }
         }
     }
 
@@ -184,11 +189,10 @@ class HabitVerifyAdminControllerTest {
     @DisplayName("단건 반려 PATCH /api/habits/verifications/{id}/reject")
     inner class Reject {
 
-        private fun reject(token: String, verificationId: Long?): ResultActions =
-            mockMvc.perform(
-                patch("/api/habits/verifications/{id}/reject", verificationId)
-                    .header("Authorization", "Bearer $token")
-            )
+        private fun reject(token: String, verificationId: Long?): ResultActionsDsl =
+            mockMvc.patch("/api/habits/verifications/{id}/reject", verificationId) {
+                header("Authorization", "Bearer $token")
+            }
 
         @Test
         @DisplayName("방장이 검토 대기 인증을 반려하면 200이고 DB에 REJECTED로 저장된다")
@@ -196,8 +200,10 @@ class HabitVerifyAdminControllerTest {
             val pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
 
             reject(ownerToken, pending.id)
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.status") { value("REJECTED") }
+                }
 
             assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.REJECTED)
         }
@@ -208,7 +214,9 @@ class HabitVerifyAdminControllerTest {
             val pending = saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
 
             reject(memberToken, pending.id)
-                .andExpect(status().isForbidden)
+                .andExpect {
+                    status { isForbidden() }
+                }
 
             assertThat(statusInDb(pending)).isEqualTo(HabitVerifyStatus.PENDING)
         }
@@ -217,8 +225,10 @@ class HabitVerifyAdminControllerTest {
         @DisplayName("없는 인증이면 404다")
         fun 없는_인증_404() {
             reject(ownerToken, Long.MAX_VALUE)
-                .andExpect(status().isNotFound)
-                .andExpect(jsonPath("$.message").value("존재하지 않는 인증 기록입니다."))
+                .andExpect {
+                    status { isNotFound() }
+                    jsonPath("$.message") { value("존재하지 않는 인증 기록입니다.") }
+                }
         }
     }
 
@@ -226,11 +236,10 @@ class HabitVerifyAdminControllerTest {
     @DisplayName("검토 대기 목록 GET /api/groups/{groupId}/habits/verifications/pending")
     inner class Pending {
 
-        private fun getPending(token: String): ResultActions =
-            mockMvc.perform(
-                get("/api/groups/{groupId}/habits/verifications/pending", group.id)
-                    .header("Authorization", "Bearer $token")
-            )
+        private fun getPending(token: String): ResultActionsDsl =
+            mockMvc.get("/api/groups/{groupId}/habits/verifications/pending", group.id) {
+                header("Authorization", "Bearer $token")
+            }
 
         @Test
         @DisplayName("방장이 조회하면 200이고 검토 대기(PENDING) 인증만 받는다")
@@ -239,10 +248,12 @@ class HabitVerifyAdminControllerTest {
             saveVerify(LocalDate.of(2026, 10, 21), HabitVerifyStatus.APPROVED)
 
             getPending(ownerToken)
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(pending.id))
-                .andExpect(jsonPath("$[0].status").value("PENDING"))
+                .andExpect {
+                    status { isOk() }
+                    jsonPath("$.length()") { value(1) }
+                    jsonPath("$[0].id") { value(pending.id) }
+                    jsonPath("$[0].status") { value("PENDING") }
+                }
         }
 
         @Test
@@ -251,7 +262,9 @@ class HabitVerifyAdminControllerTest {
             saveVerify(LocalDate.of(2026, 10, 20), HabitVerifyStatus.PENDING)
 
             getPending(memberToken)
-                .andExpect(status().isForbidden)
+                .andExpect {
+                    status { isForbidden() }
+                }
         }
     }
 }
