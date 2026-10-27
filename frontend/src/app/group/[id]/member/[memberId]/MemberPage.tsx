@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
     Calendar as CalendarIcon,
-    CheckCircle2,
     Camera,
     Crown,
     AlertTriangle,
@@ -14,6 +14,7 @@ import {
     Plus,
     ChevronLeft,
     ChevronRight,
+    X,
 } from "lucide-react";
 import { useMember } from "@/context/MemberContext";
 import { ModalShell, ModalHeader, ModalActions, ImageLightbox } from "@/components/ModalKit";
@@ -95,6 +96,8 @@ export function MemberPage({ groupId, memberId }: Props) {
     const [showFailModal, setShowFailModal] = useState(false);
     const [showCreateHabitModal, setShowCreateHabitModal] = useState(false);
     const [certDetail, setCertDetail] = useState<HabitVerifyResponse | null>(null);
+    // 상세 패널에서 이전/다음으로 넘길 때의 슬라이드 방향. 달력·앨범에서 직접 고르면 null
+    const [certDirection, setCertDirection] = useState<"left" | "right" | null>(null);
     const [editingVerify, setEditingVerify] = useState<HabitVerifyResponse | null>(null);
     const [viewerIsOwner, setViewerIsOwner] = useState(false);
     const [showKickModal, setShowKickModal] = useState(false);
@@ -228,6 +231,11 @@ export function MemberPage({ groupId, memberId }: Props) {
     const rows = [...penalties].sort((a, b) =>
         (b.verifyDate ?? "9999-99-99").localeCompare(a.verifyDate ?? "9999-99-99")
     );
+
+    const openCert = (verify: HabitVerifyResponse) => {
+        setCertDetail(verify);
+        setCertDirection(null);
+    };
 
     const openPenaltyDetail = async (penaltyId: number) => {
         try {
@@ -430,7 +438,7 @@ export function MemberPage({ groupId, memberId }: Props) {
             {(habit || verifies.length > 0) && (
                 <VerifyRecords
                     verifies={verifies}
-                    onSelect={setCertDetail}
+                    onSelect={openCert}
                     thisWeek={weekSummary ? { start: weekSummary.weekStart, end: weekSummary.weekEnd } : null}
                 />
             )}
@@ -626,12 +634,17 @@ export function MemberPage({ groupId, memberId }: Props) {
             )}
 
             {certDetail && (
-                <CertDetailModal
+                <CertDetailPanel
                     item={certDetail}
                     verifies={verifies}
                     activeHabitId={habit?.id ?? null}
                     habitTitleById={habitTitleById}
                     isMe={isMe}
+                    direction={certDirection}
+                    onNavigate={(target, dir) => {
+                        setCertDetail(target);
+                        setCertDirection(dir);
+                    }}
                     onClose={() => setCertDetail(null)}
                     onEdit={(target) => {
                         setEditingVerify(target);
@@ -1609,32 +1622,25 @@ function ConfirmModal({
 // ---------- 모달: 성공 인증 상세 ----------
 
 const CERT_STATUS_META = {
-    APPROVED: {
-        title: "성공 인증",
-        titleClass: "text-emerald-600",
-        borderClass: "border-emerald-100",
-        btnClass: "bg-emerald-500 hover:bg-emerald-600",
-    },
-    PENDING: {
-        title: "검토 대기 중",
-        titleClass: "text-amber-600",
-        borderClass: "border-amber-100",
-        btnClass: "bg-amber-500 hover:bg-amber-600",
-    },
-    REJECTED: {
-        title: "반려된 인증",
-        titleClass: "text-rose-600",
-        borderClass: "border-rose-100",
-        btnClass: "bg-rose-500 hover:bg-rose-600",
-    },
+    APPROVED: { chipClass: "bg-emerald-50 text-emerald-700", dotClass: "bg-emerald-500" },
+    PENDING: { chipClass: "bg-amber-50 text-amber-700", dotClass: "bg-amber-400" },
+    REJECTED: { chipClass: "bg-rose-50 text-rose-700", dotClass: "bg-rose-400" },
 } as const;
 
-function CertDetailModal({
+const PANEL_ICON_BUTTON =
+    "flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent cursor-pointer";
+
+// 인증 상세: 오른쪽에서 열리는 패널 (그룹 사진 라이브러리의 상세 패널과 같은 구조).
+// 넓은 화면(lg 이상)에서는 본문을 밀지 않고 겹쳐 열려서 패널 밖의 달력·앨범을 계속 눌러 고를 수 있다.
+// 좁은 화면에서는 화면 전체를 덮는다. ← → 로 같은 달의 이전/다음 인증, Esc로 닫기, 사진을 누르면 크게 본다.
+function CertDetailPanel({
     item,
     verifies,
     activeHabitId,
     habitTitleById,
     isMe,
+    direction,
+    onNavigate,
     onClose,
     onEdit,
 }: {
@@ -1643,16 +1649,17 @@ function CertDetailModal({
     activeHabitId: number | null;
     habitTitleById: Record<number, string>;
     isMe: boolean;
+    direction: "left" | "right" | null;
+    onNavigate: (target: HabitVerifyResponse, dir: "left" | "right") => void;
     onClose: () => void;
     onEdit: (item: HabitVerifyResponse) => void;
 }) {
-    const [currentId, setCurrentId] = useState(item.id);
-    const [direction, setDirection] = useState<"left" | "right" | null>(null);
-    const [closing, setClosing] = useState(false);
-    const [showLightbox, setShowLightbox] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const closeRef = useRef<HTMLButtonElement>(null);
+    const bodyRef = useRef<HTMLDivElement>(null);
 
     // 좌우 이동은 지금 보고 있는 인증이 속한 달 안에서만 한다 (최신순 목록)
-    const current = verifies.find((v) => v.id === currentId) ?? item;
+    const current = verifies.find((v) => v.id === item.id) ?? item;
     const siblings = verifiesOfMonth(verifies, monthOf(current.verifyDate));
     const position = siblings.findIndex((v) => v.id === current.id);
     const older = siblings[position + 1];
@@ -1663,145 +1670,169 @@ function CertDetailModal({
     const isPreviousHabit = current.habitId !== activeHabitId;
     const canEdit = isMe && current.status === "REJECTED" && !isPreviousHabit;
     const habitTitle = habitTitleById[current.habitId];
+    const dateLabel = `${Number(current.verifyDate.slice(5, 7))}월 ${Number(current.verifyDate.slice(8, 10))}일`;
 
-    const move = (target: HabitVerifyResponse | undefined, dir: "left" | "right") => {
-        if (!target) return;
-        setDirection(dir);
-        setCurrentId(target.id);
-    };
+    useEffect(() => {
+        closeRef.current?.focus({ preventScroll: true });
+    }, []);
 
-    // 닫을 때 페이드아웃이 끝난 뒤에 실제로 닫는다
-    const requestClose = useCallback(() => {
-        setClosing(true);
-        setTimeout(onClose, 300);
-    }, [onClose]);
+    // 다른 인증으로 넘기면 글 내용을 맨 위부터 보여 준다.
+    useEffect(() => {
+        bodyRef.current?.scrollTo({ top: 0 });
+    }, [current.id]);
+
+    // 화면 전체를 덮는 좁은 화면에서는 뒤의 페이지가 같이 스크롤되지 않게 한다.
+    useEffect(() => {
+        if (!window.matchMedia("(max-width: 1023px)").matches) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, []);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (showLightbox) return;
-            if (e.key === "Escape") requestClose();
-            else if (e.key === "ArrowLeft") move(older, "left");
-            else if (e.key === "ArrowRight") move(newer, "right");
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+
+            // 글을 입력하는 중의 방향키·Esc는 건드리지 않는다.
+            const target = e.target;
+            if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+                return;
+            }
+
+            if (e.key === "Escape") {
+                if (expanded) setExpanded(false);
+                else onClose();
+            } else if (e.key === "ArrowLeft" && older) {
+                e.preventDefault();
+                onNavigate(older, "left");
+            } else if (e.key === "ArrowRight" && newer) {
+                e.preventDefault();
+                onNavigate(newer, "right");
+            }
         };
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
-    });
+    }, [expanded, older, newer, onClose, onNavigate]);
 
-    const dateLabel = `${Number(current.verifyDate.slice(5, 7))}월 ${Number(current.verifyDate.slice(8, 10))}일`;
+    const slideClass =
+        direction === "left"
+            ? "anim-slide-from-left [--slide-distance:48px]"
+            : direction === "right"
+              ? "anim-slide-from-right [--slide-distance:48px]"
+              : "";
 
     return (
-        <ModalShell borderClass={meta.borderClass} widthClass="max-w-md" animated closing={closing}>
-            <ModalHeader
-                title={meta.title}
-                icon={<CheckCircle2 className="w-5 h-5" />}
-                onClose={requestClose}
-                titleClass={meta.titleClass}
-            />
-            <div className="mt-3 overflow-hidden">
-                <div
-                    key={current.id}
-                    className={
-                        direction === "left"
-                            ? "anim-slide-from-left [--slide-distance:48px]"
-                            : direction === "right"
-                              ? "anim-slide-from-right [--slide-distance:48px]"
-                              : ""
-                    }
+        <aside
+            aria-label="인증 상세"
+            className="anim-panel-in fixed inset-0 z-[60] flex flex-col bg-white lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[520px] xl:w-[600px] lg:border-l lg:border-slate-200 lg:shadow-[-16px_0_32px_-12px_rgba(15,23,42,0.12)]"
+        >
+            <div className="flex h-14 shrink-0 items-center border-b border-slate-100 pl-2 pr-2">
+                <button
+                    type="button"
+                    onClick={() => older && onNavigate(older, "left")}
+                    disabled={!older}
+                    aria-label="이전 인증"
+                    className={PANEL_ICON_BUTTON}
                 >
-                    {current.imageUrl && (
+                    <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => newer && onNavigate(newer, "right")}
+                    disabled={!newer}
+                    aria-label="다음 인증"
+                    className={PANEL_ICON_BUTTON}
+                >
+                    <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <span className="ml-2 text-xs font-semibold text-slate-400">
+                    {position + 1} / {siblings.length}
+                </span>
+                <span className="flex-1" />
+                <button ref={closeRef} type="button" onClick={onClose} aria-label="상세 닫기" className={PANEL_ICON_BUTTON}>
+                    <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+            </div>
+
+            <div key={current.id} className={`flex min-h-0 flex-1 flex-col overflow-hidden ${slideClass}`}>
+                <div className="h-[min(52vh,480px)] shrink-0 bg-slate-100">
+                    {current.imageUrl ? (
                         <button
                             type="button"
-                            onClick={() => setShowLightbox(true)}
-                            className="block w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner cursor-zoom-in"
+                            onClick={() => setExpanded(true)}
+                            aria-label="사진 크게 보기"
+                            className="flex h-full w-full cursor-zoom-in items-center justify-center"
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={current.imageUrl}
-                                alt="인증 사진"
-                                className={`w-full h-full object-cover ${
+                                alt={`${dateLabel} 인증 사진`}
+                                className={`max-h-full max-w-full object-contain ${
                                     current.status === "REJECTED" ? "grayscale opacity-75" : ""
                                 }`}
                             />
                         </button>
+                    ) : (
+                        <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-400">
+                            사진이 없어요
+                        </div>
                     )}
-                    <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <p className="text-xs font-semibold text-slate-800 leading-relaxed">
-                            {current.description || "등록된 내용이 없습니다."}
-                        </p>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1.5 min-w-0">
-                            {habitTitle && <span className="truncate font-bold text-slate-500">{habitTitle}</span>}
-                            {isPreviousHabit && (
-                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">
-                                    이전 습관
-                                </span>
-                            )}
+                </div>
+
+                <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold ${meta.chipClass}`}
+                        >
+                            <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} />
+                            {VERIFY_STATUS_LABEL[current.status]}
                         </span>
-                        <span className="shrink-0">
-                            인증 일자: {current.verifyDate} ({dateLabel})
+                        <span className="flex-none text-xs font-semibold text-slate-500">
+                            {current.verifyDate} ({dateLabel})
                         </span>
                     </div>
+
+                    <div className="mt-4 flex items-center gap-2 min-w-0">
+                        {habitTitle && (
+                            <h2 className="truncate text-sm font-extrabold text-[#0f3d2e]">{habitTitle}</h2>
+                        )}
+                        {isPreviousHabit && (
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">
+                                이전 습관
+                            </span>
+                        )}
+                    </div>
+                    <p
+                        className={`mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 ${
+                            current.description ? "text-slate-700" : "text-slate-500"
+                        }`}
+                    >
+                        {current.description || "등록된 내용이 없습니다."}
+                    </p>
                 </div>
             </div>
 
-            {/* 이전/다음 인증 이동 버튼은 애니메이션 영역 밖에 두어 항상 위에 보이게 한다 */}
-            {(older || newer) && (
-                <div className="mt-3 flex items-center justify-between">
+            {canEdit && (
+                <div className="shrink-0 border-t border-slate-100 px-6 py-4">
                     <button
                         type="button"
-                        onClick={() => move(older, "left")}
-                        disabled={!older}
-                        aria-label="이전 인증"
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        이전
-                    </button>
-                    <span className="text-[11px] text-slate-400">
-                        {position + 1} / {siblings.length}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => move(newer, "right")}
-                        disabled={!newer}
-                        aria-label="다음 인증"
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
-                    >
-                        다음
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
-
-            {showLightbox && current.imageUrl && (
-                <ImageLightbox src={current.imageUrl} alt="인증 사진" onClose={() => setShowLightbox(false)} />
-            )}
-
-            {canEdit ? (
-                <div className="mt-4 flex items-center gap-2">
-                    <button
-                        onClick={requestClose}
-                        className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl transition-colors"
-                    >
-                        닫기
-                    </button>
-                    <button
                         onClick={() => onEdit(current)}
-                        className={`flex-1 py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
+                        className="flex h-11 w-full items-center justify-center rounded-2xl bg-[#0f3d2e] text-sm font-extrabold text-[#c6f24a] transition hover:bg-[#0a2a20] cursor-pointer"
                     >
                         수정하기
                     </button>
                 </div>
-            ) : (
-                <button
-                    onClick={requestClose}
-                    className={`mt-4 w-full py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
-                >
-                    확인
-                </button>
             )}
-        </ModalShell>
+
+            {expanded &&
+                current.imageUrl &&
+                createPortal(
+                    <ImageLightbox src={current.imageUrl} alt={`${dateLabel} 인증 사진`} onClose={() => setExpanded(false)} />,
+                    document.body,
+                )}
+        </aside>
     );
 }
 

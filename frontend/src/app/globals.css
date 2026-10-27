@@ -56,6 +56,11 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+@keyframes panel-in {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* backwards: 끝난 뒤에는 애니메이션이 transform을 붙잡지 않아 hover 확대 등이 그대로 동작한다 */
 .anim-slide-from-left { animation: slide-in-from-left 0.32s ease backwards; }
 .anim-slide-from-right { animation: slide-in-from-right 0.32s ease backwards; }
@@ -66,6 +71,7 @@ body {
 .anim-backdrop-out { animation: backdrop-out 0.3s ease both; }
 .anim-modal-pop-in { animation: modal-pop-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .anim-modal-pop-out { animation: modal-pop-out 0.3s ease both; }
+.anim-panel-in { animation: panel-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 
 /* 멤버 페이지 요약 카드의 이번 주 링: 처음 그려질 때 0에서 차오르고, 목표를 채우면 주위에 맥박이 퍼진다 */
 @keyframes ring-fill {
@@ -81,6 +87,13 @@ body {
 .anim-ring-pulse { animation: ring-pulse 1.8s ease-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
+  .anim-ring-fill,
+  .anim-ring-pulse {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .anim-slide-from-left,
   .anim-slide-from-right,
   .anim-slide-children-from-left > *,
@@ -89,8 +102,7 @@ body {
   .anim-backdrop-out,
   .anim-modal-pop-in,
   .anim-modal-pop-out,
-  .anim-ring-fill,
-  .anim-ring-pulse {
+  .anim-panel-in {
     animation: none;
   }
 }
