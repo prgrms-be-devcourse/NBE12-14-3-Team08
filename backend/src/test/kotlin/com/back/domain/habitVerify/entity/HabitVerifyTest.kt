@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -46,6 +47,93 @@ class HabitVerifyTest {
         assertThat(habitVerify.status).isEqualTo(HabitVerifyStatus.PENDING)
         assertThat(habitVerify.habit).isSameAs(habit)
         assertThat(habitVerify.verifyDate).isEqualTo(LocalDate.of(2026, 10, 21))
+    }
+
+    @Nested
+    @DisplayName("사진 크기")
+    inner class ImageSize {
+
+        private fun sized(width: Int?, height: Int?, status: HabitVerifyStatus = HabitVerifyStatus.REJECTED): HabitVerify {
+            val habitVerify = HabitVerify.create(habit, LocalDate.of(2026, 10, 21), "인증", "https://example.com/a.png", width, height)
+            ReflectionTestUtils.setField(habitVerify, "status", status)
+            return habitVerify
+        }
+
+        @Test
+        @DisplayName("크기를 주지 않고 만들면 가로·세로 모두 null이다 (크기 저장 전의 인증과 같은 상태)")
+        fun 크기_없이_생성() {
+            val habitVerify = HabitVerify.create(habit, LocalDate.of(2026, 10, 21), "인증", "https://example.com/a.png")
+
+            assertThat(habitVerify.imageWidth).isNull()
+            assertThat(habitVerify.imageHeight).isNull()
+        }
+
+        @Test
+        @DisplayName("크기를 주고 만들면 그대로 저장된다")
+        fun 크기와_함께_생성() {
+            val habitVerify = sized(4032, 3024)
+
+            assertThat(habitVerify.imageWidth).isEqualTo(4032)
+            assertThat(habitVerify.imageHeight).isEqualTo(3024)
+        }
+
+        @Test
+        @DisplayName("가로만 있거나 세로만 있으면 만들 수 없다")
+        fun 한쪽만_있으면_생성_불가() {
+            assertThatThrownBy { sized(100, null) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessage("사진의 가로와 세로 크기는 함께 있어야 합니다.")
+            assertThatThrownBy { sized(null, 100) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessage("사진의 가로와 세로 크기는 함께 있어야 합니다.")
+        }
+
+        @ParameterizedTest(name = "가로={0}, 세로={1}")
+        @CsvSource("0,100", "100,0", "-1,100", "100,-1")
+        @DisplayName("0 이하의 크기로는 만들 수 없다")
+        fun 양수가_아니면_생성_불가(width: Int, height: Int) {
+            assertThatThrownBy { sized(width, height) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessage("사진의 가로와 세로 크기는 1 이상이어야 합니다.")
+        }
+
+        @Test
+        @DisplayName("재제출하면서 새 크기를 주면 사진과 함께 크기가 바뀐다")
+        fun 재제출하면_크기가_바뀐다() {
+            val habitVerify = sized(4032, 3024)
+
+            habitVerify.resubmit("다시", "https://example.com/b.png", 1080, 1920)
+
+            assertThat(habitVerify.imageUrl).isEqualTo("https://example.com/b.png")
+            assertThat(habitVerify.imageWidth).isEqualTo(1080)
+            assertThat(habitVerify.imageHeight).isEqualTo(1920)
+            assertThat(habitVerify.status).isEqualTo(HabitVerifyStatus.PENDING)
+        }
+
+        @Test
+        @DisplayName("재제출하면서 크기를 주지 않으면 이전 사진의 크기를 비운다 (새 사진과 맞지 않으므로)")
+        fun 재제출하며_크기를_안_주면_비운다() {
+            val habitVerify = sized(4032, 3024)
+
+            habitVerify.resubmit("다시", "https://example.com/b.png")
+
+            assertThat(habitVerify.imageWidth).isNull()
+            assertThat(habitVerify.imageHeight).isNull()
+        }
+
+        @Test
+        @DisplayName("재제출의 크기가 잘못되면 거절하고 사진, 크기, 상태가 그대로다")
+        fun 잘못된_크기로_재제출하면_그대로() {
+            val habitVerify = sized(4032, 3024)
+
+            assertThatThrownBy { habitVerify.resubmit("다시", "https://example.com/b.png", 100, null) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+
+            assertThat(habitVerify.imageUrl).isEqualTo("https://example.com/a.png")
+            assertThat(habitVerify.imageWidth).isEqualTo(4032)
+            assertThat(habitVerify.imageHeight).isEqualTo(3024)
+            assertThat(habitVerify.status).isEqualTo(HabitVerifyStatus.REJECTED)
+        }
     }
 
     @Nested

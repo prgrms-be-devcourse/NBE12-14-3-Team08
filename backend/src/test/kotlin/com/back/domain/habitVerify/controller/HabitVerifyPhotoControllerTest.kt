@@ -81,8 +81,10 @@ class HabitVerifyPhotoControllerTest {
         date: LocalDate,
         status: HabitVerifyStatus = HabitVerifyStatus.APPROVED,
         imageUrl: String? = "https://example.com/${UUID.randomUUID()}.png",
+        width: Int? = null,
+        height: Int? = null,
     ): HabitVerify {
-        val verify = HabitVerify.create(habit, date, "인증 설명", imageUrl)
+        val verify = HabitVerify.create(habit, date, "인증 설명", imageUrl, width, height)
         when (status) {
             HabitVerifyStatus.APPROVED -> verify.approve()
             HabitVerifyStatus.REJECTED -> verify.reject()
@@ -158,7 +160,7 @@ class HabitVerifyPhotoControllerTest {
             assertThat(keys(body)).containsExactlyInAnyOrder("items", "nextCursor")
             assertThat(body.get("nextCursor").isNull).isTrue()
             assertThat(keys(item)).containsExactlyInAnyOrder(
-                "id", "verifyDate", "habitTitle", "memberId", "memberNickname", "description", "imageUrl",
+                "id", "verifyDate", "habitTitle", "memberId", "memberNickname", "description", "imageUrl", "imageWidth", "imageHeight",
             )
             assertThat(item.get("id").asLong()).isEqualTo(saved.requiredId)
             assertThat(item.get("verifyDate").asString()).isEqualTo("2026-10-20")
@@ -181,6 +183,20 @@ class HabitVerifyPhotoControllerTest {
             val body = json(request(alice).andExpect(status().isOk).andReturn())
 
             assertThat(ids(body)).containsExactly(recent.requiredId, old.requiredId)
+        }
+
+        @Test
+        @DisplayName("크기를 저장한 사진은 가로·세로를 주고, 크기를 저장하기 전의 사진은 둘 다 null이다")
+        fun 사진_크기() {
+            photo(aliceHabit, LocalDate.of(2026, 10, 20), width = 4032, height = 3024)
+            photo(bobHabit, LocalDate.of(2026, 10, 19))
+
+            val items = json(request(alice).andExpect(status().isOk).andReturn()).get("items")
+
+            assertThat(items.get(0).get("imageWidth").asInt()).isEqualTo(4032)
+            assertThat(items.get(0).get("imageHeight").asInt()).isEqualTo(3024)
+            assertThat(items.get(1).get("imageWidth").isNull).isTrue()
+            assertThat(items.get(1).get("imageHeight").isNull).isTrue()
         }
 
         @Test

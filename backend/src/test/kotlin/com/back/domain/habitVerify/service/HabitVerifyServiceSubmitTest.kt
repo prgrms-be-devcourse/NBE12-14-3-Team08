@@ -16,6 +16,7 @@ import com.back.global.exception.ForbiddenException
 import com.back.global.storage.StorageService
 import com.back.global.storage.VerificationImageType
 import io.mockk.every
+import io.mockk.slot
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -106,6 +107,36 @@ class HabitVerifyServiceSubmitTest {
 
             verify { storageService.validateImageUrl(VerificationImageType.HABIT, 2L, 50L, "https://storage/a.png", null) }
             verify { habitVerifyRepository.save(any<HabitVerify>()) }
+        }
+
+        @Test
+        @DisplayName("사진 크기를 받으면 인증과 함께 저장한다")
+        fun 크기와_함께_저장() {
+            every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
+            every { habitVerifyRepository.existsByHabitIdAndVerifyDate(50L, LocalDate.now()) } returns false
+            val saved = slot<HabitVerify>()
+            every { habitVerifyRepository.save(capture(saved)) } answers { firstArg() }
+            imageValidationPasses()
+
+            habitVerifyService.create(50L, HabitVerifyRequest("인증", "https://storage/a.png", 4032, 3024), 2L)
+
+            assertThat(saved.captured.imageWidth).isEqualTo(4032)
+            assertThat(saved.captured.imageHeight).isEqualTo(3024)
+        }
+
+        @Test
+        @DisplayName("사진 크기를 받지 않으면 크기 없이(null) 저장한다")
+        fun 크기_없이_저장() {
+            every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
+            every { habitVerifyRepository.existsByHabitIdAndVerifyDate(50L, LocalDate.now()) } returns false
+            val saved = slot<HabitVerify>()
+            every { habitVerifyRepository.save(capture(saved)) } answers { firstArg() }
+            imageValidationPasses()
+
+            habitVerifyService.create(50L, HabitVerifyRequest("인증", "https://storage/a.png"), 2L)
+
+            assertThat(saved.captured.imageWidth).isNull()
+            assertThat(saved.captured.imageHeight).isNull()
         }
 
         @Test
@@ -214,6 +245,26 @@ class HabitVerifyServiceSubmitTest {
                 )
             }
             assertThat(habitVerify.status).isEqualTo(HabitVerifyStatus.PENDING)
+        }
+
+        @Test
+        @DisplayName("재제출에 새 크기를 주면 크기가 바뀌고, 주지 않으면 이전 크기가 비워진다")
+        fun 재제출_크기_갱신() {
+            val withSize = verifyIn(HabitVerifyStatus.REJECTED)
+            ReflectionTestUtils.setField(withSize, "imageWidth", 100)
+            ReflectionTestUtils.setField(withSize, "imageHeight", 50)
+            every { habitRepository.findByIdAndGroupMember_Member_Id(50L, 2L) } returns Optional.of(habit)
+            every { habitVerifyRepository.findByIdAndHabitId(70L, 50L) } returns withSize
+            imageValidationPasses()
+
+            habitVerifyService.resubmit(50L, 70L, HabitVerifyRequest("수정", "https://storage/old.png", 4032, 3024), 2L)
+            assertThat(withSize.imageWidth).isEqualTo(4032)
+            assertThat(withSize.imageHeight).isEqualTo(3024)
+
+            ReflectionTestUtils.setField(withSize, "status", HabitVerifyStatus.REJECTED)
+            habitVerifyService.resubmit(50L, 70L, HabitVerifyRequest("수정", "https://storage/old.png"), 2L)
+            assertThat(withSize.imageWidth).isNull()
+            assertThat(withSize.imageHeight).isNull()
         }
 
         @Test
