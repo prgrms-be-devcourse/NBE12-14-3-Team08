@@ -267,7 +267,7 @@ export function MemberPage({ groupId, memberId }: Props) {
     };
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 md:py-8">
             {/* Top Nav */}
             <div className="flex items-center justify-between mb-5">
                 <Link
@@ -275,7 +275,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                     className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>챌린지 방으로</span>
+                    <span>돌아가기</span>
                 </Link>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
                     멤버 상세 페이지
@@ -283,7 +283,7 @@ export function MemberPage({ groupId, memberId }: Props) {
             </div>
 
             {/* 요약 카드: 프로필, 이번 주 링, 도전 습관 */}
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0f3d2e] to-[#0a2a20] text-white p-6 sm:p-7 mb-6 shadow-[0_18px_40px_rgba(11,20,17,0.28)]">
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0f3d2e] to-[#0a2a20] text-white p-6 sm:p-8 mb-6 shadow-[0_18px_40px_rgba(11,20,17,0.28)]">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-3.5">
                         <div className="shrink-0 w-[60px] h-[60px] rounded-full p-[3px] bg-[conic-gradient(from_200deg,#c6f24a,#34e6a4,#c6f24a)]">
@@ -293,7 +293,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                         </div>
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="text-[22px] font-extrabold tracking-tight">{member.nickname}</h1>
+                                <h1 className="text-[22px] sm:text-2xl font-extrabold tracking-tight">{member.nickname}</h1>
                                 {isHost && (
                                     <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300">
                                         <Crown className="w-3 h-3 fill-amber-300" />
@@ -382,7 +382,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                         <div>
                             <span className="text-[11px] font-extrabold tracking-wider text-[#c6f24a]">도전 습관</span>
                             <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                <h2 className="text-xl font-extrabold tracking-tight">{habit.title}</h2>
+                                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">{habit.title}</h2>
                                 <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-white/10">
                                     주 {habit.days}회
                                 </span>
@@ -703,7 +703,7 @@ export function MemberPage({ groupId, memberId }: Props) {
 
 function CenteredMessage({ text }: { text: string }) {
     return (
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-3">
+        <div className="max-w-5xl mx-auto px-4 py-16 text-center space-y-3">
             <p className="text-slate-500">{text}</p>
         </div>
     );
@@ -858,7 +858,7 @@ function WeekRing({ summary }: { summary: WeekSummary }) {
         <div
             role="img"
             aria-label={`이번 주 인증 ${summary.approved}회, 목표 ${summary.goal}회`}
-            className="relative w-[180px] h-[180px] sm:w-[210px] sm:h-[210px] shrink-0"
+            className="relative w-[180px] h-[180px] sm:w-[240px] sm:h-[240px] shrink-0"
         >
             <svg viewBox="0 0 210 210" className="w-full h-full -rotate-90">
                 <circle cx="105" cy="105" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="17" />
@@ -892,10 +892,10 @@ function WeekRing({ summary }: { summary: WeekSummary }) {
             </svg>
             {summary.goalReached && <span className="absolute inset-0 rounded-full anim-ring-pulse pointer-events-none" />}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xs font-extrabold text-white/55">이번 주</span>
-                <b className="text-[52px] sm:text-[56px] leading-none font-extrabold tracking-tight text-[#c6f24a] tabular-nums">
+                <span className="text-xs sm:text-sm font-extrabold text-white/55">이번 주</span>
+                <b className="text-[52px] sm:text-[68px] leading-none font-extrabold tracking-tight text-[#c6f24a] tabular-nums">
                     {summary.approved}
-                    <em className="not-italic text-[24px] sm:text-[26px] opacity-60 ml-0.5">/{summary.goal}</em>
+                    <em className="not-italic text-[24px] sm:text-[32px] opacity-60 ml-0.5">/{summary.goal}</em>
                 </b>
             </div>
         </div>
@@ -1153,7 +1153,7 @@ function VerifyAlbum({
             <div ref={gridRef} className="overflow-hidden transition-[height] duration-300 ease-out">
                 <div
                     key={currentMonth}
-                    className={`grid grid-cols-3 sm:grid-cols-4 gap-1.5 ${
+                    className={`grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5 ${
                         direction === "left"
                             ? "anim-slide-children-from-left"
                             : direction === "right"
