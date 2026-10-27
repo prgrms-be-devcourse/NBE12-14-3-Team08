@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
     Calendar as CalendarIcon,
-    CheckCircle2,
     Camera,
     Crown,
     AlertTriangle,
@@ -14,6 +14,7 @@ import {
     Plus,
     ChevronLeft,
     ChevronRight,
+    X,
 } from "lucide-react";
 import { useMember } from "@/context/MemberContext";
 import { ModalShell, ModalHeader, ModalActions, ImageLightbox } from "@/components/ModalKit";
@@ -29,6 +30,8 @@ import {
     type PenaltyVerifyDetail,
 } from "@/lib/habitApi";
 import { readImageSize } from "@/lib/imageSize";
+import { groupApi, type GroupDetailResponse } from "@/lib/groupApi";
+import { daysSince, formatWeekRange, summarizeThisWeek, type WeekSummary } from "@/lib/habitWeek";
 
 type Props = { groupId: string; memberId: string };
 
@@ -75,6 +78,7 @@ export function MemberPage({ groupId, memberId }: Props) {
     const { currentUser, authReady } = useMember();
 
     const [member, setMember] = useState<GroupMemberDetail | null>(null);
+    const [group, setGroup] = useState<GroupDetailResponse | null>(null);
     const [penalties, setPenalties] = useState<PenaltyVerifySummary[]>([]);
     const [habitDaysById, setHabitDaysById] = useState<Record<number, number>>({});
     const [habitEndDateById, setHabitEndDateById] = useState<Record<number, string>>({});
@@ -92,6 +96,8 @@ export function MemberPage({ groupId, memberId }: Props) {
     const [showFailModal, setShowFailModal] = useState(false);
     const [showCreateHabitModal, setShowCreateHabitModal] = useState(false);
     const [certDetail, setCertDetail] = useState<HabitVerifyResponse | null>(null);
+    // 상세 패널에서 이전/다음으로 넘길 때의 슬라이드 방향. 달력·앨범에서 직접 고르면 null
+    const [certDirection, setCertDirection] = useState<"left" | "right" | null>(null);
     const [editingVerify, setEditingVerify] = useState<HabitVerifyResponse | null>(null);
     const [viewerIsOwner, setViewerIsOwner] = useState(false);
     const [showKickModal, setShowKickModal] = useState(false);
@@ -112,11 +118,14 @@ export function MemberPage({ groupId, memberId }: Props) {
             const viewerEntry = groupMembers.find((m) => String(m.memberId) === currentUser?.id);
             setViewerIsOwner(viewerEntry?.role === "OWNER");
 
-            const [memberRes, penaltiesRes] = await Promise.all([
+            const [memberRes, penaltiesRes, groupRes] = await Promise.all([
                 habitApi.getGroupMember(groupId, groupMemberId),
                 habitApi.getPenaltiesByGroupMember(groupId, groupMemberId),
+                // 이번 주 계산에 방 생성일이 필요하다. 못 불러오면 링만 숨기고 나머지는 그대로 보여준다.
+                groupApi.getById(groupId).catch(() => null),
             ]);
             setMember(memberRes);
+            setGroup(groupRes);
             setPenalties(penaltiesRes);
 
             const uniqueHabitIds = Array.from(new Set(penaltiesRes.map((p) => p.habitId)));
@@ -205,10 +214,28 @@ export function MemberPage({ groupId, memberId }: Props) {
     const isMe = currentUser.id === String(member.memberId);
     const isHost = member.role === "OWNER";
 
+    // 이번 주 링: 현재 습관의 인증만 센다. 방 정보를 못 불러왔거나 진행 중인 습관이 없으면 링을 보여주지 않는다.
+    const today = new Date();
+    const weekSummary =
+        habit && habit.status === "ACTIVE" && group
+            ? summarizeThisWeek({
+                  verifies: verifies.filter((v) => v.habitId === habit.id),
+                  goal: habit.days,
+                  habitCreateDate: habit.createDate,
+                  groupCreateDate: group.createDate,
+                  today,
+              })
+            : null;
+
     // 아직 제출 전(REQUIRED)이라 날짜가 없는 벌칙은 맨 위로 오도록 미래 날짜 취급
     const rows = [...penalties].sort((a, b) =>
         (b.verifyDate ?? "9999-99-99").localeCompare(a.verifyDate ?? "9999-99-99")
     );
+
+    const openCert = (verify: HabitVerifyResponse) => {
+        setCertDetail(verify);
+        setCertDirection(null);
+    };
 
     const openPenaltyDetail = async (penaltyId: number) => {
         try {
@@ -255,75 +282,112 @@ export function MemberPage({ groupId, memberId }: Props) {
                 </span>
             </div>
 
-            {/* 프로필 & 누적 벌칙 & 도전 습관 */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* 요약 카드: 프로필, 이번 주 링, 도전 습관 */}
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0f3d2e] to-[#0a2a20] text-white p-6 sm:p-7 mb-6 shadow-[0_18px_40px_rgba(11,20,17,0.28)]">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                        <div className="relative">
-                            <div className="w-14 h-14 rounded-full bg-emerald-100 border-2 border-emerald-400 flex items-center justify-center text-lg font-black text-emerald-700">
+                        <div className="shrink-0 w-[60px] h-[60px] rounded-full p-[3px] bg-[conic-gradient(from_200deg,#c6f24a,#34e6a4,#c6f24a)]">
+                            <div className="w-full h-full rounded-full bg-[#0f3d2e] flex items-center justify-center text-xl font-black">
                                 {member.nickname.slice(0, 1)}
                             </div>
-                            {isHost && (
-                                <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white p-1 rounded-full shadow-2xs">
-                                    <Crown className="w-3 h-3 fill-white" />
-                                </div>
-                            )}
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-black text-slate-900">{member.nickname}</h1>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h1 className="text-[22px] font-extrabold tracking-tight">{member.nickname}</h1>
                                 {isHost && (
-                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md">
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300">
+                                        <Crown className="w-3 h-3 fill-amber-300" />
                                         방장
                                     </span>
                                 )}
                                 {isMe && (
-                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-md">
+                                    <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#c6f24a]/15 text-[#c6f24a]">
                                         나
                                     </span>
                                 )}
+                                <span
+                                    title="누적 벌칙"
+                                    className="inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-400/15 text-rose-300"
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                    벌칙 {member.penaltyCount}회
+                                </span>
                             </div>
+                            <p className="text-xs text-white/55 mt-1">
+                                {group?.title ?? "챌린지 방"}
+                                {habit && habit.status === "ACTIVE" ? ` · 도전 ${daysSince(habit.createDate, today)}일째` : ""}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                        {viewerIsOwner && !isMe && !isHost && (
-                            <div className="flex items-center gap-1.5">
-                                <button
-                                    onClick={() => setShowDelegateModal(true)}
-                                    className="px-3 py-2.5 rounded-xl font-bold text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+                    {viewerIsOwner && !isMe && !isHost && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                                onClick={() => setShowDelegateModal(true)}
+                                className="px-3 py-2.5 rounded-xl font-bold text-xs text-amber-200 bg-white/10 hover:bg-white/15 transition-colors cursor-pointer"
+                            >
+                                방장 위임
+                            </button>
+                            <button
+                                onClick={() => setShowKickModal(true)}
+                                className="px-3 py-2.5 rounded-xl font-bold text-xs text-rose-300 bg-white/10 hover:bg-white/15 transition-colors cursor-pointer"
+                            >
+                                추방
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {weekSummary && (
+                    <>
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-7">
+                            <WeekRing summary={weekSummary} />
+                            <div className="grid gap-2.5 text-[13px] font-extrabold text-white/70">
+                                <p
+                                    className="text-[12px] font-bold text-white/55"
+                                    title="방을 만든 요일부터 7일씩 한 주로 센다"
                                 >
-                                    방장 위임
-                                </button>
-                                <button
-                                    onClick={() => setShowKickModal(true)}
-                                    className="px-3 py-2.5 rounded-xl font-bold text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
-                                >
-                                    추방
-                                </button>
-                            </div>
-                        )}
-                        <div className="flex items-center bg-rose-50/80 border border-rose-100 px-4 py-2.5 rounded-2xl">
-                            <div>
-                                <span className="text-[10px] font-bold text-rose-400 uppercase">누적 벌칙</span>
-                                <p className="text-sm font-black text-rose-600">벌칙 횟수 : {member.penaltyCount}회</p>
+                                    {formatWeekRange(weekSummary.weekStart, weekSummary.weekEnd)}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <i className="w-[22px] h-2 rounded-full bg-[#c6f24a]" />
+                                    승인 <b className="text-base text-white">{weekSummary.approved}</b>
+                                </div>
+                                {weekSummary.pending > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <i className="w-[22px] h-2 rounded-full bg-[#c6f24a]/40" />
+                                        검토중 <b className="text-base text-white">{weekSummary.pending}</b>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
-                </div>
+
+                        {weekSummary.isExempt && (
+                            <p className="mt-4 mx-auto max-w-md text-center text-[13px] font-bold text-white/85 bg-white/10 ring-1 ring-white/20 rounded-2xl px-4 py-2.5">
+                                🌱 습관을 만든 이번 주는 판정하지 않아요
+                            </p>
+                        )}
+
+                        {weekSummary.goalReached && (
+                            <p className="mt-4 text-center text-sm font-extrabold text-[#0c1a13] rounded-2xl px-4 py-3 bg-gradient-to-r from-[#34e6a4] to-[#c6f24a] anim-modal-pop-in">
+                                🎉 이번 주 목표 달성! 주 {weekSummary.goal}회 승인을 채웠어요
+                            </p>
+                        )}
+                    </>
+                )}
 
                 {/* 도전 습관 정보는 같은 그룹 멤버라면 누구나 조회 가능, 액션 버튼은 본인만 */}
                 {habit ? (
-                    <div className="mt-5 pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <span className="text-[11px] font-bold text-emerald-600 uppercase">도전 습관</span>
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-extrabold text-slate-900">{habit.title}</h2>
-                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            <span className="text-[11px] font-extrabold tracking-wider text-[#c6f24a]">도전 습관</span>
+                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                <h2 className="text-xl font-extrabold tracking-tight">{habit.title}</h2>
+                                <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-white/10">
                                     주 {habit.days}회
                                 </span>
                             </div>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-white/55 mt-1">
                                 {habit.description || "매일매일 실천하고 성공을 기록해보세요!"}
                             </p>
                         </div>
@@ -332,35 +396,35 @@ export function MemberPage({ groupId, memberId }: Props) {
                             <div className="flex items-center gap-2 shrink-0">
                                 <button
                                     onClick={() => setShowCertifyModal(true)}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                                    className="flex items-center gap-1.5 px-5 py-3 rounded-2xl font-extrabold text-sm text-[#0c1a13] bg-[#c6f24a] hover:-translate-y-0.5 shadow-[0_8px_20px_rgba(198,242,74,0.25)] transition-all cursor-pointer"
                                 >
                                     <Camera className="w-4 h-4" />
                                     <span>오늘 인증하기</span>
                                 </button>
                                 <button
                                     onClick={() => setShowFailModal(true)}
-                                    className="px-3.5 py-2.5 rounded-xl font-bold text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
+                                    className="px-4 py-3 rounded-2xl font-bold text-sm text-white/75 bg-white/10 hover:bg-white/15 transition-colors cursor-pointer"
                                 >
                                     습관 포기하기
                                 </button>
                             </div>
                         )}
                         {habit.status === "FAILED" && (
-                            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 shrink-0">
+                            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white/10 text-white/70 shrink-0">
                                 실패 처리된 습관입니다
                             </span>
                         )}
                     </div>
                 ) : (
-                    <div className="mt-5 pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <span className="text-[11px] font-bold text-emerald-600 uppercase">도전 습관</span>
-                            <p className="text-sm text-slate-500 mt-0.5">아직 진행 중인 습관이 없습니다.</p>
+                            <span className="text-[11px] font-extrabold tracking-wider text-[#c6f24a]">도전 습관</span>
+                            <p className="text-sm text-white/65 mt-0.5">아직 진행 중인 습관이 없습니다.</p>
                         </div>
                         {isMe && (
                             <button
                                 onClick={() => setShowCreateHabitModal(true)}
-                                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
+                                className="flex items-center gap-1.5 px-5 py-3 rounded-2xl font-extrabold text-sm text-[#0c1a13] bg-[#c6f24a] hover:-translate-y-0.5 shadow-[0_8px_20px_rgba(198,242,74,0.25)] transition-all cursor-pointer shrink-0"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>습관을 추가해주세요</span>
@@ -370,15 +434,18 @@ export function MemberPage({ groupId, memberId }: Props) {
                 )}
             </div>
 
-            {/* 인증 캘린더 (본인 페이지에서만 표시) */}
-            {(habit || verifies.length > 0) && <VerifyCalendar verifies={verifies} onSelectDay={setCertDetail} />}
-
-            {/* 인증 앨범: 한 달씩 보여주고, 달력과는 독립적으로 달을 고른다 */}
-            {verifies.length > 0 && <VerifyAlbum verifies={verifies} onSelect={setCertDetail} />}
+            {/* 인증 기록: 달력과 앨범을 토글로 전환 */}
+            {(habit || verifies.length > 0) && (
+                <VerifyRecords
+                    verifies={verifies}
+                    onSelect={openCert}
+                    thisWeek={weekSummary ? { start: weekSummary.weekStart, end: weekSummary.weekEnd } : null}
+                />
+            )}
 
             {/* 벌칙 기록 (실패한 습관 종류와 무관하게 이 멤버의 전체 벌칙) */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6">
-                <h3 className="text-sm font-extrabold text-slate-900 mb-4">벌칙 기록</h3>
+            <div className="bg-white rounded-[28px] shadow-[0_10px_30px_rgba(14,21,18,0.07),0_1px_2px_rgba(14,21,18,0.05)] p-6">
+                <h3 className="text-[17px] font-extrabold text-slate-900 mb-4">벌칙 기록</h3>
 
                 {rows.length === 0 ? (
                     <p className="text-xs text-slate-400">아직 기록이 없습니다.</p>
@@ -567,12 +634,17 @@ export function MemberPage({ groupId, memberId }: Props) {
             )}
 
             {certDetail && (
-                <CertDetailModal
+                <CertDetailPanel
                     item={certDetail}
                     verifies={verifies}
                     activeHabitId={habit?.id ?? null}
                     habitTitleById={habitTitleById}
                     isMe={isMe}
+                    direction={certDirection}
+                    onNavigate={(target, dir) => {
+                        setCertDetail(target);
+                        setCertDirection(dir);
+                    }}
                     onClose={() => setCertDetail(null)}
                     onEdit={(target) => {
                         setEditingVerify(target);
@@ -690,12 +762,155 @@ const verifiesOfMonth = (verifies: HabitVerifyResponse[], month: string) =>
         .filter((v) => monthOf(v.verifyDate) === month)
         .sort((a, b) => b.verifyDate.localeCompare(a.verifyDate) || b.id - a.id);
 
+// 달력에서 링이 세는 이번 주 칸: 링과 같은 라임색의 얇은 후광과 옅은 그림자
+const THIS_WEEK_OUTLINE =
+    "ring-2 ring-[#c6f24a] ring-offset-2 shadow-[0_6px_14px_-6px_rgba(110,160,0,0.5)]";
+
+function VerifyLegend({ showThisWeek = false }: { showThisWeek?: boolean }) {
+    return (
+        <div className="flex items-center justify-end gap-x-2.5 whitespace-nowrap text-[11px] font-bold text-slate-500">
+            <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                성공
+            </span>
+            <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+                검토중
+            </span>
+            <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
+                반려
+            </span>
+            <span className="flex items-center gap-1 text-slate-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-100 ring-1 ring-slate-300 inline-block" />
+                미인증
+            </span>
+            {showThisWeek && (
+                <span className="flex items-center gap-1">
+                    <span className="w-3 h-2.5 rounded-[3px] bg-white ring-2 ring-[#c6f24a] inline-block" />
+                    이번 주
+                </span>
+            )}
+        </div>
+    );
+}
+
+// 인증 기록 카드: 달력과 앨범을 토글로 전환한다
+function VerifyRecords({
+    verifies,
+    onSelect,
+    thisWeek,
+}: {
+    verifies: HabitVerifyResponse[];
+    onSelect: (v: HabitVerifyResponse) => void;
+    thisWeek: { start: string; end: string } | null;
+}) {
+    const [view, setView] = useState<"calendar" | "album">("calendar");
+
+    return (
+        <div className="bg-white rounded-[28px] shadow-[0_10px_30px_rgba(14,21,18,0.07),0_1px_2px_rgba(14,21,18,0.05)] p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[17px] font-extrabold text-slate-900">인증 기록</h3>
+                <div role="tablist" aria-label="인증 기록 보기" className="flex bg-slate-100 rounded-full p-[3px]">
+                    {(["calendar", "album"] as const).map((v) => (
+                        <button
+                            key={v}
+                            type="button"
+                            role="tab"
+                            aria-selected={view === v}
+                            onClick={() => setView(v)}
+                            className={`px-4 py-1.5 rounded-full text-[13px] font-extrabold cursor-pointer transition-colors ${
+                                view === v ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            {v === "calendar" ? "달력" : "앨범"}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div key={view} className="anim-modal-pop-in">
+                {view === "calendar" ? (
+                    <VerifyCalendar verifies={verifies} onSelectDay={onSelect} thisWeek={thisWeek} />
+                ) : (
+                    <VerifyAlbum verifies={verifies} onSelect={onSelect} />
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ---------- 이번 주 링 ----------
+
+const RING_RADIUS = 92;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+function WeekRing({ summary }: { summary: WeekSummary }) {
+    const fraction = (count: number) => Math.min(1, count / summary.goal);
+    const arcStyle = (count: number) =>
+        ({
+            strokeDasharray: RING_LENGTH,
+            strokeDashoffset: RING_LENGTH * (1 - fraction(count)),
+            "--ring-len": RING_LENGTH,
+        }) as React.CSSProperties;
+
+    return (
+        <div
+            role="img"
+            aria-label={`이번 주 인증 ${summary.approved}회, 목표 ${summary.goal}회`}
+            className="relative w-[180px] h-[180px] sm:w-[210px] sm:h-[210px] shrink-0"
+        >
+            <svg viewBox="0 0 210 210" className="w-full h-full -rotate-90">
+                <circle cx="105" cy="105" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="17" />
+                {summary.pending > 0 && (
+                    <circle
+                        cx="105"
+                        cy="105"
+                        r={RING_RADIUS}
+                        fill="none"
+                        stroke="#c6f24a"
+                        strokeOpacity="0.4"
+                        strokeWidth="17"
+                        strokeLinecap="round"
+                        className="anim-ring-fill"
+                        style={arcStyle(summary.approved + summary.pending)}
+                    />
+                )}
+                {summary.approved > 0 && (
+                    <circle
+                        cx="105"
+                        cy="105"
+                        r={RING_RADIUS}
+                        fill="none"
+                        stroke="#c6f24a"
+                        strokeWidth="17"
+                        strokeLinecap="round"
+                        className="anim-ring-fill"
+                        style={arcStyle(summary.approved)}
+                    />
+                )}
+            </svg>
+            {summary.goalReached && <span className="absolute inset-0 rounded-full anim-ring-pulse pointer-events-none" />}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xs font-extrabold text-white/55">이번 주</span>
+                <b className="text-[52px] sm:text-[56px] leading-none font-extrabold tracking-tight text-[#c6f24a] tabular-nums">
+                    {summary.approved}
+                    <em className="not-italic text-[24px] sm:text-[26px] opacity-60 ml-0.5">/{summary.goal}</em>
+                </b>
+            </div>
+        </div>
+    );
+}
+
 function VerifyCalendar({
     verifies,
     onSelectDay,
+    thisWeek,
 }: {
     verifies: HabitVerifyResponse[];
     onSelectDay: (v: HabitVerifyResponse) => void;
+    // 링이 세는 이번 주 기간. 달력에서 같은 칸들을 표시해 링 숫자와 맞춰 볼 수 있게 한다.
+    thisWeek: { start: string; end: string } | null;
 }) {
     const now = new Date();
     const todayYear = now.getFullYear();
@@ -736,6 +951,7 @@ function VerifyCalendar({
         day: number;
         dateStr: string;
         isToday: boolean;
+        inThisWeek: boolean;
         verify?: HabitVerifyResponse;
     } | null> = [];
 
@@ -746,15 +962,15 @@ function VerifyCalendar({
             day,
             dateStr,
             isToday: year === todayYear && month === todayMonth && day === todayDate,
+            inThisWeek: !!thisWeek && dateStr >= thisWeek.start && dateStr <= thisWeek.end,
             verify: verifyByDate.get(dateStr),
         });
     }
 
     return (
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-3 items-center mb-4">
-                <div />
-                <div className="flex items-center justify-center gap-2">
+        <div>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-4">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={goPrevMonth}
                         className="p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
@@ -774,24 +990,7 @@ function VerifyCalendar({
                         <ChevronRight className="w-4 h-4 text-slate-500" />
                     </button>
                 </div>
-                <div className="flex items-center justify-end gap-2 text-[11px]">
-                    <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                        성공
-                    </span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
-                        검토중
-                    </span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
-                        반려
-                    </span>
-                    <span className="flex items-center gap-1 text-slate-400">
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block" />
-                        대기
-                    </span>
-                </div>
+                <VerifyLegend showThisWeek={!!thisWeek} />
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400">
@@ -806,7 +1005,7 @@ function VerifyCalendar({
                 {cells.map((cell, idx) => {
                     if (!cell) return <div key={idx} className="aspect-[4/3] rounded-xl bg-transparent" />;
 
-                    const { day, isToday, verify } = cell;
+                    const { day, isToday, inThisWeek, verify } = cell;
 
                     if (!verify) {
                         return (
@@ -815,8 +1014,10 @@ function VerifyCalendar({
                                 className={`relative aspect-[4/3] rounded-xl border select-none ${
                                     isToday
                                         ? "border-2 border-dashed border-amber-400"
-                                        : "bg-slate-50 border-slate-200/70"
-                                }`}
+                                        : inThisWeek
+                                          ? "bg-[#f6fbe2] border-transparent"
+                                          : "bg-slate-50 border-slate-200/70"
+                                } ${inThisWeek ? THIS_WEEK_OUTLINE : ""}`}
                             >
                                 <span
                                     className={`absolute top-1 left-1.5 text-[11px] font-bold ${
@@ -840,7 +1041,7 @@ function VerifyCalendar({
                             type="button"
                             onClick={() => onSelectDay(verify)}
                             aria-label={`${month + 1}월 ${day}일 인증 ${VERIFY_STATUS_LABEL[verify.status]}`}
-                            className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 cursor-pointer select-none transition-transform hover:scale-105 hover:z-10 hover:shadow-lg"
+                            className={`group relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 cursor-pointer select-none transition-transform hover:scale-105 hover:z-10 hover:shadow-lg ${inThisWeek ? THIS_WEEK_OUTLINE : ""}`}
                         >
                             <VerifyThumb verify={verify} />
                             <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/35 to-transparent" />
@@ -895,7 +1096,9 @@ function VerifyAlbum({
         return () => clearTimeout(timer);
     }, [currentMonth]);
 
-    if (!currentMonth) return null;
+    if (!currentMonth) {
+        return <p className="py-10 text-center text-sm text-slate-400">아직 인증 사진이 없어요</p>;
+    }
 
     const goTo = (next: string | undefined) => {
         if (!next || next === currentMonth) return;
@@ -905,18 +1108,10 @@ function VerifyAlbum({
         setMonth(next);
     };
 
-    const [yearText, monthText] = currentMonth.split("-");
-
     return (
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 mb-6">
-            <div className="flex items-baseline justify-between mb-3">
-                <h3 className="text-sm font-extrabold text-slate-900">앨범</h3>
-                <span className="text-xs text-slate-500">
-                    {yearText}년 {Number(monthText)}월 · {items.length}장
-                </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 mb-3.5">
+        <div>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
                 <button
                     type="button"
                     onClick={() => goTo(months[index + 1])}
@@ -951,6 +1146,8 @@ function VerifyAlbum({
                 >
                     <ChevronRight className="w-4 h-4" />
                 </button>
+            </div>
+            <VerifyLegend />
             </div>
 
             <div ref={gridRef} className="overflow-hidden transition-[height] duration-300 ease-out">
@@ -1425,32 +1622,25 @@ function ConfirmModal({
 // ---------- 모달: 성공 인증 상세 ----------
 
 const CERT_STATUS_META = {
-    APPROVED: {
-        title: "성공 인증",
-        titleClass: "text-emerald-600",
-        borderClass: "border-emerald-100",
-        btnClass: "bg-emerald-500 hover:bg-emerald-600",
-    },
-    PENDING: {
-        title: "검토 대기 중",
-        titleClass: "text-amber-600",
-        borderClass: "border-amber-100",
-        btnClass: "bg-amber-500 hover:bg-amber-600",
-    },
-    REJECTED: {
-        title: "반려된 인증",
-        titleClass: "text-rose-600",
-        borderClass: "border-rose-100",
-        btnClass: "bg-rose-500 hover:bg-rose-600",
-    },
+    APPROVED: { chipClass: "bg-emerald-50 text-emerald-700", dotClass: "bg-emerald-500" },
+    PENDING: { chipClass: "bg-amber-50 text-amber-700", dotClass: "bg-amber-400" },
+    REJECTED: { chipClass: "bg-rose-50 text-rose-700", dotClass: "bg-rose-400" },
 } as const;
 
-function CertDetailModal({
+const PANEL_ICON_BUTTON =
+    "flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent cursor-pointer";
+
+// 인증 상세: 오른쪽에서 열리는 패널 (그룹 사진 라이브러리의 상세 패널과 같은 구조).
+// 넓은 화면(lg 이상)에서는 본문을 밀지 않고 겹쳐 열려서 패널 밖의 달력·앨범을 계속 눌러 고를 수 있다.
+// 좁은 화면에서는 화면 전체를 덮는다. ← → 로 같은 달의 이전/다음 인증, Esc로 닫기, 사진을 누르면 크게 본다.
+function CertDetailPanel({
     item,
     verifies,
     activeHabitId,
     habitTitleById,
     isMe,
+    direction,
+    onNavigate,
     onClose,
     onEdit,
 }: {
@@ -1459,16 +1649,17 @@ function CertDetailModal({
     activeHabitId: number | null;
     habitTitleById: Record<number, string>;
     isMe: boolean;
+    direction: "left" | "right" | null;
+    onNavigate: (target: HabitVerifyResponse, dir: "left" | "right") => void;
     onClose: () => void;
     onEdit: (item: HabitVerifyResponse) => void;
 }) {
-    const [currentId, setCurrentId] = useState(item.id);
-    const [direction, setDirection] = useState<"left" | "right" | null>(null);
-    const [closing, setClosing] = useState(false);
-    const [showLightbox, setShowLightbox] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const closeRef = useRef<HTMLButtonElement>(null);
+    const bodyRef = useRef<HTMLDivElement>(null);
 
     // 좌우 이동은 지금 보고 있는 인증이 속한 달 안에서만 한다 (최신순 목록)
-    const current = verifies.find((v) => v.id === currentId) ?? item;
+    const current = verifies.find((v) => v.id === item.id) ?? item;
     const siblings = verifiesOfMonth(verifies, monthOf(current.verifyDate));
     const position = siblings.findIndex((v) => v.id === current.id);
     const older = siblings[position + 1];
@@ -1479,145 +1670,169 @@ function CertDetailModal({
     const isPreviousHabit = current.habitId !== activeHabitId;
     const canEdit = isMe && current.status === "REJECTED" && !isPreviousHabit;
     const habitTitle = habitTitleById[current.habitId];
+    const dateLabel = `${Number(current.verifyDate.slice(5, 7))}월 ${Number(current.verifyDate.slice(8, 10))}일`;
 
-    const move = (target: HabitVerifyResponse | undefined, dir: "left" | "right") => {
-        if (!target) return;
-        setDirection(dir);
-        setCurrentId(target.id);
-    };
+    useEffect(() => {
+        closeRef.current?.focus({ preventScroll: true });
+    }, []);
 
-    // 닫을 때 페이드아웃이 끝난 뒤에 실제로 닫는다
-    const requestClose = useCallback(() => {
-        setClosing(true);
-        setTimeout(onClose, 300);
-    }, [onClose]);
+    // 다른 인증으로 넘기면 글 내용을 맨 위부터 보여 준다.
+    useEffect(() => {
+        bodyRef.current?.scrollTo({ top: 0 });
+    }, [current.id]);
+
+    // 화면 전체를 덮는 좁은 화면에서는 뒤의 페이지가 같이 스크롤되지 않게 한다.
+    useEffect(() => {
+        if (!window.matchMedia("(max-width: 1023px)").matches) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, []);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (showLightbox) return;
-            if (e.key === "Escape") requestClose();
-            else if (e.key === "ArrowLeft") move(older, "left");
-            else if (e.key === "ArrowRight") move(newer, "right");
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+
+            // 글을 입력하는 중의 방향키·Esc는 건드리지 않는다.
+            const target = e.target;
+            if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+                return;
+            }
+
+            if (e.key === "Escape") {
+                if (expanded) setExpanded(false);
+                else onClose();
+            } else if (e.key === "ArrowLeft" && older) {
+                e.preventDefault();
+                onNavigate(older, "left");
+            } else if (e.key === "ArrowRight" && newer) {
+                e.preventDefault();
+                onNavigate(newer, "right");
+            }
         };
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
-    });
+    }, [expanded, older, newer, onClose, onNavigate]);
 
-    const dateLabel = `${Number(current.verifyDate.slice(5, 7))}월 ${Number(current.verifyDate.slice(8, 10))}일`;
+    const slideClass =
+        direction === "left"
+            ? "anim-slide-from-left [--slide-distance:48px]"
+            : direction === "right"
+              ? "anim-slide-from-right [--slide-distance:48px]"
+              : "";
 
     return (
-        <ModalShell borderClass={meta.borderClass} widthClass="max-w-md" animated closing={closing}>
-            <ModalHeader
-                title={meta.title}
-                icon={<CheckCircle2 className="w-5 h-5" />}
-                onClose={requestClose}
-                titleClass={meta.titleClass}
-            />
-            <div className="mt-3 overflow-hidden">
-                <div
-                    key={current.id}
-                    className={
-                        direction === "left"
-                            ? "anim-slide-from-left [--slide-distance:48px]"
-                            : direction === "right"
-                              ? "anim-slide-from-right [--slide-distance:48px]"
-                              : ""
-                    }
+        <aside
+            aria-label="인증 상세"
+            className="anim-panel-in fixed inset-0 z-[60] flex flex-col bg-white lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[520px] xl:w-[600px] lg:border-l lg:border-slate-200 lg:shadow-[-16px_0_32px_-12px_rgba(15,23,42,0.12)]"
+        >
+            <div className="flex h-14 shrink-0 items-center border-b border-slate-100 pl-2 pr-2">
+                <button
+                    type="button"
+                    onClick={() => older && onNavigate(older, "left")}
+                    disabled={!older}
+                    aria-label="이전 인증"
+                    className={PANEL_ICON_BUTTON}
                 >
-                    {current.imageUrl && (
+                    <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => newer && onNavigate(newer, "right")}
+                    disabled={!newer}
+                    aria-label="다음 인증"
+                    className={PANEL_ICON_BUTTON}
+                >
+                    <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <span className="ml-2 text-xs font-semibold text-slate-400">
+                    {position + 1} / {siblings.length}
+                </span>
+                <span className="flex-1" />
+                <button ref={closeRef} type="button" onClick={onClose} aria-label="상세 닫기" className={PANEL_ICON_BUTTON}>
+                    <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+            </div>
+
+            <div key={current.id} className={`flex min-h-0 flex-1 flex-col overflow-hidden ${slideClass}`}>
+                <div className="h-[min(52vh,480px)] shrink-0 bg-slate-100">
+                    {current.imageUrl ? (
                         <button
                             type="button"
-                            onClick={() => setShowLightbox(true)}
-                            className="block w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner cursor-zoom-in"
+                            onClick={() => setExpanded(true)}
+                            aria-label="사진 크게 보기"
+                            className="flex h-full w-full cursor-zoom-in items-center justify-center"
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={current.imageUrl}
-                                alt="인증 사진"
-                                className={`w-full h-full object-cover ${
+                                alt={`${dateLabel} 인증 사진`}
+                                className={`max-h-full max-w-full object-contain ${
                                     current.status === "REJECTED" ? "grayscale opacity-75" : ""
                                 }`}
                             />
                         </button>
+                    ) : (
+                        <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-400">
+                            사진이 없어요
+                        </div>
                     )}
-                    <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <p className="text-xs font-semibold text-slate-800 leading-relaxed">
-                            {current.description || "등록된 내용이 없습니다."}
-                        </p>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1.5 min-w-0">
-                            {habitTitle && <span className="truncate font-bold text-slate-500">{habitTitle}</span>}
-                            {isPreviousHabit && (
-                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">
-                                    이전 습관
-                                </span>
-                            )}
+                </div>
+
+                <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold ${meta.chipClass}`}
+                        >
+                            <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} />
+                            {VERIFY_STATUS_LABEL[current.status]}
                         </span>
-                        <span className="shrink-0">
-                            인증 일자: {current.verifyDate} ({dateLabel})
+                        <span className="flex-none text-xs font-semibold text-slate-500">
+                            {current.verifyDate} ({dateLabel})
                         </span>
                     </div>
+
+                    <div className="mt-4 flex items-center gap-2 min-w-0">
+                        {habitTitle && (
+                            <h2 className="truncate text-sm font-extrabold text-[#0f3d2e]">{habitTitle}</h2>
+                        )}
+                        {isPreviousHabit && (
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">
+                                이전 습관
+                            </span>
+                        )}
+                    </div>
+                    <p
+                        className={`mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 ${
+                            current.description ? "text-slate-700" : "text-slate-500"
+                        }`}
+                    >
+                        {current.description || "등록된 내용이 없습니다."}
+                    </p>
                 </div>
             </div>
 
-            {/* 이전/다음 인증 이동 버튼은 애니메이션 영역 밖에 두어 항상 위에 보이게 한다 */}
-            {(older || newer) && (
-                <div className="mt-3 flex items-center justify-between">
+            {canEdit && (
+                <div className="shrink-0 border-t border-slate-100 px-6 py-4">
                     <button
                         type="button"
-                        onClick={() => move(older, "left")}
-                        disabled={!older}
-                        aria-label="이전 인증"
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        이전
-                    </button>
-                    <span className="text-[11px] text-slate-400">
-                        {position + 1} / {siblings.length}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => move(newer, "right")}
-                        disabled={!newer}
-                        aria-label="다음 인증"
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
-                    >
-                        다음
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
-
-            {showLightbox && current.imageUrl && (
-                <ImageLightbox src={current.imageUrl} alt="인증 사진" onClose={() => setShowLightbox(false)} />
-            )}
-
-            {canEdit ? (
-                <div className="mt-4 flex items-center gap-2">
-                    <button
-                        onClick={requestClose}
-                        className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl transition-colors"
-                    >
-                        닫기
-                    </button>
-                    <button
                         onClick={() => onEdit(current)}
-                        className={`flex-1 py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
+                        className="flex h-11 w-full items-center justify-center rounded-2xl bg-[#0f3d2e] text-sm font-extrabold text-[#c6f24a] transition hover:bg-[#0a2a20] cursor-pointer"
                     >
                         수정하기
                     </button>
                 </div>
-            ) : (
-                <button
-                    onClick={requestClose}
-                    className={`mt-4 w-full py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
-                >
-                    확인
-                </button>
             )}
-        </ModalShell>
+
+            {expanded &&
+                current.imageUrl &&
+                createPortal(
+                    <ImageLightbox src={current.imageUrl} alt={`${dateLabel} 인증 사진`} onClose={() => setExpanded(false)} />,
+                    document.body,
+                )}
+        </aside>
     );
 }
 
