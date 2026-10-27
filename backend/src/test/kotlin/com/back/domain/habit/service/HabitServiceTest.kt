@@ -554,7 +554,8 @@ class HabitServiceTest {
             fun assumeSameDay() = Assumptions.assumeTrue(LocalDate.now() == today, "테스트 도중 날짜가 바뀌었습니다.")
         }
 
-        private fun defaultWindow(offsetDays: Long) = Window(offsetDays) { it.minusDays(1) }
+        // 구간 시작 시각 정각에 만든 습관: 첫 부분 주 면제 대상이 아닌, 온전한 한 주를 채운 습관
+        private fun defaultWindow(offsetDays: Long) = Window(offsetDays) { it.minusWeeks(1) }
 
         @ParameterizedTest(name = "요일 차이 {0}일")
         @ValueSource(longs = [0, 1, 2, 3, 4, 5, 6])
@@ -593,9 +594,9 @@ class HabitServiceTest {
 
         @ParameterizedTest(name = "요일 차이 {0}일")
         @ValueSource(longs = [0, 1, 2, 3, 4, 5, 6])
-        @DisplayName("습관이 마감 1나노초 전에 만들어졌으면 판정 대상이다")
-        fun 마감_직전에_만든_습관은_판정한다(offsetDays: Long) {
-            val window = Window(offsetDays) { it.minusNanos(1) }
+        @DisplayName("습관이 구간 시작 1나노초 전에 만들어졌으면 온전한 한 주를 채운 것이라 판정 대상이다")
+        fun 구간_시작_직전에_만든_습관은_판정한다(offsetDays: Long) {
+            val window = Window(offsetDays) { it.minusWeeks(1).minusNanos(1) }
             window.stubCount(HabitVerifyStatus.PENDING, 0L)
             window.stubCount(HabitVerifyStatus.APPROVED, days)
 

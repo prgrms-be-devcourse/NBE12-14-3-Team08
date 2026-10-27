@@ -199,6 +199,18 @@ class HabitService(
             return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.BEFORE_DEADLINE, habit.status)
         }
 
+        // 습관이 이번 판정 구간 도중에 만들어졌다면(= 습관을 만든 뒤 처음 맞는 주 경계) 부분 주이므로 판정을 면제한다.
+        // 주 경계 이틀 전에 만든 주 5회 습관처럼 남은 날이 days보다 적은 주에 횟수 전체를 요구하지 않기 위해서다.
+        // 다음 경계부터는 구간 시작 시각 이전에 만든 습관이 되어 온전한 한 주로 판정한다.
+        if (habit.requiredCreateDate.isAfter(weekStart)) {
+            // 면제된 주의 인증도 미검토로 남지 않도록, 검토 유예시간이 지났다면 자동 승인한다.
+            if (!now.isBefore(currentDeadline.plusDays(1))) {
+                autoApprovePendingVerifies(habitId, weekStart, currentDeadline)
+            }
+
+            return HabitWeeklyCheckResponse(habitId, WeeklyCheckResult.FIRST_WEEK_EXEMPT, habit.status)
+        }
+
         // 이번 주 구간 내 미검토(PENDING) 건이 남아있으면 결과와 무관하게 판정을 보류
         // (인증 기록이 검토되지 않은 채로 남지 않도록, 방장이 전부 검토를 끝내야 확정)
         val pendingCount = habitVerifyRepository.countByHabit_IdAndCreateDateBetweenAndStatus(
