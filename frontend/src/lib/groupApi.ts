@@ -63,6 +63,8 @@ export const groupApi = {
       method: 'POST',
       body: JSON.stringify(request),
     }, true),
+  getById: (groupId: number | string) =>
+    apiRequest<GroupDetailResponse>(`/groups/${groupId}`, {}, true),
   getGroupByInviteCode: (inviteCode: string) =>
     apiRequest<GroupDetailResponse>(`/groups/invite/${inviteCode}`, {}, true),
   join: (inviteCode: string, password: string) =>

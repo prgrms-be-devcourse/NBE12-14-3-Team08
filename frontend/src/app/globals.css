@@ -67,6 +67,19 @@ body {
 .anim-modal-pop-in { animation: modal-pop-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .anim-modal-pop-out { animation: modal-pop-out 0.3s ease both; }
 
+/* 멤버 페이지 요약 카드의 이번 주 링: 처음 그려질 때 0에서 차오르고, 목표를 채우면 주위에 맥박이 퍼진다 */
+@keyframes ring-fill {
+  from { stroke-dashoffset: var(--ring-len); }
+}
+
+@keyframes ring-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(198, 242, 74, 0.38); }
+  100% { box-shadow: 0 0 0 28px rgba(198, 242, 74, 0); }
+}
+
+.anim-ring-fill { animation: ring-fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.anim-ring-pulse { animation: ring-pulse 1.8s ease-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .anim-slide-from-left,
   .anim-slide-from-right,
@@ -75,7 +88,9 @@ body {
   .anim-backdrop-in,
   .anim-backdrop-out,
   .anim-modal-pop-in,
-  .anim-modal-pop-out {
+  .anim-modal-pop-out,
+  .anim-ring-fill,
+  .anim-ring-pulse {
     animation: none;
   }
 }
