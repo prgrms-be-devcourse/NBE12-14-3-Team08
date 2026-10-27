@@ -6,15 +6,25 @@ export function ModalShell({
     children,
     borderClass = "border-slate-100",
     widthClass = "max-w-md",
+    animated = false,
+    closing = false,
 }: {
     children: React.ReactNode;
     borderClass?: string;
     widthClass?: string;
+    // 열고 닫을 때 배경 페이드와 카드 팝 모션을 쓴다 (기본은 모션 없음)
+    animated?: boolean;
+    closing?: boolean;
 }) {
+    const backdropMotion = animated ? (closing ? "anim-backdrop-out" : "anim-backdrop-in") : "";
+    const cardMotion = animated ? (closing ? "anim-modal-pop-out" : "anim-modal-pop-in") : "";
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 ${backdropMotion}`}
+        >
             <div
-                className={`bg-white w-full ${widthClass} rounded-3xl shadow-2xl border ${borderClass} p-6 max-h-[90vh] overflow-y-auto`}
+                className={`bg-white w-full ${widthClass} rounded-3xl shadow-2xl border ${borderClass} p-6 max-h-[90vh] overflow-y-auto ${cardMotion}`}
             >
                 {children}
             </div>

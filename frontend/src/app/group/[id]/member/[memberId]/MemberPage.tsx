@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -79,6 +79,7 @@ export function MemberPage({ groupId, memberId }: Props) {
     const [habitEndDateById, setHabitEndDateById] = useState<Record<number, string>>({});
     const [habit, setHabit] = useState<HabitResponse | null>(null);
     const [verifies, setVerifies] = useState<HabitVerifyResponse[]>([]);
+    const [habitTitleById, setHabitTitleById] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -122,7 +123,12 @@ export function MemberPage({ groupId, memberId }: Props) {
                 uniqueHabitIds.map(async (habitId) => {
                     try {
                         const habitRes = await habitApi.getHabit(habitId);
-                        return { habitId, days: habitRes.days, endDate: habitRes.modifyDate.slice(0, 10) };
+                        return {
+                            habitId,
+                            days: habitRes.days,
+                            endDate: habitRes.modifyDate.slice(0, 10),
+                            title: habitRes.title,
+                        };
                     } catch {
                         return null;
                     }
@@ -134,19 +140,35 @@ export function MemberPage({ groupId, memberId }: Props) {
 
             // 활성 습관 여부/식별자는 그룹 멤버 목록에 이미 포함되어 있어, 본인 여부와 무관하게
             // 그룹의 아무 멤버나 대상 멤버의 도전 습관과 인증 캘린더를 조회할 수 있다 (조회만 가능).
+            let activeHabit: HabitResponse | null = null;
+            let activeVerifies: HabitVerifyResponse[] = [];
             if (target.habitId != null) {
                 try {
-                    const habitRes = await habitApi.getHabit(target.habitId);
-                    setHabit(habitRes);
-                    setVerifies(await habitApi.getHabitVerifications(habitRes.id));
+                    activeHabit = await habitApi.getHabit(target.habitId);
+                    activeVerifies = await habitApi.getHabitVerifications(activeHabit.id);
                 } catch {
-                    setHabit(null);
-                    setVerifies([]);
+                    activeHabit = null;
+                    activeVerifies = [];
                 }
-            } else {
-                setHabit(null);
-                setVerifies([]);
             }
+            setHabit(activeHabit);
+
+            // 이전 습관의 인증도 앨범·달력에 함께 보여준다.
+            // 실패한 습관은 벌칙이 하나씩 생기므로 벌칙 목록의 습관 id가 곧 이 멤버의 이전 습관이다.
+            // (그룹의 실패 습관 목록 API는 요청한 본인 것만 주기 때문에 다른 멤버 페이지에서는 쓸 수 없다)
+            const previousHabitIds = uniqueHabitIds.filter((id) => id !== activeHabit?.id);
+            const previousVerifies = (
+                await Promise.all(
+                    previousHabitIds.map((id) => habitApi.getHabitVerifications(id).catch(() => [] as HabitVerifyResponse[]))
+                )
+            ).flat();
+
+            // 같은 날짜에 두 습관의 인증이 있으면 달력은 마지막 것을 보여주므로, 현재 습관의 인증을 뒤에 둔다
+            setVerifies([...previousVerifies, ...activeVerifies]);
+            setHabitTitleById({
+                ...Object.fromEntries(validHabitEntries.map((e) => [e.habitId, e.title])),
+                ...(activeHabit ? { [activeHabit.id]: activeHabit.title } : {}),
+            });
         } catch (err) {
             setError(err instanceof Error ? err : new Error("알 수 없는 오류가 발생했습니다."));
         } finally {
@@ -348,7 +370,10 @@ export function MemberPage({ groupId, memberId }: Props) {
             </div>
 
             {/* 인증 캘린더 (본인 페이지에서만 표시) */}
-            {habit && <VerifyCalendar verifies={verifies} onSelectDay={setCertDetail} />}
+            {(habit || verifies.length > 0) && <VerifyCalendar verifies={verifies} onSelectDay={setCertDetail} />}
+
+            {/* 인증 앨범: 한 달씩 보여주고, 달력과는 독립적으로 달을 고른다 */}
+            {verifies.length > 0 && <VerifyAlbum verifies={verifies} onSelect={setCertDetail} />}
 
             {/* 벌칙 기록 (실패한 습관 종류와 무관하게 이 멤버의 전체 벌칙) */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6">
@@ -537,10 +562,13 @@ export function MemberPage({ groupId, memberId }: Props) {
             {certDetail && (
                 <CertDetailModal
                     item={certDetail}
+                    verifies={verifies}
+                    activeHabitId={habit?.id ?? null}
+                    habitTitleById={habitTitleById}
                     isMe={isMe}
                     onClose={() => setCertDetail(null)}
-                    onEdit={() => {
-                        setEditingVerify(certDetail);
+                    onEdit={(target) => {
+                        setEditingVerify(target);
                         setCertDetail(null);
                     }}
                 />
@@ -603,6 +631,57 @@ function CenteredMessage({ text }: { text: string }) {
 }
 
 // ---------- 캘린더 ----------
+
+const VERIFY_STATUS_LABEL: Record<HabitVerifyStatus, string> = {
+    APPROVED: "성공",
+    PENDING: "검토중",
+    REJECTED: "반려",
+};
+
+// 인증 상태 점 (달력, 앨범 공통). 사진 위에서도 보이도록 옅은 그림자를 둔다.
+const STATUS_DOT_CLASS: Record<HabitVerifyStatus, string> = {
+    APPROVED: "bg-emerald-500",
+    PENDING: "bg-amber-400",
+    REJECTED: "bg-rose-400",
+};
+
+function StatusDot({ status, className = "" }: { status: HabitVerifyStatus; className?: string }) {
+    return (
+        <span
+            className={`w-3 h-3 rounded-full shadow-[0_0_2px_rgba(0,0,0,0.35)] ${STATUS_DOT_CLASS[status]} ${className}`}
+        />
+    );
+}
+
+// 인증 사진 썸네일. 반려된 사진은 흑백으로 흐리게 보여준다.
+function VerifyThumb({ verify }: { verify: HabitVerifyResponse }) {
+    const [failed, setFailed] = useState(false);
+
+    // 사진이 없거나 불러오지 못하면 깨진 이미지 아이콘 대신 회색 칸을 보여준다
+    if (!verify.imageUrl || failed) {
+        return <span className="absolute inset-0 bg-slate-200" />;
+    }
+    return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={verify.imageUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className={`absolute inset-0 w-full h-full object-cover ${
+                verify.status === "REJECTED" ? "grayscale opacity-70" : ""
+            }`}
+        />
+    );
+}
+
+const monthOf = (verifyDate: string) => verifyDate.slice(0, 7); // "YYYY-MM"
+
+// 같은 달의 인증을 최신순으로 정렬한다 (앨범 표시와 상세 보기 이동에 함께 쓴다)
+const verifiesOfMonth = (verifies: HabitVerifyResponse[], month: string) =>
+    verifies
+        .filter((v) => monthOf(v.verifyDate) === month)
+        .sort((a, b) => b.verifyDate.localeCompare(a.verifyDate) || b.id - a.id);
 
 function VerifyCalendar({
     verifies,
@@ -690,19 +769,19 @@ function VerifyCalendar({
                 </div>
                 <div className="flex items-center justify-end gap-2 text-[11px]">
                     <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                         성공
                     </span>
                     <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
                         검토중
                     </span>
                     <span className="flex items-center gap-1 text-slate-500">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
                         반려
                     </span>
                     <span className="flex items-center gap-1 text-slate-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block" />
                         대기
                     </span>
                 </div>
@@ -718,41 +797,183 @@ function VerifyCalendar({
 
             <div className="grid grid-cols-7 gap-2">
                 {cells.map((cell, idx) => {
-                    if (!cell) return <div key={idx} className="h-12 sm:h-14 rounded-xl bg-transparent" />;
+                    if (!cell) return <div key={idx} className="aspect-[4/3] rounded-xl bg-transparent" />;
 
                     const { day, isToday, verify } = cell;
 
-                    let bgColor = "bg-slate-50 border-slate-200/70 text-slate-500";
-                    let label: React.ReactNode = null;
-
-                    if (verify?.status === "APPROVED") {
-                        bgColor =
-                            "bg-emerald-500 text-white font-bold border-emerald-600 shadow-xs cursor-pointer hover:bg-emerald-600 transition-all";
-                        label = <span className="text-[10px] mt-0.5">성공 ✓</span>;
-                    } else if (verify?.status === "PENDING") {
-                        bgColor =
-                            "bg-amber-50 border-amber-300 text-amber-800 cursor-pointer hover:bg-amber-100 transition-all";
-                        label = <span className="text-[9px] mt-0.5">검토중</span>;
-                    } else if (verify?.status === "REJECTED") {
-                        bgColor =
-                            "bg-rose-50 border-rose-300 text-rose-700 cursor-pointer hover:bg-rose-100 transition-all";
-                        label = <span className="text-[9px] mt-0.5">반려됨</span>;
-                    } else if (isToday) {
-                        bgColor = "border-amber-300 ring-2 ring-amber-200 text-amber-900 font-bold";
-                        label = <span className="text-[9px] text-amber-600 mt-0.5">오늘</span>;
+                    if (!verify) {
+                        return (
+                            <div
+                                key={idx}
+                                className={`relative aspect-[4/3] rounded-xl border select-none ${
+                                    isToday
+                                        ? "border-2 border-dashed border-amber-400"
+                                        : "bg-slate-50 border-slate-200/70"
+                                }`}
+                            >
+                                <span
+                                    className={`absolute top-1 left-1.5 text-[11px] font-bold ${
+                                        isToday ? "text-amber-700" : "text-slate-400"
+                                    }`}
+                                >
+                                    {day}
+                                </span>
+                                {isToday && (
+                                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-amber-600">
+                                        오늘
+                                    </span>
+                                )}
+                            </div>
+                        );
                     }
 
                     return (
-                        <div
+                        <button
                             key={idx}
-                            onClick={() => verify && onSelectDay(verify)}
-                            className={`h-12 sm:h-14 rounded-2xl border flex flex-col items-center justify-center relative select-none transition-all ${bgColor}`}
+                            type="button"
+                            onClick={() => onSelectDay(verify)}
+                            aria-label={`${month + 1}월 ${day}일 인증 ${VERIFY_STATUS_LABEL[verify.status]}`}
+                            className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 cursor-pointer select-none transition-transform hover:scale-105 hover:z-10 hover:shadow-lg"
                         >
-                            <span className="text-xs">{day}</span>
-                            {label}
-                        </div>
+                            <VerifyThumb verify={verify} />
+                            <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/35 to-transparent" />
+                            <span className="absolute top-1 left-1.5 text-[11px] font-bold text-white drop-shadow">
+                                {day}
+                            </span>
+                            <StatusDot status={verify.status} className="absolute right-1.5 bottom-1.5" />
+                        </button>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+// ---------- 인증 앨범: 한 달씩, 월 선택 ----------
+
+function VerifyAlbum({
+    verifies,
+    onSelect,
+}: {
+    verifies: HabitVerifyResponse[];
+    onSelect: (v: HabitVerifyResponse) => void;
+}) {
+    // 인증이 있는 달만 최신순으로 선택할 수 있다
+    const months = Array.from(new Set(verifies.map((v) => monthOf(v.verifyDate)))).sort((a, b) => b.localeCompare(a));
+
+    const [month, setMonth] = useState<string | null>(months[0] ?? null);
+    const [direction, setDirection] = useState<"left" | "right" | null>(null);
+    const gridRef = useRef<HTMLDivElement>(null);
+    const prevHeightRef = useRef<number | null>(null);
+
+    // 선택한 달에 인증이 없어졌다면(수정 후 재조회 등) 가장 최근 달로 되돌린다
+    const currentMonth = month !== null && months.includes(month) ? month : (months[0] ?? null);
+    const items = currentMonth ? verifiesOfMonth(verifies, currentMonth) : [];
+    const index = currentMonth ? months.indexOf(currentMonth) : -1;
+
+    // 달이 바뀔 때 앨범 높이가 점프하지 않고 부드럽게 변하도록 이전 높이에서 새 높이로 옮긴다
+    useLayoutEffect(() => {
+        const el = gridRef.current;
+        const from = prevHeightRef.current;
+        prevHeightRef.current = null;
+        if (!el || from === null) return;
+
+        const to = el.scrollHeight;
+        el.style.height = `${from}px`;
+        void el.offsetHeight;
+        el.style.height = `${to}px`;
+        const timer = setTimeout(() => {
+            el.style.height = "";
+        }, 340);
+        return () => clearTimeout(timer);
+    }, [currentMonth]);
+
+    if (!currentMonth) return null;
+
+    const goTo = (next: string | undefined) => {
+        if (!next || next === currentMonth) return;
+        prevHeightRef.current = gridRef.current?.offsetHeight ?? null;
+        // 더 오래된 달로 가면 왼쪽에서, 더 최근 달로 가면 오른쪽에서 들어온다
+        setDirection(months.indexOf(next) > index ? "left" : "right");
+        setMonth(next);
+    };
+
+    const [yearText, monthText] = currentMonth.split("-");
+
+    return (
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 mb-6">
+            <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-extrabold text-slate-900">앨범</h3>
+                <span className="text-xs text-slate-500">
+                    {yearText}년 {Number(monthText)}월 · {items.length}장
+                </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 mb-3.5">
+                <button
+                    type="button"
+                    onClick={() => goTo(months[index + 1])}
+                    disabled={index >= months.length - 1}
+                    aria-label="이전 달 앨범"
+                    className="shrink-0 w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center disabled:opacity-35 enabled:cursor-pointer"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex gap-1.5 overflow-x-auto flex-1 [scrollbar-width:none]">
+                    {months.map((m) => (
+                        <button
+                            key={m}
+                            type="button"
+                            onClick={() => goTo(m)}
+                            className={`shrink-0 px-3.5 py-1.5 rounded-full border text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${
+                                m === currentMonth
+                                    ? "bg-slate-900 border-slate-900 text-white"
+                                    : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                        >
+                            {Number(m.slice(5))}월
+                        </button>
+                    ))}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => goTo(months[index - 1])}
+                    disabled={index <= 0}
+                    aria-label="다음 달 앨범"
+                    className="shrink-0 w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center disabled:opacity-35 enabled:cursor-pointer"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </button>
+            </div>
+
+            <div ref={gridRef} className="overflow-hidden transition-[height] duration-300 ease-out">
+                <div
+                    key={currentMonth}
+                    className={`grid grid-cols-3 sm:grid-cols-4 gap-1.5 ${
+                        direction === "left"
+                            ? "anim-slide-children-from-left"
+                            : direction === "right"
+                              ? "anim-slide-children-from-right"
+                              : ""
+                    }`}
+                >
+                    {items.map((v) => (
+                        <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => onSelect(v)}
+                            aria-label={`${v.verifyDate} 인증 ${VERIFY_STATUS_LABEL[v.status]}`}
+                            className="relative aspect-[4/3] rounded-[10px] overflow-hidden bg-slate-100 cursor-pointer transition-transform hover:scale-[1.03] hover:z-10 hover:shadow-lg"
+                        >
+                            <VerifyThumb verify={v} />
+                            <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/30 to-transparent" />
+                            <span className="absolute top-1.5 left-1.5 text-[11px] font-extrabold text-white drop-shadow">
+                                {Number(v.verifyDate.slice(5, 7))}/{Number(v.verifyDate.slice(8, 10))}
+                            </span>
+                            <StatusDot status={v.status} className="absolute right-1.5 bottom-1.5" />
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -1219,58 +1440,163 @@ const CERT_STATUS_META = {
 
 function CertDetailModal({
     item,
+    verifies,
+    activeHabitId,
+    habitTitleById,
     isMe,
     onClose,
     onEdit,
 }: {
     item: HabitVerifyResponse;
+    verifies: HabitVerifyResponse[];
+    activeHabitId: number | null;
+    habitTitleById: Record<number, string>;
     isMe: boolean;
     onClose: () => void;
-    onEdit: () => void;
+    onEdit: (item: HabitVerifyResponse) => void;
 }) {
-    const meta = CERT_STATUS_META[item.status];
-    const canEdit = isMe && item.status === "REJECTED";
+    const [currentId, setCurrentId] = useState(item.id);
+    const [direction, setDirection] = useState<"left" | "right" | null>(null);
+    const [closing, setClosing] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
+    // 좌우 이동은 지금 보고 있는 인증이 속한 달 안에서만 한다 (최신순 목록)
+    const current = verifies.find((v) => v.id === currentId) ?? item;
+    const siblings = verifiesOfMonth(verifies, monthOf(current.verifyDate));
+    const position = siblings.findIndex((v) => v.id === current.id);
+    const older = siblings[position + 1];
+    const newer = siblings[position - 1];
+
+    const meta = CERT_STATUS_META[current.status];
+    // 재제출은 진행 중인 습관의 반려 인증만 가능하다 (실패한 이전 습관의 인증은 수정할 수 없다)
+    const isPreviousHabit = current.habitId !== activeHabitId;
+    const canEdit = isMe && current.status === "REJECTED" && !isPreviousHabit;
+    const habitTitle = habitTitleById[current.habitId];
+
+    const move = (target: HabitVerifyResponse | undefined, dir: "left" | "right") => {
+        if (!target) return;
+        setDirection(dir);
+        setCurrentId(target.id);
+    };
+
+    // 닫을 때 페이드아웃이 끝난 뒤에 실제로 닫는다
+    const requestClose = useCallback(() => {
+        setClosing(true);
+        setTimeout(onClose, 300);
+    }, [onClose]);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (showLightbox) return;
+            if (e.key === "Escape") requestClose();
+            else if (e.key === "ArrowLeft") move(older, "left");
+            else if (e.key === "ArrowRight") move(newer, "right");
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    });
+
+    const dateLabel = `${Number(current.verifyDate.slice(5, 7))}월 ${Number(current.verifyDate.slice(8, 10))}일`;
+
     return (
-        <ModalShell borderClass={meta.borderClass} widthClass="max-w-sm">
+        <ModalShell borderClass={meta.borderClass} widthClass="max-w-md" animated closing={closing}>
             <ModalHeader
                 title={meta.title}
                 icon={<CheckCircle2 className="w-5 h-5" />}
-                onClose={onClose}
+                onClose={requestClose}
                 titleClass={meta.titleClass}
             />
-            <div className="mt-3">
-                {item.imageUrl && (
+            <div className="mt-3 overflow-hidden">
+                <div
+                    key={current.id}
+                    className={
+                        direction === "left"
+                            ? "anim-slide-from-left [--slide-distance:48px]"
+                            : direction === "right"
+                              ? "anim-slide-from-right [--slide-distance:48px]"
+                              : ""
+                    }
+                >
+                    {current.imageUrl && (
+                        <button
+                            type="button"
+                            onClick={() => setShowLightbox(true)}
+                            className="block w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner cursor-zoom-in"
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={current.imageUrl}
+                                alt="인증 사진"
+                                className={`w-full h-full object-cover ${
+                                    current.status === "REJECTED" ? "grayscale opacity-75" : ""
+                                }`}
+                            />
+                        </button>
+                    )}
+                    <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <p className="text-xs font-semibold text-slate-800 leading-relaxed">
+                            {current.description || "등록된 내용이 없습니다."}
+                        </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                        <span className="flex items-center gap-1.5 min-w-0">
+                            {habitTitle && <span className="truncate font-bold text-slate-500">{habitTitle}</span>}
+                            {isPreviousHabit && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">
+                                    이전 습관
+                                </span>
+                            )}
+                        </span>
+                        <span className="shrink-0">
+                            인증 일자: {current.verifyDate} ({dateLabel})
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 이전/다음 인증 이동 버튼은 애니메이션 영역 밖에 두어 항상 위에 보이게 한다 */}
+            {(older || newer) && (
+                <div className="mt-3 flex items-center justify-between">
                     <button
                         type="button"
-                        onClick={() => setShowLightbox(true)}
-                        className="block w-full h-56 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner cursor-zoom-in"
+                        onClick={() => move(older, "left")}
+                        disabled={!older}
+                        aria-label="이전 인증"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
                     >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.imageUrl} alt="인증 사진" className="w-full h-full object-cover" />
+                        <ChevronLeft className="w-4 h-4" />
+                        이전
                     </button>
-                )}
-                {showLightbox && item.imageUrl && (
-                    <ImageLightbox src={item.imageUrl} alt="인증 사진" onClose={() => setShowLightbox(false)} />
-                )}
-                <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="text-xs font-semibold text-slate-800 leading-relaxed">
-                        {item.description || "등록된 내용이 없습니다."}
-                    </p>
+                    <span className="text-[11px] text-slate-400">
+                        {position + 1} / {siblings.length}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => move(newer, "right")}
+                        disabled={!newer}
+                        aria-label="다음 인증"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold disabled:opacity-35 enabled:cursor-pointer enabled:hover:bg-slate-200 transition-colors"
+                    >
+                        다음
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
                 </div>
-                <p className="mt-3 text-[11px] text-slate-400 text-right">인증 일자: {item.verifyDate}</p>
-            </div>
+            )}
+
+            {showLightbox && current.imageUrl && (
+                <ImageLightbox src={current.imageUrl} alt="인증 사진" onClose={() => setShowLightbox(false)} />
+            )}
+
             {canEdit ? (
                 <div className="mt-4 flex items-center gap-2">
                     <button
-                        onClick={onClose}
+                        onClick={requestClose}
                         className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl transition-colors"
                     >
                         닫기
                     </button>
                     <button
-                        onClick={onEdit}
+                        onClick={() => onEdit(current)}
                         className={`flex-1 py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
                     >
                         수정하기
@@ -1278,7 +1604,7 @@ function CertDetailModal({
                 </div>
             ) : (
                 <button
-                    onClick={onClose}
+                    onClick={requestClose}
                     className={`mt-4 w-full py-2.5 text-white text-xs font-bold rounded-xl shadow-xs ${meta.btnClass}`}
                 >
                     확인
