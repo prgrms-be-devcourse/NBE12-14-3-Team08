@@ -8,6 +8,7 @@ import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
+import { GroupContentBar } from '@/components/GroupContentBar';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
 
 interface GroupDetailData {
@@ -261,45 +262,22 @@ export default function GroupDetailPage({
                 </div>
             </section>
 
-            <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
-                {/* 인증 사진 라이브러리 / 멤버별 습관 목록 전환 */}
-                <section>
-                    <div
-                        className="mb-4 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1"
-                        role="group"
-                        aria-label="보기 전환"
-                    >
-                        <button
-                            type="button"
-                            aria-pressed={view === 'photos'}
-                            onClick={() => setView('photos')}
-                            className={`rounded-xl px-4 py-1.5 text-sm font-extrabold transition cursor-pointer ${
-                                view === 'photos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-700'
-                            }`}
-                        >
-                            인증 사진
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={view === 'members'}
-                            onClick={() => setView('members')}
-                            className={`rounded-xl px-4 py-1.5 text-sm font-extrabold transition cursor-pointer ${
-                                view === 'members' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-700'
-                            }`}
-                        >
-                            도전 중인 멤버 <span className="text-emerald-600 text-xs font-bold">({group.currentMemberCount})</span>
-                        </button>
-                    </div>
+            {/* 인증 사진 / 멤버 목록: 아이콘 탭이 카드의 윗줄이 되어 갤러리와 이어진다 */}
+            <section className="mt-6">
+                {view === 'photos' && (
+                    <GroupPhotoLibrary
+                        groupId={group.id}
+                        members={members.map((m) => ({ memberId: m.memberId, nickname: m.nickname }))}
+                        view={view}
+                        onViewChange={setView}
+                        memberCount={group.currentMemberCount}
+                    />
+                )}
 
-                    {view === 'photos' && (
-                        <GroupPhotoLibrary
-                            groupId={group.id}
-                            members={members.map((m) => ({ memberId: m.memberId, nickname: m.nickname }))}
-                        />
-                    )}
-
-                    {view === 'members' && (
-                    <div className="grid grid-cols-1 gap-3.5">
+                {view === 'members' && (
+                    <div className="@container rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+                        <GroupContentBar view={view} onViewChange={setView} memberCount={group.currentMemberCount} />
+                        <div id="group-view-panel" role="tabpanel" aria-label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
                         {members.map((m, index) => {
                             const linkHref = `/group/${rawId}/member/${m.memberId}`;
 
@@ -358,10 +336,10 @@ export default function GroupDetailPage({
                                 참여 중인 멤버가 없습니다.
                             </div>
                         )}
+                        </div>
                     </div>
-                    )}
-                </section>
-            </div>
+                )}
+            </section>
 
             {group && (
                 <EditRoomModal

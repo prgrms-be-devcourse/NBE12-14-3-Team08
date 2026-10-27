@@ -16,12 +16,17 @@ import {
   stepColumns,
   type PhotoColumns,
 } from '@/lib/photoLibrary';
+import { GroupContentBar, type GroupView } from './GroupContentBar';
 import { MemberFilterDropdown } from './MemberFilterDropdown';
 import { PhotoDetailPanel } from './PhotoDetailPanel';
 
 interface GroupPhotoLibraryProps {
   groupId: number | string;
   members: { memberId: number; nickname: string }[];
+  // 갤러리 카드 윗줄의 아이콘 탭(인증 사진/멤버) 상태
+  view: GroupView;
+  onViewChange: (view: GroupView) => void;
+  memberCount: number;
 }
 
 // 상세 패널에서 다음 사진으로 넘기다 끝에 닿기 전에 미리 다음 페이지를 불러올 남은 장 수
@@ -140,7 +145,7 @@ function playZoomTransition(scroller: HTMLElement, before: Map<number, CellBox>)
 
 // 인증 사진을 아이폰 사진 앱처럼 모아 보는 라이브러리.
 // 날짜 내림차순(최신이 위)이고, 한 줄에 1·3·5·15장 단계를 오가며 스크롤하면 다음 페이지를 불러온다.
-export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) {
+export function GroupPhotoLibrary({ groupId, members, view, onViewChange, memberCount }: GroupPhotoLibraryProps) {
   const [filter, setFilter] = useState<number | null>(null);
   const [columns, setColumns] = useState<PhotoColumns>(DEFAULT_PHOTO_COLUMNS);
   const [loaded, setLoaded] = useState<LoadedPhotos | null>(null);
@@ -722,22 +727,27 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
 
   return (
     <section aria-label="인증 사진">
-      {/* 갤러리 위 줄: 왼쪽에 지금 보는 년/월/주, 오른쪽에 멤버 필터 드롭다운 */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-1">
-        <p
-          aria-live="polite"
-          className="min-h-[28px] text-lg font-extrabold tabular-nums leading-7 tracking-tight text-slate-900 [@media(max-width:400px)]:text-base"
-        >
-          {periodLabel && current !== null ? periodLabel : ''}
-        </p>
+      {/* 아이콘 탭과 갤러리가 한 카드로 이어진다. 윗줄: 왼쪽 년/월/주, 가운데 탭, 오른쪽 멤버 필터 */}
+      <div className="@container rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+        <GroupContentBar
+          view={view}
+          onViewChange={onViewChange}
+          memberCount={memberCount}
+          left={
+            <p
+              aria-live="polite"
+              className="min-h-7 text-lg font-extrabold tabular-nums leading-7 tracking-tight text-slate-900 @max-[400px]:text-base"
+            >
+              {periodLabel && current !== null ? periodLabel : ''}
+            </p>
+          }
+          right={<MemberFilterDropdown members={members} value={filter} onChange={selectFilter} />}
+        />
 
-        <MemberFilterDropdown members={members} value={filter} onChange={selectFilter} />
-      </div>
-
-      <div className="group/frame relative">
+        <div id="group-view-panel" role="tabpanel" aria-label="인증 사진" className="group/frame relative h-[min(720px,78vh)]">
       <div
         ref={frameRef}
-        className="relative h-[min(720px,78vh)] overflow-hidden rounded-3xl border border-slate-200 bg-white"
+        className="relative h-full overflow-hidden rounded-b-[23px]"
       >
         <div
           ref={scrollRef}
@@ -779,12 +789,12 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
         </div>
       </div>
 
-      {/* 갤러리 프레임 오른쪽 바깥에 따로 놓는 스크롤바. 평소엔 숨기고 마우스를 올리거나 스크롤할 때만 나타난다. */}
+      {/* 갤러리 오른쪽 바깥에 따로 놓는 스크롤바. 평소엔 숨기고 마우스를 올리거나 스크롤할 때만 나타난다. */}
       <div
         ref={trackRef}
         aria-hidden="true"
         onPointerDown={handleTrackPointerDown}
-        className={`absolute bottom-4 left-full top-4 ml-1.5 w-3 rounded-full transition-opacity duration-200 ${
+        className={`absolute bottom-4 left-full top-4 ml-0.5 w-3 sm:ml-1.5 rounded-full transition-opacity duration-200 ${
           scrollActive || dragging ? 'opacity-100' : 'opacity-0 group-hover/frame:opacity-100'
         }`}
       >
@@ -799,6 +809,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
           }`}
         />
       </div>
+        </div>
       </div>
 
       <p className="mt-2 text-center text-xs font-medium text-slate-400">
