@@ -74,6 +74,69 @@ function errorText(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+// 확대/축소 때 각 칸이 이전 위치·크기에서 새 위치·크기로 움직이는 시간
+const ZOOM_MS = 300;
+const ZOOM_EASING = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+// 갤러리 화면(뷰포트) 왼쪽 위를 기준으로 한 칸의 위치와 크기
+interface CellBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+// 지금 화면에 보이는 칸의 위치와 크기를 사진 id별로 모은다. (진행 중인 애니메이션의 현재 모습도 반영된다)
+function collectCellBoxes(scroller: HTMLElement): Map<number, CellBox> {
+  const view = scroller.getBoundingClientRect();
+  const boxes = new Map<number, CellBox>();
+  scroller.querySelectorAll<HTMLElement>('[data-photo-id]').forEach((cell) => {
+    const box = cell.getBoundingClientRect();
+    if (box.bottom <= view.top || box.top >= view.bottom) return;
+    boxes.set(Number(cell.dataset.photoId), {
+      left: box.left - view.left,
+      top: box.top - view.top,
+      width: box.width,
+      height: box.height,
+    });
+  });
+  return boxes;
+}
+
+// 단계가 바뀐 뒤 칸들이 이전 모습에서 새 자리로 부드럽게 옮겨 가게 한다. (FLIP)
+// 이전에도 보이던 칸은 이전 위치·크기에서 제자리로, 새로 보이게 된 칸은 서서히 나타난다.
+function playZoomTransition(scroller: HTMLElement, before: Map<number, CellBox>) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const cells = scroller.querySelectorAll<HTMLElement>('[data-photo-id]');
+  // 이전 동작이 아직 진행 중이면 멈추고 새 자리를 정확히 잰다. (이전 모습은 단계를 바꾸기 직전에 이미 기록했다)
+  cells.forEach((cell) => cell.getAnimations().forEach((animation) => animation.cancel()));
+
+  const view = scroller.getBoundingClientRect();
+  cells.forEach((cell) => {
+    const box = cell.getBoundingClientRect();
+    if (box.bottom <= view.top || box.top >= view.bottom) return;
+
+    const from = before.get(Number(cell.dataset.photoId));
+    if (!from) {
+      cell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ZOOM_MS, easing: 'ease-out' });
+      return;
+    }
+
+    const dx = from.left - (box.left - view.left);
+    const dy = from.top - (box.top - view.top);
+    const sx = from.width / box.width;
+    const sy = from.height / box.height;
+    cell.animate(
+      [
+        { transformOrigin: '0 0', transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+        { transformOrigin: '0 0', transform: 'none' },
+      ],
+      { duration: ZOOM_MS, easing: ZOOM_EASING }
+    );
+  });
+}
+
 // 인증 사진을 아이폰 사진 앱처럼 모아 보는 라이브러리.
 // 날짜 내림차순(최신이 위)이고, 한 줄에 1·3·5·15장 단계를 오가며 스크롤하면 다음 페이지를 불러온다.
 export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) {
@@ -91,6 +154,9 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const anchorRef = useRef<ScrollAnchor | null>(null);
+  // 확대/축소 직전 칸들의 모습. 단계가 바뀐 직후 레이아웃에서 한 번 쓰고 비운다.
+  const zoomFromRef = useRef<Map<number, CellBox> | null>(null);
+  const prevColumnsRef = useRef(columns);
   const loadingMoreRef = useRef(false);
   const lastFocusRef = useRef<HTMLElement | null>(null);
 
@@ -243,6 +309,12 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
       }
       if (reached || !hasMore) anchorRef.current = null;
     }
+
+    // 단계가 실제로 바뀐 경우에만 칸이 옮겨 가는 애니메이션을 재생한다.
+    const zoomFrom = zoomFromRef.current;
+    zoomFromRef.current = null;
+    if (scroller && zoomFrom && prevColumnsRef.current !== columns) playZoomTransition(scroller, zoomFrom);
+    prevColumnsRef.current = columns;
 
     updatePeriod();
   }, [columns, loadedMemberId, items.length, hasMore, updatePeriod]);
@@ -408,6 +480,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
   const stepLevel = useCallback(
     (delta: 1 | -1) => {
       anchorRef.current = captureAnchor();
+      zoomFromRef.current = scrollRef.current ? collectCellBoxes(scrollRef.current) : null;
       setColumns((current) => stepColumns(current, delta));
     },
     [captureAnchor]
