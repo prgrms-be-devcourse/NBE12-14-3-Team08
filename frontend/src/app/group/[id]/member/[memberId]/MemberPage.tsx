@@ -28,6 +28,7 @@ import {
     type PenaltyVerifySummary,
     type PenaltyVerifyDetail,
 } from "@/lib/habitApi";
+import { readImageSize } from "@/lib/imageSize";
 
 type Props = { groupId: string; memberId: string };
 
@@ -471,15 +472,21 @@ export function MemberPage({ groupId, memberId }: Props) {
                             throw new Error("습관 인증 사진은 필수입니다.");
                         }
 
+                        // 갤러리가 사진 비율대로 자리를 잡도록 크기를 함께 보낸다. 사진을 바꾸지 않은 재제출은
+                        // 서버가 이전 크기를 비우므로 올라가 있는 사진에서 다시 읽는다. 못 읽으면 크기 없이 보낸다.
+                        const imageSize = await readImageSize(file ?? imageUrl);
+
                         if (editingVerify) {
                             await habitApi.resubmitHabitVerification(habit.id, editingVerify.id, {
                                 description: description || null,
                                 imageUrl,
+                                ...imageSize,
                             });
                         } else {
                             await habitApi.createHabitVerification(habit.id, {
                                 description: description || null,
                                 imageUrl,
+                                ...imageSize,
                             });
                         }
                         setShowCertifyModal(false);
