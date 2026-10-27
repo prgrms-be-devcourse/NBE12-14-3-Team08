@@ -16,49 +16,48 @@ import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
+import io.mockk.MockKAnnotations
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.impl.annotations.MockK
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyString
-import org.mockito.BDDMockito.given
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Optional
 
-@ExtendWith(MockitoExtension::class)
 class GroupServiceTest {
 
     private lateinit var groupService: GroupService
 
-    @Mock
+    @MockK
     private lateinit var groupRepository: GroupRepository
 
-    @Mock
+    @MockK
     private lateinit var groupMemberRepository: GroupMemberRepository
 
-    @Mock
+    @MockK
     private lateinit var groupMemberService: GroupMemberService
 
-    @Mock
+    @MockK
     private lateinit var memberRepository: MemberRepository
 
-    @Mock
+    @MockK
     private lateinit var passwordEncoder: PasswordEncoder
 
-    @Mock
+    @MockK
     private lateinit var habitVerifyRepository: HabitVerifyRepository
 
-    @Mock
+    @MockK
     private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
     companion object {
@@ -69,6 +68,8 @@ class GroupServiceTest {
 
     @BeforeEach
     fun setUp() {
+        MockKAnnotations.init(this)
+
         groupService = GroupService(
             groupRepository = groupRepository,
             passwordEncoder = passwordEncoder,
@@ -113,7 +114,7 @@ class GroupServiceTest {
         group: Group,
         role: GroupMemberRole
     ): GroupMember {
-        val member = mock(Member::class.java)
+        val member = mockk<Member>(relaxed = true)
         return GroupMember.create(group, member, role)
     }
 
@@ -142,7 +143,7 @@ class GroupServiceTest {
                     5
                 )
 
-                val mockMember = mock(Member::class.java)
+                val mockMember = mockk<Member>(relaxed = true)
                 val mockGroup = createGroup(
                     title = request.title,
                     password = "encoded_pass"
@@ -154,17 +155,25 @@ class GroupServiceTest {
                     GROUP_ID
                 )
 
-                given(groupRepository.existsByInviteCode(anyString()))
-                    .willReturn(false)
+                every {
+                    groupRepository.existsByInviteCode(any<String>())
+                } returns false
 
-                given(passwordEncoder.encode(request.password))
-                    .willReturn("encoded_pass")
+                every {
+                    passwordEncoder.encode(request.password)
+                } returns "encoded_pass"
 
-                given(groupRepository.save(any(Group::class.java)))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.save(any<Group>())
+                } returns mockGroup
 
-                given(memberRepository.findById(MEMBER_ID))
-                    .willReturn(Optional.of(mockMember))
+                every {
+                    memberRepository.findById(MEMBER_ID)
+                } returns Optional.of(mockMember)
+
+                every {
+                    groupMemberRepository.save(any<GroupMember>())
+                } answers { firstArg() }
 
                 // when
                 val response = groupService.createGroup(
@@ -178,9 +187,13 @@ class GroupServiceTest {
                 assertThat(response.inviteLink)
                     .startsWith(BASE_INVITE_URL)
 
-                verify(groupRepository).save(any(Group::class.java))
-                verify(groupMemberRepository)
-                    .save(any(GroupMember::class.java))
+                verify(exactly = 1) {
+                    groupRepository.save(any<Group>())
+                }
+
+                verify(exactly = 1) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
         }
 
@@ -206,14 +219,22 @@ class GroupServiceTest {
                     inviteCode = "mockcode"
                 )
 
-                given(passwordEncoder.encode(anyString()))
-                    .willReturn("encoded_password")
+                // 추가: 초대 코드가 중복되지 않았음을 설정
+                every {
+                    groupRepository.existsByInviteCode(any<String>())
+                } returns false
 
-                given(groupRepository.save(any(Group::class.java)))
-                    .willReturn(mockGroup)
+                every {
+                    passwordEncoder.encode(any<String>())
+                } returns "encoded_password"
 
-                given(memberRepository.findById(MEMBER_ID))
-                    .willReturn(Optional.empty())
+                every {
+                    groupRepository.save(any<Group>())
+                } returns mockGroup
+
+                every {
+                    memberRepository.findById(MEMBER_ID)
+                } returns Optional.empty()
 
                 // when & then
                 assertThatThrownBy {
@@ -222,8 +243,9 @@ class GroupServiceTest {
                     .isInstanceOf(EntityNotFoundException::class.java)
                     .hasMessageContaining("존재하지 않는 회원입니다.")
 
-                verify(groupMemberRepository, never())
-                    .save(any(GroupMember::class.java))
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
         }
     }
@@ -244,12 +266,12 @@ class GroupServiceTest {
             @DisplayName("그룹 목록 조회 - 결과가 없으면 빈 목록을 반환한다")
             fun getGroupSimpleListEmpty() {
                 // given
-                given(
+                every {
                     groupRepository.findMyGroupsWithCount(
                         MEMBER_ID,
                         GroupStatus.ACTIVE
                     )
-                ).willReturn(emptyList())
+                } returns emptyList()
 
                 // when
                 val result = groupService.getGroupSimpleList(
@@ -260,10 +282,12 @@ class GroupServiceTest {
                 // then
                 assertThat(result).isEmpty()
 
-                verify(groupRepository).findMyGroupsWithCount(
-                    MEMBER_ID,
-                    GroupStatus.ACTIVE
-                )
+                verify(exactly = 1) {
+                    groupRepository.findMyGroupsWithCount(
+                        MEMBER_ID,
+                        GroupStatus.ACTIVE
+                    )
+                }
             }
 
             @Test
@@ -276,17 +300,24 @@ class GroupServiceTest {
                     inviteCode = "code"
                 )
 
-                given(groupRepository.findById(GROUP_ID))
-                    .willReturn(Optional.of(mockGroup))
+                every {
+                    groupRepository.findById(GROUP_ID)
+                } returns Optional.of(mockGroup)
 
-                given(
-                    groupMemberRepository
-                        .existsByGroupIdAndMemberIdAndStatus(
-                            GROUP_ID,
-                            MEMBER_ID,
-                            GroupMemberStatus.ACTIVE
-                        )
-                ).willReturn(true)
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
+                        GROUP_ID,
+                        MEMBER_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                } returns true
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        GROUP_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
 
                 // when
                 val response = groupService.getGroupDetail(
@@ -300,18 +331,25 @@ class GroupServiceTest {
                     .isEqualTo(GroupStatus.ACTIVE)
                 assertThat(response.rankings).isNull()
 
-                verify(groupRepository).findById(GROUP_ID)
-                verify(groupMemberRepository)
-                    .existsByGroupIdAndMemberIdAndStatus(
+                verify(exactly = 1) {
+                    groupRepository.findById(GROUP_ID)
+                }
+
+                verify(exactly = 1) {
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
                         GROUP_ID,
                         MEMBER_ID,
                         GroupMemberStatus.ACTIVE
                     )
-                verify(habitVerifyRepository, never())
-                    .findAllByGroupId(GROUP_ID)
+                }
 
-                verify(penaltyVerifyRepository, never())
-                    .findAllByGroupId(GROUP_ID)
+                verify(exactly = 0) {
+                    habitVerifyRepository.findAllByGroupId(GROUP_ID)
+                }
+
+                verify(exactly = 0) {
+                    penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
+                }
             }
 
             @Test
@@ -322,32 +360,36 @@ class GroupServiceTest {
                     status = GroupStatus.FINISH
                 )
 
-                given(groupRepository.findById(GROUP_ID))
-                    .willReturn(Optional.of(finishedGroup))
+                every {
+                    groupRepository.findById(GROUP_ID)
+                } returns Optional.of(finishedGroup)
 
-                given(
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
                         GROUP_ID,
                         MEMBER_ID,
                         GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(true)
+                } returns true
 
-                given(
+                every {
                     groupMemberRepository.countByGroupIdAndStatus(
                         GROUP_ID,
                         GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(0L)
+                } returns 0L
 
-                given(groupMemberRepository.findAllByGroupId(GROUP_ID))
-                    .willReturn(emptyList())
+                every {
+                    groupMemberRepository.findAllByGroupId(GROUP_ID)
+                } returns emptyList()
 
-                given(habitVerifyRepository.findAllByGroupId(GROUP_ID))
-                    .willReturn(emptyList())
+                every {
+                    habitVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns emptyList()
 
-                given(penaltyVerifyRepository.findAllByGroupId(GROUP_ID))
-                    .willReturn(emptyList())
+                every {
+                    penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns emptyList()
 
                 // when
                 val response = groupService.getGroupDetail(
@@ -360,13 +402,21 @@ class GroupServiceTest {
                     .isEqualTo(GroupStatus.FINISH)
 
                 assertThat(response.rankings).isNotNull
-                assertThat(response.rankings!!.habitVerifyTop3).isEmpty()
-                assertThat(response.rankings!!.penaltyVerifyTop3).isEmpty()
-                assertThat(response.rankings!!.habitSuccessTop3).isEmpty()
+                assertThat(response.rankings?.habitVerifyTop3).isEmpty()
+                assertThat(response.rankings?.penaltyVerifyTop3).isEmpty()
+                assertThat(response.rankings?.habitSuccessTop3).isEmpty()
 
-                verify(groupMemberRepository).findAllByGroupId(GROUP_ID)
-                verify(habitVerifyRepository).findAllByGroupId(GROUP_ID)
-                verify(penaltyVerifyRepository).findAllByGroupId(GROUP_ID)
+                verify(exactly = 1) {
+                    groupMemberRepository.findAllByGroupId(GROUP_ID)
+                }
+
+                verify(exactly = 1) {
+                    habitVerifyRepository.findAllByGroupId(GROUP_ID)
+                }
+
+                verify(exactly = 1) {
+                    penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
+                }
             }
         }
 
@@ -378,17 +428,17 @@ class GroupServiceTest {
             @DisplayName("가입하지 않은 멤버는 그룹 상세 정보에 접근할 수 없다")
             fun getGroupDetailForbidden() {
                 // given
-                given(groupRepository.findById(GROUP_ID))
-                    .willReturn(Optional.of(createGroup()))
+                every {
+                    groupRepository.findById(GROUP_ID)
+                } returns Optional.of(createGroup())
 
-                given(
-                    groupMemberRepository
-                        .existsByGroupIdAndMemberIdAndStatus(
-                            GROUP_ID,
-                            MEMBER_ID,
-                            GroupMemberStatus.ACTIVE
-                        )
-                ).willReturn(false)
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
+                        GROUP_ID,
+                        MEMBER_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                } returns false
 
                 // when & then
                 assertThatThrownBy {
@@ -434,18 +484,28 @@ class GroupServiceTest {
                     10
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
-                given(
+                every {
                     groupMemberRepository.findByGroupIdAndMemberId(
                         GROUP_ID,
                         MEMBER_ID
                     )
-                ).willReturn(Optional.of(mockGroupMember))
+                } returns Optional.of(mockGroupMember)
 
-                given(passwordEncoder.encode("newpass"))
-                    .willReturn("encoded_newpass")
+                // 추가: 그룹 수정 시 활성 멤버 수 조회에 대한 응답
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        GROUP_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
+
+                every {
+                    passwordEncoder.encode("newpass")
+                } returns "encoded_newpass"
 
                 // when
                 groupService.updateGroup(
@@ -457,10 +517,20 @@ class GroupServiceTest {
                 // then
                 assertThat(mockGroup.title).isEqualTo("새제목")
 
-                verify(groupRepository).findByIdForUpdate(GROUP_ID)
-                verify(groupMemberRepository)
-                    .findByGroupIdAndMemberId(GROUP_ID, MEMBER_ID)
-                verify(passwordEncoder).encode("newpass")
+                verify(exactly = 1) {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                }
+
+                verify(exactly = 1) {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        GROUP_ID,
+                        MEMBER_ID
+                    )
+                }
+
+                verify(exactly = 1) {
+                    passwordEncoder.encode("newpass")
+                }
             }
         }
 
@@ -486,8 +556,9 @@ class GroupServiceTest {
                     5
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
                 // when & then
                 assertThatThrownBy {
@@ -520,15 +591,16 @@ class GroupServiceTest {
                     5
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
-                given(
+                every {
                     groupMemberRepository.findByGroupIdAndMemberId(
                         GROUP_ID,
                         MEMBER_ID
                     )
-                ).willReturn(Optional.of(mockGroupMember))
+                } returns Optional.of(mockGroupMember)
 
                 // when & then
                 assertThatThrownBy {
@@ -572,29 +644,35 @@ class GroupServiceTest {
                     50L
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
-                given(
+                every {
                     groupMemberRepository.findByGroupIdAndMemberId(
                         GROUP_ID,
                         MEMBER_ID
                     )
-                ).willReturn(Optional.of(mockGroupMember))
+                } returns Optional.of(mockGroupMember)
 
-                given(
+                every {
                     groupMemberRepository.countByGroupIdAndStatus(
                         GROUP_ID,
                         GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(1L)
+                } returns 1L
+
+                every {
+                    groupMemberService.deleteGroupAndAllMembers(mockGroup)
+                } just Runs
 
                 // when
                 groupService.deleteGroup(GROUP_ID, MEMBER_ID)
 
                 // then
-                verify(groupMemberService, times(1))
-                    .deleteGroupAndAllMembers(mockGroup)
+                verify(exactly = 1) {
+                    groupMemberService.deleteGroupAndAllMembers(mockGroup)
+                }
             }
         }
 
@@ -610,8 +688,9 @@ class GroupServiceTest {
                     status = GroupStatus.FINISH
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
                 // when & then
                 assertThatThrownBy {
@@ -620,8 +699,9 @@ class GroupServiceTest {
                     .isInstanceOf(BusinessRuleException::class.java)
                     .hasMessageContaining("이미 종료된 그룹은 삭제할 수 없습니다.")
 
-                verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(mockGroup)
+                verify(exactly = 0) {
+                    groupMemberService.deleteGroupAndAllMembers(mockGroup)
+                }
             }
 
             @Test
@@ -634,15 +714,16 @@ class GroupServiceTest {
                     GroupMemberRole.MEMBER
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
-                given(
+                every {
                     groupMemberRepository.findByGroupIdAndMemberId(
                         GROUP_ID,
                         MEMBER_ID
                     )
-                ).willReturn(Optional.of(mockGroupMember))
+                } returns Optional.of(mockGroupMember)
 
                 // when & then
                 assertThatThrownBy {
@@ -651,8 +732,9 @@ class GroupServiceTest {
                     .isInstanceOf(ForbiddenException::class.java)
                     .hasMessageContaining("그룹 삭제는 방장만 가능합니다.")
 
-                verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(mockGroup)
+                verify(exactly = 0) {
+                    groupMemberService.deleteGroupAndAllMembers(mockGroup)
+                }
             }
 
             @Test
@@ -667,22 +749,23 @@ class GroupServiceTest {
                     GroupMemberRole.OWNER
                 )
 
-                given(groupRepository.findByIdForUpdate(GROUP_ID))
-                    .willReturn(mockGroup)
+                every {
+                    groupRepository.findByIdForUpdate(GROUP_ID)
+                } returns mockGroup
 
-                given(
+                every {
                     groupMemberRepository.findByGroupIdAndMemberId(
                         GROUP_ID,
                         MEMBER_ID
                     )
-                ).willReturn(Optional.of(mockGroupMember))
+                } returns Optional.of(mockGroupMember)
 
-                given(
+                every {
                     groupMemberRepository.countByGroupIdAndStatus(
                         GROUP_ID,
                         GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(3L)
+                } returns 3L
 
                 // when & then
                 assertThatThrownBy {
@@ -693,8 +776,9 @@ class GroupServiceTest {
                         "그룹을 삭제하려면 방장을 제외한 모든 멤버가 퇴장해야 합니다."
                     )
 
-                verify(groupMemberService, never())
-                    .deleteGroupAndAllMembers(mockGroup)
+                verify(exactly = 0) {
+                    groupMemberService.deleteGroupAndAllMembers(mockGroup)
+                }
             }
         }
     }
@@ -720,15 +804,17 @@ class GroupServiceTest {
                 val mockGroup1 = createGroup()
                 val mockGroup2 = createGroup(title = "두 번째 그룹")
 
-                given(groupRepository.findExpiredGroupsForUpdate(today))
-                    .willReturn(listOf(mockGroup1, mockGroup2))
+                every {
+                    groupRepository.findExpiredGroupsForUpdate(today)
+                } returns listOf(mockGroup1, mockGroup2)
 
                 // when
                 groupService.autoCloseExpiredGroups()
 
                 // then
-                verify(groupRepository)
-                    .findExpiredGroupsForUpdate(today)
+                verify(exactly = 1) {
+                    groupRepository.findExpiredGroupsForUpdate(today)
+                }
 
                 assertThat(mockGroup1.status)
                     .isEqualTo(GroupStatus.FINISH)

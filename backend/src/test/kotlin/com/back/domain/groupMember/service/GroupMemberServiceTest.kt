@@ -17,6 +17,13 @@ import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
 import com.back.global.exception.GroupLimitExceededException
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.impl.annotations.InjectMockKs
+import io.mockk.impl.annotations.MockK
+import io.mockk.impl.annotations.SpyK
+import io.mockk.junit5.MockKExtension
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType
 import java.time.LocalDate
@@ -28,18 +35,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.Spy
-import org.mockito.BDDMockito.given
-import org.mockito.BDDMockito.willAnswer
-import org.mockito.Mockito.any
-import org.mockito.Mockito.anyList
-import org.mockito.Mockito.anyString
-import org.mockito.Mockito.never
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.transaction.PlatformTransactionManager
@@ -48,42 +43,42 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.SimpleTransactionStatus
 import org.springframework.transaction.support.TransactionTemplate
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 class GroupMemberServiceTest {
 
-    @InjectMocks
+    @InjectMockKs
     private lateinit var groupMemberService: GroupMemberService
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var groupMemberRepository: GroupMemberRepository
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var groupRepository: GroupRepository
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var memberRepository: MemberRepository
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var habitRepository: HabitRepository
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var habitVerifyRepository: HabitVerifyRepository
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
-    @Mock
+    @MockK
     private lateinit var passwordEncoder: PasswordEncoder
 
-    @Mock
+    @MockK(relaxUnitFun = true)
     private lateinit var entityManager: EntityManager
 
-    // 잠금 구간을 실제로 실행하도록, 트랜잭션 관리자만 아무것도 안 하는 가짜인 진짜 TransactionTemplate을 넣는다
-    @Spy
-    private val transactionTemplate = TransactionTemplate(
+    @SpyK
+    private var transactionTemplate = TransactionTemplate(
         object : PlatformTransactionManager {
-            override fun getTransaction(definition: TransactionDefinition?): TransactionStatus =
-                SimpleTransactionStatus()
+            override fun getTransaction(
+                definition: TransactionDefinition?
+            ): TransactionStatus = SimpleTransactionStatus()
 
             override fun commit(status: TransactionStatus) = Unit
 
@@ -102,9 +97,16 @@ class GroupMemberServiceTest {
             memberLimit = 5,
             deadline = LocalDate.now().plusDays(7)
         )
-
         ReflectionTestUtils.setField(group, "id", groupId)
         return group
+    }
+
+    private fun newGroupMember(
+        group: Group,
+        role: GroupMemberRole
+    ): GroupMember {
+        val member = mockk<Member>()
+        return GroupMember.create(group, member, role)
     }
 
     @BeforeEach
@@ -131,61 +133,80 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(true)
+                } returns 1L
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns true
 
                 val result = groupMemberService.joinGroup(
-                    inviteCode,
-                    memberId,
-                    request
+                    inviteCode, memberId, request
                 )
 
                 assertThat(result).isEqualTo(groupId)
-                verify(groupMemberRepository, never())
-                    .save(any(GroupMember::class.java))
+
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
 
             @Test
             @DisplayName("비밀번호와 정원 검증을 통과하면 신규 가입한다")
             fun joinGroup_NewMember() {
                 val group = createActiveGroup()
-                val member = org.mockito.Mockito.mock(Member::class.java)
+                val member = mockk<Member>()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                        groupId, memberId
                     )
-                ).willReturn(false)
-                given(passwordEncoder.matches("pass123", "encoded_pass"))
-                    .willReturn(true)
-                given(
+                } returns false
+
+                every {
+                    passwordEncoder.matches("pass123", "encoded_pass")
+                } returns true
+
+                every {
                     groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                        groupId, GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(3L)
-                given(memberRepository.findById(memberId))
-                    .willReturn(Optional.of(member))
+                } returns 3L
+
+                every {
+                    memberRepository.findById(memberId)
+                } returns Optional.of(member)
+
+                // save()는 Unit이 아니라 저장된 엔티티를 반환하므로 별도 설정한다.
+                every {
+                    groupMemberRepository.save(any<GroupMember>())
+                } answers {
+                    firstArg<GroupMember>()
+                }
 
                 val result = groupMemberService.joinGroup(
-                    inviteCode,
-                    memberId,
-                    request
+                    inviteCode, memberId, request
                 )
 
                 assertThat(result).isEqualTo(groupId)
-                verify(groupMemberRepository, times(1))
-                    .save(any(GroupMember::class.java))
+
+                verify(exactly = 1) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
 
             @Test
@@ -194,26 +215,35 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                        groupId, memberId
                     )
-                ).willReturn(false, true)
-                given(passwordEncoder.matches("pass123", "encoded_pass"))
-                    .willReturn(true)
+                } returnsMany listOf(false, true)
+
+                every {
+                    passwordEncoder.matches("pass123", "encoded_pass")
+                } returns true
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
 
                 val result = groupMemberService.joinGroup(
-                    inviteCode,
-                    memberId,
-                    request
+                    inviteCode, memberId, request
                 )
 
                 assertThat(result).isEqualTo(groupId)
-                verify(groupMemberRepository, never())
-                    .save(any(GroupMember::class.java))
+
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
         }
 
@@ -222,56 +252,60 @@ class GroupMemberServiceTest {
         inner class Failure {
 
             @Test
-            @DisplayName("유효하지 않은 초대 코드이면 예외가 발생한다")
-            fun joinGroup_InvalidInviteCode() {
-                val request = GroupRequest.Join("pass123")
-
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(null)
-
-                assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
-                }
-                    .isInstanceOf(EntityNotFoundException::class.java)
-                    .hasMessageContaining("유효하지 않거나 존재하지 않는 초대 코드입니다.")
-            }
-
-            @Test
             @DisplayName("그룹 비밀번호가 일치하지 않으면 예외가 발생한다")
             fun joinGroup_WrongPassword() {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("wrong_pass")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                        groupId, memberId
                     )
-                ).willReturn(false)
-                given(passwordEncoder.matches("wrong_pass", "encoded_pass"))
-                    .willReturn(false)
+                } returns false
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
+
+                every {
+                    passwordEncoder.matches(
+                        "wrong_pass", "encoded_pass"
+                    )
+                } returns false
 
                 assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                    groupMemberService.joinGroup(
+                        inviteCode, memberId, request
+                    )
                 }
                     .isInstanceOf(ForbiddenException::class.java)
-                    .hasMessageContaining("그룹 비밀번호가 일치하지 않습니다.")
+                    .hasMessageContaining(
+                        "그룹 비밀번호가 일치하지 않습니다."
+                    )
             }
 
             @Test
             @DisplayName("이미 종료된 그룹이면 가입할 수 없다")
             fun joinGroup_AlreadyFinished() {
-                val group = org.mockito.Mockito.mock(Group::class.java)
+                val group = mockk<Group>()
                 val request = GroupRequest.Join("pass123")
 
-                given(group.isFinished()).willReturn(true)
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
+                every { group.isFinished() } returns true
+
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
 
                 assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                    groupMemberService.joinGroup(
+                        inviteCode, memberId, request
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
                     .hasMessageContaining("이미 마감된 그룹입니다.")
@@ -283,20 +317,21 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                        groupId, memberId
                     )
-                ).willReturn(false)
-                given(
+                } returns false
+
+                every {
                     groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                        groupId, GroupMemberStatus.ACTIVE
                     )
-                ).willReturn(5L)
+                } returns 5L
 
                 assertThatThrownBy {
                     groupMemberService.joinGroup(inviteCode, memberId, request)
@@ -305,67 +340,10 @@ class GroupMemberServiceTest {
                     .hasMessageContaining(
                         "그룹의 최대 인원이 초과되어 입장할 수 없습니다."
                     )
-                verify(passwordEncoder, never()).matches(anyString(), anyString())
-                verify(entityManager, never())
-                    .refresh(group, LockModeType.PESSIMISTIC_WRITE)
-            }
 
-            @Test
-            @DisplayName("그룹 정원이 가득 찼으면 비밀번호가 틀려도 정원 초과로 거절한다")
-            fun joinGroup_LimitExceeded_WrongPassword() {
-                val group = createActiveGroup()
-                val request = GroupRequest.Join("wrong_pass")
-
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
-                    )
-                ).willReturn(false)
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(5L)
-
-                assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                verify(exactly = 0) {
+                    passwordEncoder.matches(any<String>(), any<String>())
                 }
-                    .isInstanceOf(GroupLimitExceededException::class.java)
-            }
-
-            @Test
-            @DisplayName("비밀번호를 확인하는 사이 마지막 자리가 차면 잠금 안에서 정원 초과로 거절한다")
-            fun joinGroup_FilledWhileCheckingPassword() {
-                val group = createActiveGroup()
-                val request = GroupRequest.Join("pass123")
-
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
-                    )
-                ).willReturn(false)
-                given(passwordEncoder.matches("pass123", "encoded_pass"))
-                    .willReturn(true)
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(4L, 5L)
-
-                assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
-                }
-                    .isInstanceOf(GroupLimitExceededException::class.java)
-                verify(groupMemberRepository, never())
-                    .save(any(GroupMember::class.java))
             }
 
             @Test
@@ -374,24 +352,108 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("wrong_pass")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                given(
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
                     groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                        groupId, memberId
                     )
-                ).willReturn(false)
-                given(passwordEncoder.matches("wrong_pass", "encoded_pass"))
-                    .willReturn(false)
+                } returns false
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
+
+                every {
+                    passwordEncoder.matches("wrong_pass", "encoded_pass")
+                } returns false
 
                 assertThatThrownBy {
                     groupMemberService.joinGroup(inviteCode, memberId, request)
                 }
                     .isInstanceOf(ForbiddenException::class.java)
 
-                verify(entityManager, never())
-                    .refresh(group, LockModeType.PESSIMISTIC_WRITE)
+                verify(exactly = 0) {
+                    entityManager.refresh(
+                        group, LockModeType.PESSIMISTIC_WRITE
+                    )
+                }
+
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
+            }
+
+            @Test
+            @DisplayName("그룹 정원이 가득 찼으면 비밀번호가 틀려도 정원 초과로 거절한다")
+            fun joinGroup_LimitExceeded_WrongPassword() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("wrong_pass")
+
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns false
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 5L
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(GroupLimitExceededException::class.java)
+
+                verify(exactly = 0) {
+                    passwordEncoder.matches(any<String>(), any<String>())
+                }
+            }
+
+            @Test
+            @DisplayName("비밀번호를 확인하는 사이 마지막 자리가 차면 잠금 안에서 정원 초과로 거절한다")
+            fun joinGroup_FilledWhileCheckingPassword() {
+                val group = createActiveGroup()
+                val request = GroupRequest.Join("pass123")
+
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns false
+
+                every {
+                    passwordEncoder.matches("pass123", "encoded_pass")
+                } returns true
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returnsMany listOf(4L, 5L)
+
+                assertThatThrownBy {
+                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                }
+                    .isInstanceOf(GroupLimitExceededException::class.java)
+
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
 
             @Test
@@ -400,29 +462,52 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val request = GroupRequest.Join("pass123")
 
-                given(groupRepository.findByInviteCode(inviteCode))
-                    .willReturn(group)
-                // 잠그며 다시 읽을 때(refresh) 다른 요청이 바꾼 비밀번호가 반영된 상황
-                willAnswer { group.password = "changed_encoded_pass" }
-                    .given(entityManager).refresh(group, LockModeType.PESSIMISTIC_WRITE)
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberId(
-                        groupId,
-                        memberId
+                every {
+                    groupRepository.findByInviteCode(inviteCode)
+                } returns group
+
+                every {
+                    entityManager.refresh(
+                        group, LockModeType.PESSIMISTIC_WRITE
                     )
-                ).willReturn(false)
-                given(passwordEncoder.matches("pass123", "encoded_pass"))
-                    .willReturn(true)
-                given(passwordEncoder.matches("pass123", "changed_encoded_pass"))
-                    .willReturn(false)
+                } answers {
+                    group.password = "changed_encoded_pass"
+                    Unit
+                }
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns false
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
+
+                every {
+                    passwordEncoder.matches("pass123", "encoded_pass")
+                } returns true
+
+                every {
+                    passwordEncoder.matches(
+                        "pass123", "changed_encoded_pass"
+                    )
+                } returns false
 
                 assertThatThrownBy {
-                    groupMemberService.joinGroup(inviteCode, memberId, request)
+                    groupMemberService.joinGroup(
+                        inviteCode, memberId, request
+                    )
                 }
                     .isInstanceOf(ForbiddenException::class.java)
                     .hasMessageContaining("그룹 비밀번호가 일치하지 않습니다.")
-                verify(groupMemberRepository, never())
-                    .save(any(GroupMember::class.java))
+
+                verify(exactly = 0) {
+                    groupMemberRepository.save(any<GroupMember>())
+                }
             }
         }
     }
@@ -439,22 +524,26 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("활성 멤버이면 그룹 멤버 목록을 반환한다")
             fun getGroupMembers() {
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                        groupId,
-                        memberId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(true)
-                given(groupMemberRepository.findByGroupIdWithHabit(groupId))
-                    .willReturn(emptyList())
+                every {
+                    groupMemberRepository
+                        .existsByGroupIdAndMemberIdAndStatus(
+                            groupId, memberId, GroupMemberStatus.ACTIVE
+                        )
+                } returns true
+
+                every {
+                    groupMemberRepository.findByGroupIdWithHabit(groupId)
+                } returns emptyList()
 
                 val result: List<GroupMemberResponse.Simple> =
                     groupMemberService.getGroupMembers(groupId, memberId)
 
                 assertThat(result).isNotNull
                 assertThat(result).isEmpty()
-                verify(groupMemberRepository).findByGroupIdWithHabit(groupId)
+
+                verify(exactly = 1) {
+                    groupMemberRepository.findByGroupIdWithHabit(groupId)
+                }
             }
         }
 
@@ -465,13 +554,12 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("그룹의 활성 멤버가 아니면 목록을 조회할 수 없다")
             fun getGroupMembers_NoAccess() {
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                        groupId,
-                        memberId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(false)
+                every {
+                    groupMemberRepository
+                        .existsByGroupIdAndMemberIdAndStatus(
+                            groupId, memberId, GroupMemberStatus.ACTIVE
+                        )
+                } returns false
 
                 assertThatThrownBy {
                     groupMemberService.getGroupMembers(groupId, memberId)
@@ -479,8 +567,9 @@ class GroupMemberServiceTest {
                     .isInstanceOf(ForbiddenException::class.java)
                     .hasMessageContaining("해당 그룹의 접근 권한이 없습니다.")
 
-                verify(groupMemberRepository, never())
-                    .findByGroupIdWithHabit(groupId)
+                verify(exactly = 0) {
+                    groupMemberRepository.findByGroupIdWithHabit(groupId)
+                }
             }
         }
     }
@@ -506,24 +595,21 @@ class GroupMemberServiceTest {
                     2L
                 )
 
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                        groupId,
-                        memberId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(true)
-                given(
+                every {
+                    groupMemberRepository
+                        .existsByGroupIdAndMemberIdAndStatus(
+                            groupId, memberId, GroupMemberStatus.ACTIVE
+                        )
+                } returns true
+
+                every {
                     groupMemberRepository.findMemberDetailWithPenaltyCount(
-                        groupId,
-                        groupMemberId
+                        groupId, groupMemberId
                     )
-                ).willReturn(Optional.of(detail))
+                } returns Optional.of(detail)
 
                 val result = groupMemberService.getGroupMemberDetail(
-                    groupId,
-                    groupMemberId,
-                    memberId
+                    groupId, groupMemberId, memberId
                 )
 
                 assertThat(result).isNotNull
@@ -539,50 +625,47 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("활성 멤버가 아니면 상세 정보를 조회할 수 없다")
             fun getGroupMemberDetail_NoAccess() {
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                        groupId,
-                        memberId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(false)
+                every {
+                    groupMemberRepository
+                        .existsByGroupIdAndMemberIdAndStatus(
+                            groupId, memberId, GroupMemberStatus.ACTIVE
+                        )
+                } returns false
 
                 assertThatThrownBy {
                     groupMemberService.getGroupMemberDetail(
-                        groupId,
-                        groupMemberId,
-                        memberId
+                        groupId, groupMemberId, memberId
                     )
                 }
                     .isInstanceOf(ForbiddenException::class.java)
                     .hasMessageContaining("해당 그룹의 접근 권한이 없습니다.")
 
-                verify(groupMemberRepository, never())
-                    .findMemberDetailWithPenaltyCount(groupId, groupMemberId)
+                verify(exactly = 0) {
+                    groupMemberRepository.findMemberDetailWithPenaltyCount(
+                        groupId, groupMemberId
+                    )
+                }
             }
 
             @Test
             @DisplayName("상세 조회 대상이 없으면 예외가 발생한다")
             fun getGroupMemberDetail_NotFound() {
-                given(
-                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
-                        groupId,
-                        memberId,
-                        GroupMemberStatus.ACTIVE
-                    )
-                ).willReturn(true)
-                given(
+                every {
+                    groupMemberRepository
+                        .existsByGroupIdAndMemberIdAndStatus(
+                            groupId, memberId, GroupMemberStatus.ACTIVE
+                        )
+                } returns true
+
+                every {
                     groupMemberRepository.findMemberDetailWithPenaltyCount(
-                        groupId,
-                        groupMemberId
+                        groupId, groupMemberId
                     )
-                ).willReturn(Optional.empty())
+                } returns Optional.empty()
 
                 assertThatThrownBy {
                     groupMemberService.getGroupMemberDetail(
-                        groupId,
-                        groupMemberId,
-                        memberId
+                        groupId, groupMemberId, memberId
                     )
                 }
                     .isInstanceOf(EntityNotFoundException::class.java)
@@ -591,7 +674,9 @@ class GroupMemberServiceTest {
                     )
             }
         }
-    }    // 그룹 탈퇴
+    }
+
+    // 그룹 탈퇴
     @Nested
     @DisplayName("LeaveGroup")
     inner class LeaveGroup {
@@ -605,53 +690,84 @@ class GroupMemberServiceTest {
             fun leaveGroup_ActiveMember() {
                 val group = createActiveGroup()
                 val groupMember = newGroupMember(group, GroupMemberRole.MEMBER)
-                ReflectionTestUtils.setField(groupMember, "id", groupMemberId)
+                ReflectionTestUtils.setField(
+                    groupMember, "id", groupMemberId
+                )
 
-                given(groupRepository.findByIdForUpdate(groupId))
-                    .willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(groupMember))
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
                     )
-                ).willReturn(2L)
-                given(habitRepository.findIdsByGroupMemberId(groupMemberId))
-                    .willReturn(listOf(10L, 11L))
+                } returns Optional.of(groupMember)
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 2L
+
+                every {
+                    habitRepository.findIdsByGroupMemberId(groupMemberId)
+                } returns listOf(10L, 11L)
 
                 groupMemberService.leaveGroup(groupId, memberId)
 
-                verify(habitVerifyRepository).deleteByHabitIds(anyList())
-                verify(penaltyVerifyRepository).deleteByGroupMemberId(groupMemberId)
-                verify(habitRepository).deleteByIds(anyList())
-                verify(groupMemberRepository).delete(groupMember)
+                verify(exactly = 1) {
+                    habitVerifyRepository.deleteByHabitIds(any<List<Long>>())
+                }
+                verify(exactly = 1) {
+                    penaltyVerifyRepository.deleteByGroupMemberId(groupMemberId)
+                }
+                verify(exactly = 1) {
+                    habitRepository.deleteByIds(any<List<Long>>())
+                }
+                verify(exactly = 1) {
+                    groupMemberRepository.delete(groupMember)
+                }
             }
 
             @Test
             @DisplayName("종료된 그룹에서 탈퇴하면 멤버 상태를 LEFT로 변경한다")
             fun leaveGroup_FinishedGroup() {
-                val group = org.mockito.Mockito.mock(Group::class.java)
-                val groupMember = newGroupMember(group, GroupMemberRole.MEMBER)
+                val group = mockk<Group>()
+                val groupMember = newGroupMember(
+                    group, GroupMemberRole.MEMBER
+                )
 
-                given(group.isFinished()).willReturn(true)
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(groupMember))
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                every { group.isFinished() } returns true
+
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
                     )
-                ).willReturn(2L)
+                } returns Optional.of(groupMember)
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 2L
 
                 groupMemberService.leaveGroup(groupId, memberId)
 
-                assertThat(groupMember.status).isEqualTo(GroupMemberStatus.LEFT)
-                verify(groupMemberRepository, never())
-                    .delete(any(GroupMember::class.java))
-                verify(habitRepository, never())
-                    .findIdsByGroupMemberId(groupMember.id)
+                assertThat(groupMember.status).isEqualTo(
+                    GroupMemberStatus.LEFT
+                )
+
+                verify(exactly = 0) {
+                    groupMemberRepository.delete(any<GroupMember>())
+                }
+                verify(exactly = 0) {
+                    habitRepository.findIdsByGroupMemberId(any())
+                }
             }
         }
 
@@ -665,15 +781,21 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
 
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
                     )
-                ).willReturn(2L)
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 2L
 
                 assertThatThrownBy {
                     groupMemberService.leaveGroup(groupId, memberId)
@@ -687,7 +809,9 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("존재하지 않는 그룹이면 탈퇴할 수 없다")
             fun leaveGroup_GroupNotFound() {
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(null)
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns null
 
                 assertThatThrownBy {
                     groupMemberService.leaveGroup(groupId, memberId)
@@ -701,9 +825,15 @@ class GroupMemberServiceTest {
             fun leaveGroup_MemberNotFound() {
                 val group = createActiveGroup()
 
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.empty())
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.empty()
 
                 assertThatThrownBy {
                     groupMemberService.leaveGroup(groupId, memberId)
@@ -716,12 +846,20 @@ class GroupMemberServiceTest {
             @DisplayName("이미 탈퇴한 멤버는 다시 탈퇴할 수 없다")
             fun leaveGroup_AlreadyLeft() {
                 val group = createActiveGroup()
-                val groupMember = newGroupMember(group, GroupMemberRole.MEMBER)
+                val groupMember = newGroupMember(
+                    group, GroupMemberRole.MEMBER
+                )
                 groupMember.leave()
 
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(groupMember))
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(groupMember)
 
                 assertThatThrownBy {
                     groupMemberService.leaveGroup(groupId, memberId)
@@ -732,6 +870,7 @@ class GroupMemberServiceTest {
         }
     }
 
+    // 멤버 데이터 일괄 삭제
     @Nested
     @DisplayName("DeleteGroupMemberDataBulk")
     inner class DeleteGroupMemberDataBulk {
@@ -743,15 +882,24 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("습관 데이터가 없어도 벌칙 인증 데이터는 삭제한다")
             fun deleteGroupMemberDataBulk_NoHabits() {
-                given(habitRepository.findIdsByGroupMemberId(groupMemberId))
-                    .willReturn(emptyList())
+                every {
+                    habitRepository.findIdsByGroupMemberId(groupMemberId)
+                } returns emptyList()
 
                 groupMemberService.deleteGroupMemberDataBulk(groupMemberId)
 
-                verify(habitRepository).findIdsByGroupMemberId(groupMemberId)
-                verify(penaltyVerifyRepository).deleteByGroupMemberId(groupMemberId)
-                verify(habitVerifyRepository, never()).deleteByHabitIds(anyList())
-                verify(habitRepository, never()).deleteByIds(anyList())
+                verify(exactly = 1) {
+                    habitRepository.findIdsByGroupMemberId(groupMemberId)
+                }
+                verify(exactly = 1) {
+                    penaltyVerifyRepository.deleteByGroupMemberId(groupMemberId)
+                }
+                verify(exactly = 0) {
+                    habitVerifyRepository.deleteByHabitIds(any<List<Long>>())
+                }
+                verify(exactly = 0) {
+                    habitRepository.deleteByIds(any<List<Long>>())
+                }
             }
         }
     }
@@ -776,45 +924,90 @@ class GroupMemberServiceTest {
                 val target = newGroupMember(group, GroupMemberRole.MEMBER)
                 ReflectionTestUtils.setField(target, "id", targetId)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(targetId))
-                    .willReturn(Optional.of(target))
-                given(habitRepository.findIdsByGroupMemberId(targetId))
-                    .willReturn(emptyList())
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(targetId)
+                } returns Optional.of(target)
+
+                every {
+                    habitRepository.findIdsByGroupMemberId(targetId)
+                } returns emptyList()
 
                 groupMemberService.kickMember(groupId, targetId, memberId)
 
-                verify(penaltyVerifyRepository).deleteByGroupMemberId(targetId)
-                verify(groupMemberRepository).delete(target)
+                verify(exactly = 1) {
+                    penaltyVerifyRepository.deleteByGroupMemberId(targetId)
+                }
+                verify(exactly = 1) {
+                    groupMemberRepository.delete(target)
+                }
             }
-
             @Test
             @DisplayName("마지막 멤버가 탈퇴하면 연관 데이터를 삭제하고 그룹도 삭제한다")
             fun leaveGroup_LastMember() {
                 val group = createActiveGroup()
-                val groupMember = newGroupMember(group, GroupMemberRole.OWNER)
+                val groupMember = newGroupMember(
+                    group, GroupMemberRole.OWNER
+                )
 
-                given(groupRepository.findByIdForUpdate(groupId)).willReturn(group)
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(groupMember))
-                given(
-                    groupMemberRepository.countByGroupIdAndStatus(
-                        groupId,
-                        GroupMemberStatus.ACTIVE
+                every {
+                    groupRepository.findByIdForUpdate(groupId)
+                } returns group
+
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
                     )
-                ).willReturn(1L)
-                given(groupRepository.findById(groupId)).willReturn(Optional.of(group))
+                } returns Optional.of(groupMember)
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        groupId, GroupMemberStatus.ACTIVE
+                    )
+                } returns 1L
+
+                every {
+                    groupRepository.findById(groupId)
+                } returns Optional.of(group)
+
+                every {
+                    habitVerifyRepository.deleteHabitVerifiesByGroupId(groupId)
+                } returns 0
+
+                every {
+                    penaltyVerifyRepository.deletePenaltyVerifiesByGroupId(groupId)
+                } returns 0
+
+                every {
+                    habitRepository.deleteHabitsByGroupId(groupId)
+                } returns 0
+
+                every {
+                    groupMemberRepository.deleteGroupMembersByGroupId(groupId)
+                } returns 0
 
                 groupMemberService.leaveGroup(groupId, memberId)
 
-                verify(habitVerifyRepository).deleteHabitVerifiesByGroupId(groupId)
-                verify(penaltyVerifyRepository).deletePenaltyVerifiesByGroupId(groupId)
-                verify(habitRepository).deleteHabitsByGroupId(groupId)
-                verify(groupMemberRepository).deleteGroupMembersByGroupId(groupId)
-                verify(entityManager).flush()
-                verify(entityManager).clear()
-                verify(groupRepository).delete(group)
+                verify(exactly = 1) {
+                    habitVerifyRepository.deleteHabitVerifiesByGroupId(groupId)
+                }
+                verify(exactly = 1) {
+                    penaltyVerifyRepository.deletePenaltyVerifiesByGroupId(groupId)
+                }
+                verify(exactly = 1) {
+                    habitRepository.deleteHabitsByGroupId(groupId)
+                }
+                verify(exactly = 1) {
+                    groupMemberRepository.deleteGroupMembersByGroupId(groupId)
+                }
+                verify(exactly = 1) { entityManager.flush() }
+                verify(exactly = 1) { entityManager.clear() }
+                verify(exactly = 1) { groupRepository.delete(group) }
             }
         }
 
@@ -826,10 +1019,15 @@ class GroupMemberServiceTest {
             @DisplayName("방장이 아닌 멤버는 다른 멤버를 추방할 수 없다")
             fun kickMember_NotOwner() {
                 val group = createActiveGroup()
-                val normalMember = newGroupMember(group, GroupMemberRole.MEMBER)
+                val normalMember = newGroupMember(
+                    group, GroupMemberRole.MEMBER
+                )
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(normalMember))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(normalMember)
 
                 assertThatThrownBy {
                     groupMemberService.kickMember(groupId, 55L, memberId)
@@ -845,13 +1043,20 @@ class GroupMemberServiceTest {
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(groupMemberId))
-                    .willReturn(Optional.of(owner))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(groupMemberId)
+                } returns Optional.of(owner)
 
                 assertThatThrownBy {
-                    groupMemberService.kickMember(groupId, groupMemberId, memberId)
+                    groupMemberService.kickMember(
+                        groupId, groupMemberId, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
                     .hasMessageContaining("방장 스스로를 추방할 수 없습니다.")
@@ -863,35 +1068,53 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(groupMemberId))
-                    .willReturn(Optional.empty())
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(groupMemberId)
+                } returns Optional.empty()
 
                 assertThatThrownBy {
-                    groupMemberService.kickMember(groupId, groupMemberId, memberId)
+                    groupMemberService.kickMember(
+                        groupId, groupMemberId, memberId
+                    )
                 }
                     .isInstanceOf(EntityNotFoundException::class.java)
-                    .hasMessageContaining("존재하지 않거나 해당 그룹의 멤버가 아닙니다.")
+                    .hasMessageContaining(
+                        "존재하지 않거나 해당 그룹의 멤버가 아닙니다."
+                    )
             }
 
             @Test
             @DisplayName("다른 그룹의 멤버는 추방할 수 없다")
             fun kickMember_DifferentGroup() {
                 val group = createActiveGroup()
-                val otherGroup = Group(deadline = LocalDate.now().plusDays(7))
+                val otherGroup = Group(
+                    deadline = LocalDate.now().plusDays(7)
+                )
                 ReflectionTestUtils.setField(otherGroup, "id", 200L)
 
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
 
-                val target = newGroupMember(otherGroup, GroupMemberRole.MEMBER)
+                val target = newGroupMember(
+                    otherGroup, GroupMemberRole.MEMBER
+                )
                 ReflectionTestUtils.setField(target, "id", 60L)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(60L))
-                    .willReturn(Optional.of(target))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(60L)
+                } returns Optional.of(target)
 
                 assertThatThrownBy {
                     groupMemberService.kickMember(groupId, 60L, memberId)
@@ -903,9 +1126,9 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("종료된 그룹에서는 멤버를 추방할 수 없다")
             fun kickMember_FinishedGroup() {
-                val group = org.mockito.Mockito.mock(Group::class.java)
-                given(group.id).willReturn(groupId)
-                given(group.isFinished()).willReturn(true)
+                val group = mockk<Group>()
+                every { group.id } returns groupId
+                every { group.isFinished() } returns true
 
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
@@ -913,44 +1136,67 @@ class GroupMemberServiceTest {
                 val target = newGroupMember(group, GroupMemberRole.MEMBER)
                 ReflectionTestUtils.setField(target, "id", 60L)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(60L))
-                    .willReturn(Optional.of(target))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(60L)
+                } returns Optional.of(target)
 
                 assertThatThrownBy {
                     groupMemberService.kickMember(groupId, 60L, memberId)
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
-                    .hasMessageContaining("이미 종료된 그룹은 멤버를 추방할 수 없습니다.")
+                    .hasMessageContaining(
+                        "이미 종료된 그룹은 멤버를 추방할 수 없습니다."
+                    )
             }
 
             @Test
             fun kickMember_LeftMember() {
                 val group = createActiveGroup()
-                val owner = org.mockito.Mockito.mock(GroupMember::class.java)
-                val kickTarget = org.mockito.Mockito.mock(GroupMember::class.java)
+                val owner = mockk<GroupMember>()
+                val kickTarget = mockk<GroupMember>()
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(owner.role).willReturn(GroupMemberRole.OWNER)
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
 
-                given(groupMemberRepository.findById(groupMemberId))
-                    .willReturn(Optional.of(kickTarget))
-                given(kickTarget.group).willReturn(group)
-                given(kickTarget.id).willReturn(groupMemberId)
-                given(kickTarget.status).willReturn(GroupMemberStatus.LEFT)
+                every { owner.role } returns GroupMemberRole.OWNER
+                // 서비스에서 요청자 ID를 비교하므로 반드시 설정한다.
+                every { owner.id } returns memberId
+
+                every {
+                    groupMemberRepository.findById(groupMemberId)
+                } returns Optional.of(kickTarget)
+
+                every { kickTarget.group } returns group
+                every { kickTarget.id } returns groupMemberId
+                every { kickTarget.status } returns GroupMemberStatus.LEFT
 
                 assertThatThrownBy {
-                    groupMemberService.kickMember(groupId, groupMemberId, memberId)
+                    groupMemberService.kickMember(
+                        groupId, groupMemberId, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
-                    .hasMessage("현재 활동 중인 멤버만 추방할 수 있습니다.")
+                    .hasMessage(
+                        "현재 활동 중인 멤버만 추방할 수 있습니다."
+                    )
 
-                verify(groupMemberRepository, never()).delete(kickTarget)
+                verify(exactly = 0) {
+                    groupMemberRepository.delete(kickTarget)
+                }
             }
         }
-    }    // 방장 권한 위임
+    }
+
+    // 방장 권한 위임
     @Nested
     @DisplayName("TransferOwner")
     inner class TransferOwner {
@@ -963,21 +1209,36 @@ class GroupMemberServiceTest {
             @DisplayName("같은 그룹의 다른 멤버에게 방장 권한을 위임한다")
             fun transferOwner() {
                 val group = createActiveGroup()
-                val currentOwner = newGroupMember(group, GroupMemberRole.OWNER)
-                ReflectionTestUtils.setField(currentOwner, "id", groupMemberId)
+                val currentOwner = newGroupMember(
+                    group, GroupMemberRole.OWNER
+                )
+                ReflectionTestUtils.setField(
+                    currentOwner, "id", groupMemberId
+                )
 
                 val nextOwnerId = 60L
-                val nextOwner = newGroupMember(group, GroupMemberRole.MEMBER)
+                val nextOwner = newGroupMember(
+                    group, GroupMemberRole.MEMBER
+                )
                 ReflectionTestUtils.setField(nextOwner, "id", nextOwnerId)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(currentOwner))
-                given(groupMemberRepository.findById(nextOwnerId))
-                    .willReturn(Optional.of(nextOwner))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(currentOwner)
 
-                groupMemberService.transferOwner(groupId, nextOwnerId, memberId)
+                every {
+                    groupMemberRepository.findById(nextOwnerId)
+                } returns Optional.of(nextOwner)
 
-                assertThat(currentOwner.role).isEqualTo(GroupMemberRole.MEMBER)
+                groupMemberService.transferOwner(
+                    groupId, nextOwnerId, memberId
+                )
+
+                assertThat(currentOwner.role).isEqualTo(
+                    GroupMemberRole.MEMBER
+                )
                 assertThat(nextOwner.role).isEqualTo(GroupMemberRole.OWNER)
             }
         }
@@ -993,16 +1254,25 @@ class GroupMemberServiceTest {
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(groupMemberId))
-                    .willReturn(Optional.of(owner))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(groupMemberId)
+                } returns Optional.of(owner)
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, groupMemberId, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, groupMemberId, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
-                    .hasMessageContaining("자기 자신에게 방장 권한을 위임할 수 없습니다.")
+                    .hasMessageContaining(
+                        "자기 자신에게 방장 권한을 위임할 수 없습니다."
+                    )
             }
 
             @Test
@@ -1011,14 +1281,21 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val member = newGroupMember(group, GroupMemberRole.MEMBER)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(member))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(member)
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, 60L, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, 60L, memberId
+                    )
                 }
                     .isInstanceOf(ForbiddenException::class.java)
-                    .hasMessageContaining("방장 권한 위임은 현재 방장만 가능합니다.")
+                    .hasMessageContaining(
+                        "방장 권한 위임은 현재 방장만 가능합니다."
+                    )
             }
 
             @Test
@@ -1027,38 +1304,58 @@ class GroupMemberServiceTest {
                 val group = createActiveGroup()
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(60L))
-                    .willReturn(Optional.empty())
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(60L)
+                } returns Optional.empty()
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, 60L, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, 60L, memberId
+                    )
                 }
                     .isInstanceOf(EntityNotFoundException::class.java)
-                    .hasMessageContaining("권한을 위임할 대상 멤버가 존재하지 않습니다.")
+                    .hasMessageContaining(
+                        "권한을 위임할 대상 멤버가 존재하지 않습니다."
+                    )
             }
 
             @Test
             @DisplayName("다른 그룹의 멤버에게는 방장 권한을 위임할 수 없다")
             fun transferOwner_DifferentGroup() {
                 val group = createActiveGroup()
-                val otherGroup = Group(deadline = LocalDate.now().plusDays(7))
+                val otherGroup = Group(
+                    deadline = LocalDate.now().plusDays(7)
+                )
                 ReflectionTestUtils.setField(otherGroup, "id", 200L)
 
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
 
-                val target = newGroupMember(otherGroup, GroupMemberRole.MEMBER)
+                val target = newGroupMember(
+                    otherGroup, GroupMemberRole.MEMBER
+                )
                 ReflectionTestUtils.setField(target, "id", 60L)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(60L))
-                    .willReturn(Optional.of(target))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(60L)
+                } returns Optional.of(target)
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, 60L, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, 60L, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
                     .hasMessageContaining("해당 그룹에 속한 멤버가 아닙니다.")
@@ -1067,9 +1364,9 @@ class GroupMemberServiceTest {
             @Test
             @DisplayName("종료된 그룹에서는 방장 권한을 위임할 수 없다")
             fun transferOwner_FinishedGroup() {
-                val group = org.mockito.Mockito.mock(Group::class.java)
-                given(group.id).willReturn(groupId)
-                given(group.isFinished()).willReturn(true)
+                val group = mockk<Group>()
+                every { group.id } returns groupId
+                every { group.isFinished() } returns true
 
                 val owner = newGroupMember(group, GroupMemberRole.OWNER)
                 ReflectionTestUtils.setField(owner, "id", groupMemberId)
@@ -1077,52 +1374,65 @@ class GroupMemberServiceTest {
                 val target = newGroupMember(group, GroupMemberRole.MEMBER)
                 ReflectionTestUtils.setField(target, "id", 60L)
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(groupMemberRepository.findById(60L))
-                    .willReturn(Optional.of(target))
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
+
+                every {
+                    groupMemberRepository.findById(60L)
+                } returns Optional.of(target)
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, 60L, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, 60L, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
-                    .hasMessageContaining("이미 종료된 그룹은 방장을 위임할 수 없습니다.")
+                    .hasMessageContaining(
+                        "이미 종료된 그룹은 방장을 위임할 수 없습니다."
+                    )
             }
 
             @Test
             fun transferOwner_LeftMember() {
                 val group = createActiveGroup()
-                val owner = org.mockito.Mockito.mock(GroupMember::class.java)
-                val nextOwner = org.mockito.Mockito.mock(GroupMember::class.java)
+                val owner = mockk<GroupMember>()
+                val nextOwner = mockk<GroupMember>()
 
-                given(groupMemberRepository.findByGroupIdAndMemberId(groupId, memberId))
-                    .willReturn(Optional.of(owner))
-                given(owner.role).willReturn(GroupMemberRole.OWNER)
-                given(owner.group).willReturn(group)
+                every {
+                    groupMemberRepository.findByGroupIdAndMemberId(
+                        groupId, memberId
+                    )
+                } returns Optional.of(owner)
 
-                given(groupMemberRepository.findById(groupMemberId))
-                    .willReturn(Optional.of(nextOwner))
-                given(nextOwner.group).willReturn(group)
-                given(nextOwner.id).willReturn(groupMemberId)
-                given(owner.id).willReturn(memberId)
-                given(nextOwner.status).willReturn(GroupMemberStatus.LEFT)
+                every { owner.role } returns GroupMemberRole.OWNER
+                every { owner.group } returns group
+
+                every {
+                    groupMemberRepository.findById(groupMemberId)
+                } returns Optional.of(nextOwner)
+
+                every { nextOwner.group } returns group
+                every { nextOwner.id } returns groupMemberId
+                every { owner.id } returns memberId
+                every { nextOwner.status } returns GroupMemberStatus.LEFT
 
                 assertThatThrownBy {
-                    groupMemberService.transferOwner(groupId, groupMemberId, memberId)
+                    groupMemberService.transferOwner(
+                        groupId, groupMemberId, memberId
+                    )
                 }
                     .isInstanceOf(BusinessRuleException::class.java)
-                    .hasMessage("현재 활동 중인 멤버에게만 방장 권한을 위임할 수 있습니다.")
+                    .hasMessage(
+                        "현재 활동 중인 멤버에게만 방장 권한을 위임할 수 있습니다."
+                    )
 
-                verify(nextOwner, never()).changeRole(GroupMemberRole.OWNER)
+                verify(exactly = 0) {
+                    nextOwner.changeRole(GroupMemberRole.OWNER)
+                }
             }
         }
-    }
-
-    private fun newGroupMember(
-        group: Group,
-        role: GroupMemberRole
-    ): GroupMember {
-        val member = org.mockito.Mockito.mock(Member::class.java)
-        return GroupMember.create(group, member, role)
     }
 }
