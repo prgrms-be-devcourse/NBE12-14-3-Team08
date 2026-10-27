@@ -3,7 +3,7 @@ import type { GroupPhoto } from './habitApi';
 // 한 줄에 놓이는 사진 수. 뒤로 갈수록 사진이 커지고 적게 보인다.
 export type PhotoColumns = 1 | 3 | 5 | 15;
 export const PHOTO_LEVELS: PhotoColumns[] = [15, 5, 3, 1];
-export const DEFAULT_PHOTO_COLUMNS: PhotoColumns = 3;
+export const DEFAULT_PHOTO_COLUMNS: PhotoColumns = 5;
 
 // 칸 사이 간격(px)
 export const PHOTO_GAP: Record<PhotoColumns, number> = { 15: 1, 5: 3, 3: 3, 1: 8 };
@@ -70,6 +70,17 @@ export function formatShortDate(value: string): string {
 export function formatYearMonth(value: string): string {
   const parsed = parseYmd(value);
   return parsed ? `${parsed.year}년 ${parsed.month}월` : '';
+}
+
+// 그 달의 몇 번째 주인지. 1~7일은 1주, 8~14일은 2주처럼 7일 단위로 센다.
+export function weekOfMonth(day: number): number {
+  return Math.ceil(day / 7);
+}
+
+// "2026년 10월 2주"
+export function formatYearMonthWeek(value: string): string {
+  const parsed = parseYmd(value);
+  return parsed ? `${parsed.year}년 ${parsed.month}월 ${weekOfMonth(parsed.day)}주` : '';
 }
 
 export function yearMonthKey(value: string): number {
