@@ -184,91 +184,86 @@ export default function GroupDetailPage({
                 </Link>
             </div>
 
-            <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
-                {/* 그룹 기본 정보 카드 */}
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 transition-all">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                                    {group.title}
-                                </h1>
-                                {currentRole === 'OWNER' && (
-                                    <span
-                                        className="text-base"
-                                        role="img"
-                                        aria-label="방장"
-                                        title="방장"
-                                    >
-                                        👑
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs leading-5 text-slate-500 max-w-xl">
-                                {group.description || '함께 목표를 실천해보세요!'}
-                            </p>
+            {/* 그룹 기본 정보 배너 */}
+            <section className="rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+                                {group.title}
+                            </h1>
+                            {currentRole === 'OWNER' && (
+                                <span className="text-2xl" role="img" aria-label="방장" title="방장">
+                                    👑
+                                </span>
+                            )}
                         </div>
-
-                        <button
-                            onClick={handleLeaveGroup}
-                            className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 transition cursor-pointer"
-                        >
-                            방 탈퇴
-                        </button>
+                        <p className="max-w-2xl text-sm leading-6 text-slate-500">
+                            {group.description || '함께 목표를 실천해보세요!'}
+                        </p>
                     </div>
 
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs font-semibold text-slate-500">
-                        <div className="flex items-center gap-2">
-                            <span>👥 참여 인원</span>
-                            <span className="font-bold text-slate-700">
-                                {group.currentMemberCount} / {group.memberLimit}명
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span>📅 마감 기한</span>
-                            <span className="font-bold text-slate-700">
-                                {group.deadline ? `${group.deadline}까지` : '상시 진행'}
-                            </span>
-                        </div>
-                    </div>
+                    <button
+                        onClick={handleLeaveGroup}
+                        className="shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition cursor-pointer"
+                    >
+                        방 탈퇴
+                    </button>
+                </div>
 
-                    <div className="mt-4 flex items-center gap-2 text-xs">
-                        <span className="font-bold text-slate-400">벌칙</span>
-                        <span className="rounded-full bg-rose-50 border border-rose-100 px-3 py-1 font-bold text-rose-600">
+                {/* 핵심 정보 칸 */}
+                <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p className="text-[11px] font-bold text-slate-500">👥 참여 인원</p>
+                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
+                            {group.currentMemberCount} / {group.memberLimit}명
+                        </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p className="text-[11px] font-bold text-slate-500">📅 마감 기한</p>
+                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
+                            {group.deadline ? `${group.deadline}까지` : '상시 진행'}
+                        </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p className="text-[11px] font-bold text-slate-500">벌칙</p>
+                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
                             {group.penalty || '벌칙 없음'}
-                        </span>
+                        </p>
                     </div>
+                </div>
 
-                    {/* 컨트롤 버튼부 */}
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                        <button
-                            onClick={handleCopyInvite}
-                            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                        >
-                            초대 코드 복사
-                        </button>
+                {/* 컨트롤 버튼부 */}
+                <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                    <button
+                        onClick={handleCopyInvite}
+                        className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-slate-900/20 hover:bg-slate-800 transition cursor-pointer"
+                    >
+                        초대 코드 복사
+                    </button>
 
-                        {currentRole === 'OWNER' && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setIsEditModalOpen(true)}
-                                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer"
-                                >
-                                    방 설정
-                                </button>
-                                <Link
-                                    href={`/admin/group/${rawId}/verification`}
-                                    className="rounded-2xl bg-emerald-500 px-4 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition text-center"
-                                >
-                                    미인증 내역 관리
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                </section>
+                    {currentRole === 'OWNER' && (
+                        <>
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                            >
+                                방 설정
+                            </button>
+                            <Link
+                                href={`/admin/group/${rawId}/verification`}
+                                className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition text-center"
+                            >
+                                미인증 내역 관리
+                            </Link>
+                        </>
+                    )}
+                </div>
+            </section>
 
+            <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
                 {/* 인증 사진 라이브러리 / 멤버별 습관 목록 전환 */}
-                <section className="mt-8">
+                <section>
                     <div
                         className="mb-4 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1"
                         role="group"
