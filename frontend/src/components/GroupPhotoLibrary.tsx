@@ -8,7 +8,7 @@ import {
   PHOTO_LEVELS,
   chunkRows,
   formatShortDate,
-  formatYearMonth,
+  formatYearMonthWeek,
   monthStartRows,
   normalizeDate,
   placeMonthLabels,
@@ -93,6 +93,15 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
   const anchorRef = useRef<ScrollAnchor | null>(null);
   const loadingMoreRef = useRef(false);
   const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  // 갤러리 밖에 따로 그리는 스크롤바. 평소엔 숨기고, 마우스를 올리거나 스크롤할 때만 보인다.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startY: number; startTop: number } | null>(null);
+  const hideTimerRef = useRef<number | null>(null);
+  const [scrollActive, setScrollActive] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   // 필터를 바꾸면 새 목록이 올 때까지 loaded.memberId와 filter가 달라 "불러오는 중"으로 본다.
   const current = loaded !== null && loaded.memberId === filter ? loaded : null;
@@ -198,7 +207,7 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
 
   const updatePeriod = useCallback(() => {
     const anchor = captureAnchor();
-    setPeriodLabel(anchor ? formatYearMonth(anchor.date) : '');
+    setPeriodLabel(anchor ? formatYearMonthWeek(anchor.date) : '');
   }, [captureAnchor]);
 
   // 단계나 필터가 바뀐 뒤, 기억해 둔 사진(없으면 그 날짜 근처)이 화면 맨 위에 오도록 스크롤한다.
@@ -248,19 +257,62 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
     };
     scroller.addEventListener('wheel', forget, { passive: true });
     scroller.addEventListener('touchstart', forget, { passive: true });
+    scroller.addEventListener('pointerdown', forget, { passive: true });
     return () => {
       scroller.removeEventListener('wheel', forget);
       scroller.removeEventListener('touchstart', forget);
+      scroller.removeEventListener('pointerdown', forget);
     };
   }, []);
 
-  // 스크롤하면 좌상단의 현재 시기를 갱신한다.
+  // 스크롤 위치와 내용 길이에 맞춰 막대(thumb)의 길이와 위치를 정한다. 스크롤할 내용이 없으면 막대를 숨긴다.
+  const updateThumb = useCallback(() => {
+    const scroller = scrollRef.current;
+    const track = trackRef.current;
+    const thumb = thumbRef.current;
+    if (!scroller || !track || !thumb) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scroller;
+    const overflow = scrollHeight - clientHeight;
+    if (overflow <= 1) {
+      track.style.display = 'none';
+      return;
+    }
+
+    track.style.display = '';
+    const trackHeight = track.clientHeight;
+    const thumbHeight = Math.max(40, Math.round((clientHeight / scrollHeight) * trackHeight));
+    const top = Math.round((scrollTop / overflow) * (trackHeight - thumbHeight));
+    thumb.style.height = `${thumbHeight}px`;
+    thumb.style.transform = `translateY(${top}px)`;
+  }, []);
+
+  // 스크롤바를 보이고, 잠시 뒤 다시 숨긴다.
+  const showScrollbar = useCallback(() => {
+    setScrollActive(true);
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = window.setTimeout(() => {
+      hideTimerRef.current = null;
+      setScrollActive(false);
+    }, 900);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    },
+    []
+  );
+
+  // 스크롤하면 좌상단의 현재 시기와 스크롤바를 갱신한다.
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
 
     let ticking = false;
     const handleScroll = () => {
+      updateThumb();
+      showScrollbar();
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
@@ -271,7 +323,61 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
 
     scroller.addEventListener('scroll', handleScroll, { passive: true });
     return () => scroller.removeEventListener('scroll', handleScroll);
-  }, [updatePeriod]);
+  }, [updatePeriod, updateThumb, showScrollbar]);
+
+  // 사진을 더 불러오거나 단계·창 크기가 바뀌어 내용 길이가 달라지면 막대도 다시 맞춘다.
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return;
+
+    const observer = new ResizeObserver(updateThumb);
+    observer.observe(scroller);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [updateThumb]);
+
+  // 막대를 끌어 스크롤한다.
+  const handleThumbPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    event.preventDefault();
+    event.stopPropagation();
+    anchorRef.current = null;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { startY: event.clientY, startTop: scroller.scrollTop };
+    setDragging(true);
+  };
+
+  const handleThumbPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const scroller = scrollRef.current;
+    const track = trackRef.current;
+    const thumb = thumbRef.current;
+    if (!drag || !scroller || !track || !thumb) return;
+
+    const travel = track.clientHeight - thumb.offsetHeight;
+    if (travel <= 0) return;
+    const overflow = scroller.scrollHeight - scroller.clientHeight;
+    scroller.scrollTop = drag.startTop + ((event.clientY - drag.startY) / travel) * overflow;
+  };
+
+  const handleThumbPointerEnd = () => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    setDragging(false);
+    showScrollbar();
+  };
+
+  // 막대 바깥의 빈 곳을 누르면 한 화면씩 그 방향으로 넘긴다.
+  const handleTrackPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const scroller = scrollRef.current;
+    const thumb = thumbRef.current;
+    if (!scroller || !thumb || event.target !== event.currentTarget) return;
+    anchorRef.current = null;
+    const direction = event.clientY < thumb.getBoundingClientRect().top ? -1 : 1;
+    scroller.scrollBy({ top: direction * scroller.clientHeight * 0.9, behavior: 'smooth' });
+  };
 
   // 15열의 월 라벨은 그 달이 시작되는 행의 높이에 맞춰 왼쪽 끝에 두고, 겹치면 아래로 민다.
   const positionLabels = useCallback(() => {
@@ -542,7 +648,20 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
 
   return (
     <section aria-label="인증 사진">
-      <div className="mb-3 flex flex-wrap items-center gap-1.5 px-1" role="group" aria-label="멤버 필터">
+      {/* 갤러리 위 줄: 왼쪽에 지금 보는 년/월/주, 오른쪽에 멤버 필터 */}
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-1">
+        <p
+          aria-live="polite"
+          className="min-h-[28px] text-lg font-extrabold tabular-nums leading-7 tracking-tight text-slate-900 [@media(max-width:400px)]:text-base"
+        >
+          {periodLabel && current !== null ? periodLabel : ''}
+        </p>
+
+      <div
+        className="flex min-w-0 flex-1 basis-60 flex-wrap items-center justify-end gap-1.5"
+        role="group"
+        aria-label="멤버 필터"
+      >
         <button
           type="button"
           aria-pressed={filter === null}
@@ -571,22 +690,18 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
           </button>
         ))}
       </div>
+      </div>
 
+      <div className="group/frame relative">
       <div
         ref={frameRef}
         className="relative h-[min(720px,78vh)] overflow-hidden rounded-3xl border border-slate-200 bg-white"
       >
-        {periodLabel && columns !== 15 && current !== null && (
-          <div className="pointer-events-none absolute left-3 top-3 z-[5] rounded-full bg-slate-900/60 px-3 py-1 text-[13px] font-extrabold text-white backdrop-blur-md">
-            {periodLabel}
-          </div>
-        )}
-
         <div
           ref={scrollRef}
           className="relative h-full touch-pan-y overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {body}
+          <div ref={contentRef}>{body}</div>
         </div>
 
         <div className="absolute bottom-3.5 left-1/2 z-[6] flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/80 bg-white/70 p-1.5 shadow-xl backdrop-blur-xl">
@@ -620,6 +735,28 @@ export function GroupPhotoLibrary({ groupId, members }: GroupPhotoLibraryProps) 
             ↑
           </button>
         </div>
+      </div>
+
+      {/* 갤러리 프레임 오른쪽 바깥에 따로 놓는 스크롤바. 평소엔 숨기고 마우스를 올리거나 스크롤할 때만 나타난다. */}
+      <div
+        ref={trackRef}
+        aria-hidden="true"
+        onPointerDown={handleTrackPointerDown}
+        className={`absolute bottom-4 left-full top-4 ml-1.5 w-3 rounded-full transition-opacity duration-200 ${
+          scrollActive || dragging ? 'opacity-100' : 'opacity-0 group-hover/frame:opacity-100'
+        }`}
+      >
+        <div
+          ref={thumbRef}
+          onPointerDown={handleThumbPointerDown}
+          onPointerMove={handleThumbPointerMove}
+          onPointerUp={handleThumbPointerEnd}
+          onPointerCancel={handleThumbPointerEnd}
+          className={`absolute left-[3px] top-0 w-1.5 touch-none rounded-full transition-colors ${
+            dragging ? 'bg-slate-600' : 'bg-slate-400 hover:bg-slate-500'
+          }`}
+        />
+      </div>
       </div>
 
       <p className="mt-2 text-center text-xs font-medium text-slate-400">
