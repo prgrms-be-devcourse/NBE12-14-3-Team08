@@ -39,6 +39,12 @@ logging:
     com.back: DEBUG
 
 
+# 소셜 로그인. 값이 없으면 해당 공급자 로그인만 502로 거절되고 나머지 기능은 그대로 동작한다.
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+
 jwt:
   secret: ${JWT_SECRET:local-development-jwt-secret-key-1234567890}
   access-expiration: ${JWT_ACCESS_EXPIRATION:1800000}
