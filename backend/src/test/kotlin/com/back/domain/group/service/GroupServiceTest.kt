@@ -9,8 +9,10 @@ import com.back.domain.groupMember.entity.GroupMemberRole
 import com.back.domain.groupMember.entity.GroupMemberStatus
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.groupMember.service.GroupMemberService
+import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
+import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
@@ -24,18 +26,14 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.BDDMockito.given
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.never
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.InjectMocks
 import org.mockito.Mock
+import org.mockito.Mockito.*
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Optional
+import java.util.*
 
 @ExtendWith(MockitoExtension::class)
 class GroupServiceTest {
@@ -57,6 +55,12 @@ class GroupServiceTest {
     @Mock
     private lateinit var passwordEncoder: PasswordEncoder
 
+    @Mock
+    private lateinit var habitVerifyRepository: HabitVerifyRepository
+
+    @Mock
+    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+
     companion object {
         private const val BASE_INVITE_URL = "http://test-invite.com"
         private const val MEMBER_ID = 1L
@@ -67,11 +71,13 @@ class GroupServiceTest {
     fun setUp() {
         groupService = GroupService(
             groupRepository = groupRepository,
-            groupMemberRepository = groupMemberRepository,
-            groupMemberService = groupMemberService,
-            memberRepository = memberRepository,
             passwordEncoder = passwordEncoder,
-            baseInviteUrl = BASE_INVITE_URL
+            groupMemberRepository = groupMemberRepository,
+            memberRepository = memberRepository,
+            groupMemberService = groupMemberService,
+            baseInviteUrl = BASE_INVITE_URL,
+            habitVerifyRepository = habitVerifyRepository,
+            penaltyVerifyRepository = penaltyVerifyRepository
         )
     }
 
@@ -292,6 +298,7 @@ class GroupServiceTest {
                 assertThat(response).isNotNull
                 assertThat(mockGroup.status)
                     .isEqualTo(GroupStatus.ACTIVE)
+                assertThat(response.rankings).isNull()
 
                 verify(groupRepository).findById(GROUP_ID)
                 verify(groupMemberRepository)
@@ -300,6 +307,66 @@ class GroupServiceTest {
                         MEMBER_ID,
                         GroupMemberStatus.ACTIVE
                     )
+                verify(habitVerifyRepository, never())
+                    .findAllByGroupId(GROUP_ID)
+
+                verify(penaltyVerifyRepository, never())
+                    .findAllByGroupId(GROUP_ID)
+            }
+
+            @Test
+            @DisplayName("마감된 그룹은 세 가지 랭킹 정보를 반환한다")
+            fun getGroupDetailFinishedWithRankings() {
+                // given
+                val finishedGroup = createGroup(
+                    status = GroupStatus.FINISH
+                )
+
+                given(groupRepository.findById(GROUP_ID))
+                    .willReturn(Optional.of(finishedGroup))
+
+                given(
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
+                        GROUP_ID,
+                        MEMBER_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                ).willReturn(true)
+
+                given(
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        GROUP_ID,
+                        GroupMemberStatus.ACTIVE
+                    )
+                ).willReturn(0L)
+
+                given(groupMemberRepository.findAllByGroupId(GROUP_ID))
+                    .willReturn(emptyList())
+
+                given(habitVerifyRepository.findAllByGroupId(GROUP_ID))
+                    .willReturn(emptyList())
+
+                given(penaltyVerifyRepository.findAllByGroupId(GROUP_ID))
+                    .willReturn(emptyList())
+
+                // when
+                val response = groupService.getGroupDetail(
+                    GROUP_ID,
+                    MEMBER_ID
+                )
+
+                // then
+                assertThat(response.status)
+                    .isEqualTo(GroupStatus.FINISH)
+
+                assertThat(response.rankings).isNotNull
+                assertThat(response.rankings!!.habitVerifyTop3).isEmpty()
+                assertThat(response.rankings!!.penaltyVerifyTop3).isEmpty()
+                assertThat(response.rankings!!.habitSuccessTop3).isEmpty()
+
+                verify(groupMemberRepository).findAllByGroupId(GROUP_ID)
+                verify(habitVerifyRepository).findAllByGroupId(GROUP_ID)
+                verify(penaltyVerifyRepository).findAllByGroupId(GROUP_ID)
             }
         }
 

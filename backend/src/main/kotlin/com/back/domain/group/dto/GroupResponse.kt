@@ -22,7 +22,8 @@ interface GroupResponse {
         val inviteLink: String,
         val status: GroupStatus,
         val isJoined: Boolean,
-        val currentMemberCount: Long
+        val currentMemberCount: Long,
+        val rankings: Rankings? = null
     ) {
         companion object {
 
@@ -31,7 +32,8 @@ interface GroupResponse {
                 group: Group,
                 baseInviteUrl: String,
                 isJoined: Boolean,
-                currentMemberCount: Long
+                currentMemberCount: Long,
+                rankings: Rankings? = null
             ): Detail {
                 val createdAt = requireNotNull(group.createDate) {
                     "그룹 생성 일시는 필수입니다."
@@ -40,7 +42,9 @@ interface GroupResponse {
                 val currentStatus =
                     if (
                         group.status == GroupStatus.ACTIVE &&
-                        group.deadline?.let { LocalDate.now().isAfter(it) } == true
+                        group.deadline?.let {
+                            LocalDate.now().isAfter(it)
+                        } == true
                     ) {
                         GroupStatus.FINISH
                     } else {
@@ -60,7 +64,8 @@ interface GroupResponse {
                     inviteLink = baseInviteUrl + group.inviteCode,
                     status = currentStatus,
                     isJoined = isJoined,
-                    currentMemberCount = currentMemberCount
+                    currentMemberCount = currentMemberCount,
+                    rankings = rankings
                 )
             }
         }
@@ -75,5 +80,20 @@ interface GroupResponse {
         val currentMemberCount: Long?,
         val status: String,
         val role: String
+    )
+
+    @JvmRecord
+    data class Rankings(
+        val habitVerifyTop3: List<Ranking>,
+        val penaltyVerifyTop3: List<Ranking>,
+        val habitSuccessTop3: List<Ranking>
+    )
+
+    @JvmRecord
+    data class Ranking(
+        val rank: Int,
+        val memberId: Long,
+        val nickname: String?,
+        val count: Int
     )
 }

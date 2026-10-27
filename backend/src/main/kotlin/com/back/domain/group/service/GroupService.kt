@@ -11,7 +11,11 @@ import com.back.domain.groupMember.entity.GroupMemberRole
 import com.back.domain.groupMember.entity.GroupMemberStatus
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.groupMember.service.GroupMemberService
+import com.back.domain.habitVerify.entity.HabitVerifyStatus
+import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.repository.MemberRepository
+import com.back.domain.penaltyverify.entity.PenaltyVerifyStatus
+import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
@@ -32,7 +36,9 @@ class GroupService(
     private val memberRepository: MemberRepository,
     private val groupMemberService: GroupMemberService,
     @Value("\${app.invite-base-url}")
-    private val baseInviteUrl: String
+    private val baseInviteUrl: String,
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
 ) {
 
     @Transactional
@@ -111,11 +117,18 @@ class GroupService(
                 GroupMemberStatus.ACTIVE
             )
 
+        val rankings = if (group.status == GroupStatus.FINISH) {
+            createRankings(groupId)
+        } else {
+            null
+        }
+
         return GroupResponse.Detail.from(
-            group,
-            baseInviteUrl,
-            true,
-            currentMemberCount
+            group = group,
+            baseInviteUrl = baseInviteUrl,
+            isJoined = true,
+            currentMemberCount = currentMemberCount,
+            rankings = rankings
         )
     }
 
@@ -282,5 +295,86 @@ class GroupService(
             isJoined,
             currentMemberCount
         )
+    }
+
+    private data class MemberRankingStats(
+        val memberId: Long,
+        val nickname: String?,
+        var habitVerifyCount: Int = 0,
+        var penaltyVerifyCount: Int = 0,
+        var habitSuccessCount: Int = 0
+    )
+
+    private fun createRankings(groupId: Long): GroupResponse.Rankings {
+        val groupMembers = groupMemberRepository.findAllByGroupId(groupId)
+
+        // LEFT 멤버도 포함하여 모든 그룹 멤버를 먼저 등록한다.
+        val statsByMemberId = groupMembers.associate { groupMember ->
+            val memberId = requireNotNull(groupMember.member.id)
+
+            memberId to MemberRankingStats(
+                memberId = memberId,
+                nickname = groupMember.member.nickname
+            )
+        }
+
+        // 모든 상태의 습관 인증을 집계하고,
+        // APPROVED만 성공 횟수에 추가한다.
+        habitVerifyRepository.findAllByGroupId(groupId).forEach { verify ->
+            val memberId = verify.habit.groupMember.member.id
+                ?: return@forEach
+
+            val stats = statsByMemberId[memberId]
+                ?: return@forEach
+
+            stats.habitVerifyCount++
+
+            if (verify.status == HabitVerifyStatus.APPROVED) {
+                stats.habitSuccessCount++
+            }
+        }
+
+        // REQUIRED는 아직 인증이 제출되지 않은 상태이므로 제외한다.
+        penaltyVerifyRepository.findAllByGroupId(groupId).forEach { verify ->
+            if (verify.status == PenaltyVerifyStatus.REQUIRED) {
+                return@forEach
+            }
+
+            val memberId = verify.groupMember.member.id
+                ?: return@forEach
+
+            val stats = statsByMemberId[memberId]
+                ?: return@forEach
+
+            stats.penaltyVerifyCount++
+        }
+
+        val allStats = statsByMemberId.values
+
+        return GroupResponse.Rankings(
+            habitVerifyTop3 = createTop3(allStats) { it.habitVerifyCount },
+            penaltyVerifyTop3 = createTop3(allStats) { it.penaltyVerifyCount },
+            habitSuccessTop3 = createTop3(allStats) { it.habitSuccessCount }
+        )
+    }
+
+    private fun createTop3(
+        stats: Collection<MemberRankingStats>,
+        countSelector: (MemberRankingStats) -> Int
+    ): List<GroupResponse.Ranking> {
+        return stats
+            .sortedWith(
+                compareByDescending<MemberRankingStats> { countSelector(it) }
+                    .thenBy { it.memberId }
+            )
+            .take(3)
+            .mapIndexed { index, member ->
+                GroupResponse.Ranking(
+                    rank = index + 1,
+                    memberId = member.memberId,
+                    nickname = member.nickname,
+                    count = countSelector(member)
+                )
+            }
     }
 }
