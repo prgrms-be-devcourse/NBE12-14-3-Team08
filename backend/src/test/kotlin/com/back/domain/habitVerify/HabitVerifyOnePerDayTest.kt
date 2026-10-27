@@ -24,13 +24,13 @@ import java.time.LocalDate
 // 엔티티를 Kotlin으로 바꾸면서 제약이 빠지지 않는지 고정한다.
 // (테스트 DB 스키마는 엔티티에서 만들어져서, 제약이 빠져도 다른 테스트는 조용히 통과한다)
 @DataJpaTest
-class HabitVerifyOnePerDayTest {
-
-    @Autowired lateinit var habitVerifyRepository: HabitVerifyRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var memberRepository: MemberRepository
+class HabitVerifyOnePerDayTest @Autowired constructor(
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository
+) {
 
     @Test
     @DisplayName("같은 습관에 같은 날짜의 습관 인증을 두 번 저장할 수 없다")

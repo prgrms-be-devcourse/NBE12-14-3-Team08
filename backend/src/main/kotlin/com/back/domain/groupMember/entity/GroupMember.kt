@@ -79,10 +79,10 @@ class GroupMember protected constructor() : BaseEntity() {
     }
 
     companion object {
-        @JvmStatic
+
         fun builder(): Builder = Builder()
 
-        @JvmStatic
+
         fun create(
             group: Group,
             member: Member,

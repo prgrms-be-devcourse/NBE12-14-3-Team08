@@ -25,14 +25,14 @@ import java.util.UUID
 // Testcontainers PostgreSQL에서 PenaltyVerifyRepository의 조회 쿼리를 검증한다. (테스트마다 롤백)
 // 배포 DB는 PostgreSQL이지만, 여기서 쓰는 WHERE / IN / ORDER BY / COUNT는 두 DB에서 같게 동작한다.
 @DataJpaTest
-class PenaltyVerifyRepositoryTest {
-
-    @Autowired private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-    @Autowired private lateinit var habitRepository: HabitRepository
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var entityManager: EntityManager
+class PenaltyVerifyRepositoryTest @Autowired constructor(
+    private val penaltyVerifyRepository: PenaltyVerifyRepository,
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val entityManager: EntityManager
+) {
 
     private lateinit var groupA: Group
     private lateinit var groupB: Group

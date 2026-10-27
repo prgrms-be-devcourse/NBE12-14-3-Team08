@@ -24,17 +24,10 @@ import tools.jackson.databind.json.JsonMapper
 @Transactional
 abstract class MemberApiTestSupport {
 
-    @Autowired
-    protected lateinit var mockMvc: MockMvc
-
-    @Autowired
-    protected lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    protected lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    protected lateinit var passwordEncoder: PasswordEncoder
+    @Autowired protected lateinit var mockMvc: MockMvc
+    @Autowired protected lateinit var jsonMapper: JsonMapper
+    @Autowired protected lateinit var memberRepository: MemberRepository
+    @Autowired protected lateinit var passwordEncoder: PasswordEncoder
 
     protected class Tokens(val accessToken: String, val refreshToken: String)
 

@@ -15,7 +15,7 @@ data class MemberResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(member: Member): MemberResponse = MemberResponse(
             memberId = member.id,
             nickname = member.nickname,

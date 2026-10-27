@@ -23,12 +23,12 @@ import org.springframework.transaction.annotation.Transactional
 // 저장 후 영속성 컨텍스트를 비워(clear) 실제 요청처럼 연관 엔티티가 프록시로 로딩되게 만든다. (테스트 종료 시 롤백)
 @SpringBootTest
 @Transactional
-class BaseEntityLazyProxyTest {
-
-    @Autowired private lateinit var entityManager: EntityManager
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
+class BaseEntityLazyProxyTest @Autowired constructor(
+    private val entityManager: EntityManager,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository
+) {
 
     // 그룹 멤버를 새로 조회해, 아직 읽지 않은 회원(지연 로딩 프록시)과 실제 회원 id를 돌려준다
     private fun memberProxyAndId(): Pair<Member, Long> {

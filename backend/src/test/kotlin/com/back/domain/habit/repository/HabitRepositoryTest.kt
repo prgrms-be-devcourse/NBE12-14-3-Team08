@@ -25,22 +25,13 @@ import java.util.UUID
 
 // Testcontainers PostgreSQL에서 HabitRepository의 커스텀 쿼리를 검증한다. (테스트마다 롤백)
 @DataJpaTest
-class HabitRepositoryTest {
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
+class HabitRepositoryTest @Autowired constructor(
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val entityManager: EntityManager
+) {
 
     private lateinit var member: Member
     private lateinit var group: Group

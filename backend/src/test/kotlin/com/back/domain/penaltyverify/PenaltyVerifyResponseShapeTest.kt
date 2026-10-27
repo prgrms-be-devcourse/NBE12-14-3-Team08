@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 
 // 벌칙 인증 응답(상세·요약)의 JSON 키 모양을 고정한다.
 // DTO를 Java record에서 Kotlin으로 바꿀 때 키 이름이 바뀌거나 null 값의 키가 빠지면 프론트가 조용히 깨지므로,
@@ -32,16 +33,16 @@ import tools.jackson.databind.json.JsonMapper
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class PenaltyVerifyResponseShapeTest {
-
-    @Autowired lateinit var mockMvc: MockMvc
-    @Autowired lateinit var jsonMapper: JsonMapper
-    @Autowired lateinit var authTokenService: AuthTokenService
-    @Autowired lateinit var memberRepository: MemberRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class PenaltyVerifyResponseShapeTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     // 이 테스트는 사진 저장소를 쓰지 않지만, 설정을 PenaltyVerifyControllerTest와 똑같이 맞춰 Spring 컨텍스트를 재사용한다.
     // 새 설정 조합이면 컨텍스트(DB 커넥션 풀 최대 20개)가 하나 더 생겨 테스트 DB 접속 수 한도(100)를 넘길 수 있다.

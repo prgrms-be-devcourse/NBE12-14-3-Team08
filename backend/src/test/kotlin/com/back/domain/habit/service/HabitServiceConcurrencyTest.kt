@@ -29,28 +29,15 @@ import java.util.concurrent.atomic.AtomicInteger
 // 개발용 DB(local 프로필)를 건드리지 않도록 Testcontainers PostgreSQL을 쓰는 test 프로필로 실행한다.
 @SpringBootTest
 @ActiveProfiles("test")
-class HabitServiceConcurrencyTest {
-
-    @Autowired
-    private lateinit var habitService: HabitService
-
-    @Autowired
-    private lateinit var groupService: GroupService
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var passwordEncoder: PasswordEncoder
+class HabitServiceConcurrencyTest @Autowired constructor(
+    private val habitService: HabitService,
+    private val groupService: GroupService,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val memberRepository: MemberRepository,
+    private val passwordEncoder: PasswordEncoder
+) {
 
     private lateinit var owner: Member
     private var groupId: Long = 0L

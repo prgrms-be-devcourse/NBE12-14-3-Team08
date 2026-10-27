@@ -42,16 +42,16 @@ import java.util.UUID
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class HabitVerifyPhotoControllerTest {
-
-    @Autowired private lateinit var mockMvc: MockMvc
-    @Autowired private lateinit var objectMapper: JsonMapper
-    @Autowired private lateinit var authTokenService: AuthTokenService
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var habitRepository: HabitRepository
-    @Autowired private lateinit var habitVerifyRepository: HabitVerifyRepository
+class HabitVerifyPhotoControllerTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val objectMapper: JsonMapper,
+    private val authTokenService: AuthTokenService,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository
+) {
 
     private lateinit var group: Group
     private lateinit var alice: Member

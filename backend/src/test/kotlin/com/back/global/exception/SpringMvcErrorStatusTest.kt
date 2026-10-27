@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 import org.hamcrest.Matchers.containsString
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 
 // Spring MVC가 원래 4xx로 바꿔 주는 오류(없는 경로, 허용되지 않는 메서드, 본문 형식, 경로 변수·쿼리 형식)가
 // 전역 예외 처리의 Exception 일괄 처리에 가려 500이 되지 않는지 확인한다. (이슈 #56)
@@ -34,16 +35,11 @@ import tools.jackson.databind.json.JsonMapper
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class SpringMvcErrorStatusTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
+class SpringMvcErrorStatusTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService
+) {
 
     private lateinit var token: String
 

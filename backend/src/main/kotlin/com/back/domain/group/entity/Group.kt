@@ -105,7 +105,7 @@ class Group(
     }
 
     companion object {
-        @JvmStatic
+
         fun builder(): Builder = Builder()
     }
 }

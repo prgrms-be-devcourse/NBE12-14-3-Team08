@@ -39,26 +39,13 @@ class GroupServiceTest {
 
     private lateinit var groupService: GroupService
 
-    @MockK
-    private lateinit var groupRepository: GroupRepository
-
-    @MockK
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @MockK
-    private lateinit var groupMemberService: GroupMemberService
-
-    @MockK
-    private lateinit var memberRepository: MemberRepository
-
-    @MockK
-    private lateinit var passwordEncoder: PasswordEncoder
-
-    @MockK
-    private lateinit var habitVerifyRepository: HabitVerifyRepository
-
-    @MockK
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+    @MockK private lateinit var groupRepository: GroupRepository
+    @MockK private lateinit var groupMemberRepository: GroupMemberRepository
+    @MockK private lateinit var groupMemberService: GroupMemberService
+    @MockK private lateinit var memberRepository: MemberRepository
+    @MockK private lateinit var passwordEncoder: PasswordEncoder
+    @MockK private lateinit var habitVerifyRepository: HabitVerifyRepository
+    @MockK private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
 
     companion object {
         private const val BASE_INVITE_URL = "http://test-invite.com"

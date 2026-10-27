@@ -23,22 +23,13 @@ import java.util.UUID
 // 실제로 커밋되는 트랜잭션이 필요해서 @Transactional 없이 실행하고, 끝나면 만든 데이터를 직접 지운다.
 @SpringBootTest
 @ActiveProfiles("test")
-class HabitServiceFailConcurrencyTest {
-
-    @Autowired
-    private lateinit var habitService: HabitService
-
-    @Autowired
-    private lateinit var groupService: GroupService
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var passwordEncoder: PasswordEncoder
-
-    @Autowired
-    private lateinit var jdbc: JdbcTemplate
+class HabitServiceFailConcurrencyTest @Autowired constructor(
+    private val habitService: HabitService,
+    private val groupService: GroupService,
+    private val memberRepository: MemberRepository,
+    private val passwordEncoder: PasswordEncoder,
+    private val jdbc: JdbcTemplate
+) {
 
     private var ownerId: Long = 0L
     private var groupId: Long = 0L

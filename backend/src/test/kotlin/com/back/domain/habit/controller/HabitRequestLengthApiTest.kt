@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 import java.time.LocalDate
 
 // 습관 생성 API가 제목·설명 길이를 DB에 닿기 전에 400으로 거절하는지 확인한다. (255자까지만 저장 가능한 컬럼)
@@ -29,19 +30,12 @@ import java.time.LocalDate
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class HabitRequestLengthApiTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
+class HabitRequestLengthApiTes @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService,
+    private val habitRepository: HabitRepository
+) {
 
     private var groupId: Long = 0L
     private lateinit var token: String

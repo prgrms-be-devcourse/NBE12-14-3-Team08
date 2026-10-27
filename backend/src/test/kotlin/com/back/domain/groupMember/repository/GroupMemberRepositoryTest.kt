@@ -23,22 +23,13 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.transaction.annotation.Transactional
 
 @DataJpaTest
-class GroupMemberRepositoryTest {
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class GroupMemberRepositoryTest @Autowired constructor(
+    private val groupMemberRepository: GroupMemberRepository,
+    private val groupRepository: GroupRepository,
+    private val memberRepository: MemberRepository,
+    private val habitRepository: HabitRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     private lateinit var group: Group
     private lateinit var member: Member

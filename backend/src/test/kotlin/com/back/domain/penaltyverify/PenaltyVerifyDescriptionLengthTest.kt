@@ -36,15 +36,15 @@ import java.time.LocalDate
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class PenaltyVerifyDescriptionLengthTest {
-
-    @Autowired lateinit var mockMvc: MockMvc
-    @Autowired lateinit var authTokenService: AuthTokenService
-    @Autowired lateinit var memberRepository: MemberRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class PenaltyVerifyDescriptionLengthTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val authTokenService: AuthTokenService,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다
     @MockkBean(relaxUnitFun = true) lateinit var storageService: StorageService

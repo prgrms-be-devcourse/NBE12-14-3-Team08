@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 import java.time.LocalDate
 
 // 습관 인증 응답(목록·검토 대기 요약)의 JSON 키 모양을 고정한다.
@@ -33,16 +34,16 @@ import java.time.LocalDate
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class HabitVerifyResponseShapeTest {
-
-    @Autowired lateinit var mockMvc: MockMvc
-    @Autowired lateinit var jsonMapper: JsonMapper
-    @Autowired lateinit var authTokenService: AuthTokenService
-    @Autowired lateinit var memberRepository: MemberRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var habitVerifyRepository: HabitVerifyRepository
+class HabitVerifyResponseShapeTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository
+) {
 
     // 이 테스트는 사진 저장소를 쓰지 않지만, 설정을 HabitVerifyControllerTest와 똑같이 맞춰 Spring 컨텍스트를 재사용한다.
     // 새 설정 조합이면 컨텍스트(DB 커넥션 풀 최대 20개)가 하나 더 생겨 테스트 DB 접속 수 한도(100)를 넘길 수 있다.

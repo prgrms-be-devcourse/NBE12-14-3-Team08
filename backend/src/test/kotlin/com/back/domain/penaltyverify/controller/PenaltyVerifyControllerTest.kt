@@ -37,21 +37,22 @@ import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 import java.time.LocalDate
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class PenaltyVerifyControllerTest {
-
-    @Autowired private lateinit var mockMvc: MockMvc
-    @Autowired private lateinit var jsonMapper: JsonMapper
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var authTokenService: AuthTokenService
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var habitRepository: HabitRepository
-    @Autowired private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class PenaltyVerifyControllerTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val memberRepository: MemberRepository,
+    private val authTokenService: AuthTokenService,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     // 인증 사진 URL 검사(Supabase 호출)는 StorageServiceTest에서 확인하므로 여기서는 통과시킨다
     // relaxUnitFun: 정해 두지 않은 Unit 함수(사진 검사 validateImageUrl)는 Mockito처럼 아무것도 하지 않고 넘어간다

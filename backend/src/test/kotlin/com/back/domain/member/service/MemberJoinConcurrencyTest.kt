@@ -17,13 +17,10 @@ import java.util.UUID
 // 실제로 커밋되는 트랜잭션이 필요해서 @Transactional 없이 실행하고, 끝나면 만든 데이터를 직접 지운다.
 @SpringBootTest
 @ActiveProfiles("test")
-class MemberJoinConcurrencyTest {
-
-    @Autowired
-    private lateinit var memberService: MemberService
-
-    @Autowired
-    private lateinit var jdbc: JdbcTemplate
+class MemberJoinConcurrencyTest @Autowired constructor(
+    private val memberService: MemberService,
+    private val jdbc: JdbcTemplate
+) {
 
     private val username = "join-race-" + UUID.randomUUID().toString().substring(0, 8)
 

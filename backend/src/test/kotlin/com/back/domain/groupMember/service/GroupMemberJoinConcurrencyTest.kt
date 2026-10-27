@@ -30,14 +30,14 @@ import java.util.concurrent.TimeUnit
 // - 비밀번호를 확인하는 사이 방장이 정원을 줄여도, 잠금 안에서 최신 정원으로 다시 판단한다.
 // 스레드마다 별도 트랜잭션이 필요해 @Transactional을 쓰지 않고, 끝나면 만든 데이터를 지운다.
 @SpringBootTest
-class GroupMemberJoinConcurrencyTest {
-
-    @Autowired private lateinit var groupMemberService: GroupMemberService
-    @Autowired private lateinit var groupService: GroupService
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var passwordEncoder: PasswordEncoder
+class GroupMemberJoinConcurrencyTest @Autowired constructor(
+    private val groupMemberService: GroupMemberService,
+    private val groupService: GroupService,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val passwordEncoder: PasswordEncoder
+) {
 
     private val createdGroupIds = mutableListOf<Long>()
     private val createdMemberIds = mutableListOf<Long>()

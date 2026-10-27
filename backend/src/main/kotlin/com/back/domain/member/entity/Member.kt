@@ -76,7 +76,7 @@ class Member private constructor(
     fun isSocial(): Boolean = provider != MemberProvider.LOCAL
 
     companion object {
-        @JvmStatic
+
         fun create(nickname: String, username: String, encodedPassword: String): Member =
             Member(nickname, username, encodedPassword, MemberProvider.LOCAL, null)
 

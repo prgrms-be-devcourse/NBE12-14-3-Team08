@@ -49,29 +49,14 @@ class GroupMemberServiceTest {
     @InjectMockKs
     private lateinit var groupMemberService: GroupMemberService
 
-    @MockK(relaxUnitFun = true)
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var groupRepository: GroupRepository
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var memberRepository: MemberRepository
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var habitRepository: HabitRepository
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var habitVerifyRepository: HabitVerifyRepository
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-
-    @MockK
-    private lateinit var passwordEncoder: PasswordEncoder
-
-    @MockK(relaxUnitFun = true)
-    private lateinit var entityManager: EntityManager
+    @MockK(relaxUnitFun = true) private lateinit var groupMemberRepository: GroupMemberRepository
+    @MockK(relaxUnitFun = true) private lateinit var groupRepository: GroupRepository
+    @MockK(relaxUnitFun = true) private lateinit var memberRepository: MemberRepository
+    @MockK(relaxUnitFun = true) private lateinit var habitRepository: HabitRepository
+    @MockK(relaxUnitFun = true) private lateinit var habitVerifyRepository: HabitVerifyRepository
+    @MockK(relaxUnitFun = true) private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+    @MockK private lateinit var passwordEncoder: PasswordEncoder
+    @MockK(relaxUnitFun = true) private lateinit var entityManager: EntityManager
 
     @SpyK
     private var transactionTemplate = TransactionTemplate(
