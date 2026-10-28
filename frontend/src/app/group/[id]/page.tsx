@@ -379,7 +379,6 @@ export default function GroupDetailPage({
                     initialData={{
                         title: group.title,
                         description: group.description,
-                        startDate: group.startDate || new Date().toISOString().slice(0, 10),
                         deadline: group.deadline || '',
                         memberLimit: group.memberLimit,
                         penalty: group.penalty || '',
