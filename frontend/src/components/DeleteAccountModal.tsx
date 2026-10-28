@@ -57,9 +57,9 @@ export function DeleteAccountModal({
         <div id="delete-account-description" className="mt-5 text-sm leading-6 text-slate-600">
           <p className="text-center">회원탈퇴를 하면 계정을 복구할 수 없습니다.</p>
           <ul className="mt-4 list-disc space-y-1.5 rounded-2xl bg-slate-50 py-4 pl-9 pr-5 text-left text-xs leading-5">
-            <li>아이디, 비밀번호, 연결된 구글 계정 정보는 삭제됩니다.</li>
+            <li>닉네임, 아이디, 비밀번호, 연결된 구글 계정 정보는 삭제되고 닉네임은 "탈퇴한 회원"으로 바뀝니다.</li>
             <li>같은 아이디나 구글 계정으로 다시 가입할 수 있지만, 이전 기록은 이어지지 않는 새 계정이 만들어집니다.</li>
-            <li>참여했던 방의 인증 사진·내용과 벌칙 기록, 닉네임은 방 기록을 위해 남습니다.</li>
+            <li>참여했던 방의 인증 사진·내용과 벌칙 기록은 방 기록을 위해 남습니다.</li>
           </ul>
         </div>
         {error && <p role="alert" className="mt-4 text-center text-sm font-semibold text-rose-600">{error}</p>}

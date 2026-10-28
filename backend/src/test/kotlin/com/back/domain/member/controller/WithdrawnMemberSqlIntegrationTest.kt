@@ -49,7 +49,7 @@ class WithdrawnMemberSqlIntegrationTest : MemberApiTestSupport() {
         )
 
     @Test
-    @DisplayName("예전 방식으로 탈퇴한 회원은 새 정책과 같은 값이 되고 닉네임은 남으며, 활성 회원은 그대로다")
+    @DisplayName("예전 방식으로 탈퇴한 회원은 새 정책과 같은 값(익명 닉네임 포함)이 되고, 활성 회원은 그대로다")
     fun 예전_탈퇴_회원이_익명화된다() {
         val oldId = signUpOk("old-withdrawn", "예전탈퇴")
         val activeId = signUpOk("still-active", "활성회원")
@@ -61,7 +61,7 @@ class WithdrawnMemberSqlIntegrationTest : MemberApiTestSupport() {
         val old = row(oldId)
         assertThat(old["username"]).isEqualTo("withdrawn_$oldId")
         assertThat(old["password"]).isEqualTo(Member.WITHDRAWN_PASSWORD)
-        assertThat(old["nickname"]).isEqualTo("예전탈퇴")
+        assertThat(old["nickname"]).isEqualTo(Member.WITHDRAWN_NICKNAME)
         assertThat(old["provider"]).isEqualTo(MemberProvider.LOCAL.name)
         assertThat(old["provider_id"]).isNull()
         assertThat(old["refresh_token"]).isNull()
@@ -84,7 +84,7 @@ class WithdrawnMemberSqlIntegrationTest : MemberApiTestSupport() {
         assertThat(row["provider"]).isEqualTo(MemberProvider.LOCAL.name)
         assertThat(row["provider_id"]).isNull()
         assertThat(row["username"]).isEqualTo("withdrawn_$memberId")
-        assertThat(row["nickname"]).isEqualTo("구글회원")
+        assertThat(row["nickname"]).isEqualTo(Member.WITHDRAWN_NICKNAME)
     }
 
     @Test

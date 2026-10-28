@@ -54,7 +54,7 @@ class MemberSocialTest {
         assertThat(member.provider).isEqualTo(MemberProvider.LOCAL)
         assertThat(member.providerId).isNull()
         assertThat(member.username).isEqualTo("withdrawn_9")
-        assertThat(member.nickname).isEqualTo("홍길동")
+        assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
         assertThat(member.isSocial()).isFalse()
     }
 }

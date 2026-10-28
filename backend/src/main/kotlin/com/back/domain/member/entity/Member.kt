@@ -70,11 +70,12 @@ class Member private constructor(
         this.refreshToken != null && this.refreshToken == refreshToken
 
     // 탈퇴한 회원은 행을 지우지 않고 익명화한다. (인증·벌칙 기록이 이 회원을 참조하고 있어 지우면 관계가 깨진다)
-    // 닉네임은 방 기록에 그대로 남기고, 계정을 가리키는 값(아이디·비밀번호·소셜 식별자)은 지정한 값으로 바꾼다.
+    // 사람을 가리키는 값(닉네임·아이디·비밀번호·소셜 식별자)은 지정한 값으로 바꾼다.
     // 그러면 같은 아이디와 같은 소셜 계정으로 새로 가입할 수 있다. 이미 탈퇴한 회원에게 다시 호출해도 같은 값이 된다.
     fun withdraw() {
         status = MemberStatus.WITHDRAWN
         refreshToken = null
+        nickname = WITHDRAWN_NICKNAME
         username = "$WITHDRAWN_USERNAME_PREFIX$requiredId"
         password = WITHDRAWN_PASSWORD
         provider = MemberProvider.LOCAL
@@ -84,6 +85,9 @@ class Member private constructor(
     fun isSocial(): Boolean = provider != MemberProvider.LOCAL
 
     companion object {
+        // 탈퇴한 회원의 닉네임. 종료된 방의 멤버 목록·통계·정산에 이 이름으로 표시된다.
+        const val WITHDRAWN_NICKNAME = "탈퇴한 회원"
+
         // 탈퇴한 회원의 아이디는 이 접두사 + 회원 id다. 가입 때 이 접두사로 시작하는 아이디를 막아, 탈퇴할 때 아이디가 겹치지 않게 한다.
         const val WITHDRAWN_USERNAME_PREFIX = "withdrawn_"
 

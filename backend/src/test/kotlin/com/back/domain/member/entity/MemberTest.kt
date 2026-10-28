@@ -160,15 +160,15 @@ class MemberTest {
         }
 
         @Test
-        @DisplayName("탈퇴하면 아이디와 비밀번호가 지정한 값으로 바뀌고 닉네임은 그대로 남는다")
-        fun 탈퇴하면_계정_정보는_익명화되고_닉네임은_남는다() {
+        @DisplayName("탈퇴하면 닉네임, 아이디, 비밀번호가 지정한 값으로 바뀐다")
+        fun 탈퇴하면_닉네임과_계정_정보가_익명화된다() {
             val member = savedMember()
 
             member.withdraw()
 
             assertThat(member.username).isEqualTo("withdrawn_5")
             assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
-            assertThat(member.nickname).isEqualTo("닉네임")
+            assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
         }
 
         @Test

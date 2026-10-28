@@ -531,7 +531,7 @@ class MemberServiceTest {
         }
 
         @Test
-        @DisplayName("탈퇴하면 아이디와 비밀번호가 익명 값으로 바뀌고 닉네임은 남아 같은 아이디로 다시 가입할 수 있다")
+        @DisplayName("탈퇴하면 닉네임, 아이디, 비밀번호가 익명 값으로 바뀌어 같은 아이디로 다시 가입할 수 있다")
         fun 탈퇴하면_익명화된다() {
             val member = member(nickname = "홍길동", username = "user-1", password = "encoded-password")
             stubFind(member)
@@ -541,7 +541,7 @@ class MemberServiceTest {
 
             assertThat(member.username).isEqualTo("withdrawn_$MEMBER_ID")
             assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
-            assertThat(member.nickname).isEqualTo("홍길동")
+            assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
             // 원래 아이디는 비어 있게 되어 다시 가입할 수 있다 (존재 여부 검사는 저장소가 한다)
             every { memberRepository.existsByUsername("user-1") } returns false
             every { passwordEncoder.encode("password1234") } returns "encoded-new"

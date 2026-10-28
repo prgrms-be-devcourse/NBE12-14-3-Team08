@@ -120,12 +120,12 @@ class MemberFlowE2ETest : E2ETestSupport() {
         jdbc.update("update groups set deadline = ? where id = ?", Date.valueOf(LocalDate.now().minusDays(1)), group.id)
         expectStatus(call(HttpMethod.DELETE, "/api/members/me", tokens.accessToken), 204, "방이 끝난 뒤 탈퇴")
 
-        // DB: 회원은 WITHDRAWN이고 리프레시 토큰이 폐기되며, 아이디와 비밀번호는 익명 값으로 바뀌고 닉네임은 남는다. 방의 멤버 기록은 LEFT로 남는다.
+        // DB: 회원은 WITHDRAWN이고 리프레시 토큰이 폐기되며, 닉네임, 아이디, 비밀번호는 익명 값으로 바뀐다. 방의 멤버 기록은 LEFT로 남는다.
         assertThat(storedValueById("status", memberId)).isEqualTo("WITHDRAWN")
         assertThat(storedValueById("refresh_token", memberId)).isNull()
         assertThat(storedValueById("username", memberId)).isEqualTo("withdrawn_$memberId")
         assertThat(storedValueById("password", memberId)).isEqualTo("!withdrawn")
-        assertThat(storedValueById("nickname", memberId)).isEqualTo("탈퇴회원")
+        assertThat(storedValueById("nickname", memberId)).isEqualTo("탈퇴한 회원")
         val memberStatuses = jdbc.queryForList(
             "select gm.status from group_member gm where gm.member_id = ?",
             String::class.java,

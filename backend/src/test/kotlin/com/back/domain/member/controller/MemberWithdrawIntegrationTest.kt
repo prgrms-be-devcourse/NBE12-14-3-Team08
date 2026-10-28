@@ -98,7 +98,7 @@ class MemberWithdrawIntegrationTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("탈퇴하면 회원 행은 남고 아이디와 비밀번호는 익명 값으로 바뀌며 닉네임은 그대로다")
+    @DisplayName("탈퇴하면 회원 행은 남고 닉네임, 아이디, 비밀번호는 익명 값으로 바뀐다")
     fun 탈퇴하면_익명화된다() {
         withdraw().andExpect(status().isNoContent())
 
@@ -106,9 +106,25 @@ class MemberWithdrawIntegrationTest @Autowired constructor(
         assertThat(member.status).isEqualTo(MemberStatus.WITHDRAWN)
         assertThat(member.username).isEqualTo("withdrawn_$memberId")
         assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
-        assertThat(member.nickname).isEqualTo("탈퇴할회원")
+        assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
         assertThat(member.provider).isEqualTo(MemberProvider.LOCAL)
         assertThat(member.providerId).isNull()
+    }
+
+    @Test
+    @DisplayName("끝난 방의 멤버 목록에는 탈퇴한 회원이 익명 닉네임으로 남고, 방 기록은 그대로다")
+    fun 방의_멤버_목록에는_익명_닉네임으로_남는다() {
+        val groupId = createGroup()
+        setDeadline(groupId, LocalDate.now().minusDays(1))
+        withdraw().andExpect(status().isNoContent())
+
+        val members = groupMemberRepository.findByGroupIdWithHabit(groupId)
+
+        assertThat(members).hasSize(1)
+        assertThat(members[0].memberId).isEqualTo(memberId)
+        assertThat(members[0].nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
+        assertThat(members[0].username).isEqualTo("withdrawn_$memberId")
+        assertThat(membershipStatuses()).containsOnly(GroupMemberStatus.LEFT)
     }
 
     @Test
