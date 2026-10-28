@@ -98,7 +98,6 @@ class Member private constructor(
             Member(nickname, username, encodedPassword, MemberProvider.LOCAL, null)
 
         // 소셜 로그인으로 처음 들어온 회원. 비밀번호로는 로그인할 수 없도록 아무도 모르는 값의 해시를 넣는다.
-        @JvmStatic
         fun createSocial(
             provider: MemberProvider,
             providerId: String,
