@@ -9,9 +9,14 @@ import com.back.domain.groupMember.entity.GroupMemberRole
 import com.back.domain.groupMember.entity.GroupMemberStatus
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.groupMember.service.GroupMemberService
+import com.back.domain.habit.entity.Habit
+import com.back.domain.habitVerify.entity.HabitVerify
+import com.back.domain.habitVerify.entity.HabitVerifyStatus
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.entity.Member
 import com.back.domain.member.repository.MemberRepository
+import com.back.domain.penaltyverify.entity.PenaltyVerify
+import com.back.domain.penaltyverify.entity.PenaltyVerifyStatus
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
@@ -404,6 +409,353 @@ class GroupServiceTest {
                 verify(exactly = 1) {
                     penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
                 }
+            }
+
+            @Test
+            @DisplayName("종료된 그룹의 랭킹은 인증 상태와 횟수에 따라 상위 3명을 반환한다")
+            fun getGroupDetailFinishedWithRankingData() {
+                // given
+                val finishedGroup = createGroup(status = GroupStatus.FINISH)
+
+                val members = (1L..5L).map { id ->
+                    Member.create(
+                        nickname = "member$id",
+                        username = "user$id",
+                        encodedPassword = "password",
+                    ).also {
+                        ReflectionTestUtils.setField(it, "id", id)
+                    }
+                }
+
+                val groupMembers = members.mapIndexed { index, member ->
+                    GroupMember.create(
+                        finishedGroup,
+                        member,
+                        GroupMemberRole.MEMBER,
+                    ).also {
+                        ReflectionTestUtils.setField(it, "id", index + 1L)
+
+                        // 5번 회원은 퇴장했어도 랭킹에 포함되어야 한다.
+                        if (index == 4) {
+                            it.leave()
+                        }
+                    }
+                }
+
+                // 회원별 습관 4개를 생성한다.
+                // 벌칙 인증은 회원-습관 조합당 하나만 생성한다.
+                val habitsByMember = groupMembers.mapIndexed { memberIndex, groupMember ->
+                    (1..4).map { habitIndex ->
+                        Habit.create(
+                            groupMember = groupMember,
+                            title = "habit${memberIndex + 1}-$habitIndex",
+                            description = null,
+                            days = 7,
+                        )
+                    }
+                }
+
+                fun createHabitVerify(
+                    habit: Habit,
+                    status: HabitVerifyStatus,
+                    day: Int,
+                ): HabitVerify {
+                    val verify = HabitVerify.create(
+                        habit = habit,
+                        verifyDate = LocalDate.of(2026, 1, day),
+                        description = null,
+                        imageUrl = null,
+                    )
+
+                    when (status) {
+                        HabitVerifyStatus.APPROVED -> verify.approve()
+                        HabitVerifyStatus.REJECTED -> verify.reject()
+                        HabitVerifyStatus.PENDING -> Unit
+                    }
+
+                    return verify
+                }
+
+                val habitStatusesByMember = listOf(
+                    listOf(
+                        HabitVerifyStatus.APPROVED,
+                        HabitVerifyStatus.APPROVED,
+                        HabitVerifyStatus.PENDING,
+                    ),
+                    listOf(
+                        HabitVerifyStatus.APPROVED,
+                        HabitVerifyStatus.REJECTED,
+                        HabitVerifyStatus.PENDING,
+                    ),
+                    listOf(
+                        HabitVerifyStatus.APPROVED,
+                        HabitVerifyStatus.APPROVED,
+                    ),
+                    listOf(HabitVerifyStatus.APPROVED),
+                    listOf(
+                        HabitVerifyStatus.PENDING,
+                        HabitVerifyStatus.PENDING,
+                        HabitVerifyStatus.PENDING,
+                        HabitVerifyStatus.PENDING,
+                    ),
+                )
+
+                val habitVerifies = habitStatusesByMember.flatMapIndexed { memberIndex, statuses ->
+                    statuses.mapIndexed { habitIndex, status ->
+                        createHabitVerify(
+                            habit = habitsByMember[memberIndex][habitIndex],
+                            status = status,
+                            day = habitIndex + 1,
+                        )
+                    }
+                }
+
+                fun createPenaltyVerify(
+                    groupMember: GroupMember,
+                    habit: Habit,
+                    status: PenaltyVerifyStatus,
+                ): PenaltyVerify {
+                    val verify = PenaltyVerify.create(groupMember, habit)
+
+                    when (status) {
+                        PenaltyVerifyStatus.REQUIRED -> Unit
+                        PenaltyVerifyStatus.PENDING -> {
+                            verify.submit(LocalDate.now(), null, null)
+                        }
+                        PenaltyVerifyStatus.APPROVED -> {
+                            verify.submit(LocalDate.now(), null, null)
+                            verify.approve()
+                        }
+                        PenaltyVerifyStatus.REJECTED -> {
+                            verify.submit(LocalDate.now(), null, null)
+                            verify.reject()
+                        }
+                    }
+
+                    return verify
+                }
+
+                // REQUIRED는 집계에서 제외되어야 한다.
+                val penaltyStatusesByMember = listOf(
+                    listOf(
+                        PenaltyVerifyStatus.APPROVED,
+                        PenaltyVerifyStatus.PENDING,
+                        PenaltyVerifyStatus.REQUIRED,
+                        PenaltyVerifyStatus.REQUIRED,
+                    ),
+                    listOf(
+                        PenaltyVerifyStatus.REJECTED,
+                        PenaltyVerifyStatus.PENDING,
+                        PenaltyVerifyStatus.REQUIRED,
+                        PenaltyVerifyStatus.REQUIRED,
+                    ),
+                    listOf(
+                        PenaltyVerifyStatus.APPROVED,
+                        PenaltyVerifyStatus.REQUIRED,
+                        PenaltyVerifyStatus.REQUIRED,
+                        PenaltyVerifyStatus.REQUIRED,
+                    ),
+                    List(4) { PenaltyVerifyStatus.REQUIRED },
+                    List(4) { PenaltyVerifyStatus.REQUIRED },
+                )
+
+                val penaltyVerifies = penaltyStatusesByMember.flatMapIndexed { memberIndex, statuses ->
+                    statuses.mapIndexed { habitIndex, status ->
+                        createPenaltyVerify(
+                            groupMember = groupMembers[memberIndex],
+                            habit = habitsByMember[memberIndex][habitIndex],
+                            status = status,
+                        )
+                    }
+                }
+
+                every {
+                    groupRepository.findById(GROUP_ID)
+                } returns Optional.of(finishedGroup)
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
+                        GROUP_ID,
+                        MEMBER_ID,
+                        GroupMemberStatus.ACTIVE,
+                    )
+                } returns true
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        GROUP_ID,
+                        GroupMemberStatus.ACTIVE,
+                    )
+                } returns 4L
+
+                every {
+                    groupMemberRepository.findAllByGroupId(GROUP_ID)
+                } returns groupMembers
+
+                every {
+                    habitVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns habitVerifies
+
+                every {
+                    penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns penaltyVerifies
+
+                // when
+                val response = groupService.getGroupDetail(GROUP_ID, MEMBER_ID)
+
+                // then
+                val rankings = response.rankings!!
+
+                // 전체 습관 인증: 모든 상태를 포함하고, 동점이면 회원 ID 오름차순
+                assertThat(rankings.habitVerifyTop3.map { it.memberId to it.count })
+                    .containsExactly(
+                        5L to 4,
+                        1L to 3,
+                        2L to 3,
+                    )
+
+                // 습관 성공: APPROVED만 포함
+                assertThat(rankings.habitSuccessTop3.map { it.memberId to it.count })
+                    .containsExactly(
+                        1L to 2,
+                        3L to 2,
+                        2L to 1,
+                    )
+
+                // 벌칙 인증: REQUIRED를 제외하고, 동점이면 회원 ID 오름차순
+                assertThat(rankings.penaltyVerifyTop3.map { it.memberId to it.count })
+                    .containsExactly(
+                        1L to 2,
+                        2L to 2,
+                        3L to 1,
+                    )
+
+                assertThat(rankings.habitVerifyTop3).hasSize(3)
+                assertThat(rankings.habitSuccessTop3).hasSize(3)
+                assertThat(rankings.penaltyVerifyTop3).hasSize(3)
+            }
+
+            @Test
+            @DisplayName("그룹에 속하지 않은 회원의 인증 기록은 랭킹에 집계되지 않는다")
+            fun getGroupDetailFinishedIgnoresVerifiesFromOtherMembers() {
+                // given
+                val finishedGroup = createGroup(status = GroupStatus.FINISH)
+                val otherGroup = createGroup()
+
+                // 현재 그룹의 회원
+                val member = Member.create(
+                    nickname = "member1",
+                    username = "user1",
+                    encodedPassword = "password",
+                ).also {
+                    ReflectionTestUtils.setField(it, "id", 1L)
+                }
+
+                val groupMember = GroupMember.create(
+                    finishedGroup,
+                    member,
+                    GroupMemberRole.MEMBER,
+                ).also {
+                    ReflectionTestUtils.setField(it, "id", 1L)
+                }
+
+                // 다른 그룹에 속한 회원
+                val outsider = Member.create(
+                    nickname = "outsider",
+                    username = "outsider",
+                    encodedPassword = "password",
+                ).also {
+                    ReflectionTestUtils.setField(it, "id", 99L)
+                }
+
+                val outsiderGroupMember = GroupMember.create(
+                    otherGroup,
+                    outsider,
+                    GroupMemberRole.MEMBER,
+                ).also {
+                    ReflectionTestUtils.setField(it, "id", 99L)
+                }
+
+                // 외부 회원의 습관 및 인증 기록
+                val outsiderHabit = Habit.create(
+                    groupMember = outsiderGroupMember,
+                    title = "outsider habit",
+                    description = null,
+                    days = 7,
+                )
+
+                val outsiderHabitVerify = HabitVerify.create(
+                    habit = outsiderHabit,
+                    verifyDate = LocalDate.of(2026, 1, 1),
+                    description = null,
+                    imageUrl = null,
+                ).also {
+                    it.approve()
+                }
+
+                val outsiderPenaltyVerify = PenaltyVerify.create(
+                    outsiderGroupMember,
+                    outsiderHabit,
+                ).also {
+                    it.submit(LocalDate.of(2026, 1, 1), null, null)
+                    it.approve()
+                }
+
+                every {
+                    groupRepository.findById(GROUP_ID)
+                } returns Optional.of(finishedGroup)
+
+                every {
+                    groupMemberRepository.existsByGroupIdAndMemberIdAndStatus(
+                        GROUP_ID,
+                        MEMBER_ID,
+                        GroupMemberStatus.ACTIVE,
+                    )
+                } returns true
+
+                every {
+                    groupMemberRepository.countByGroupIdAndStatus(
+                        GROUP_ID,
+                        GroupMemberStatus.ACTIVE,
+                    )
+                } returns 1L
+
+                // 현재 그룹의 회원만 랭킹 대상에 포함
+                every {
+                    groupMemberRepository.findAllByGroupId(GROUP_ID)
+                } returns listOf(groupMember)
+
+                // 외부 회원의 인증 기록이 결과에 섞여 들어오는 상황을 가정
+                every {
+                    habitVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns listOf(outsiderHabitVerify)
+
+                every {
+                    penaltyVerifyRepository.findAllByGroupId(GROUP_ID)
+                } returns listOf(outsiderPenaltyVerify)
+
+                // when
+                val response = groupService.getGroupDetail(GROUP_ID, MEMBER_ID)
+                val rankings = response.rankings!!
+
+                // then
+                assertThat(rankings.habitVerifyTop3.map { it.memberId })
+                    .containsExactly(1L)
+
+                assertThat(rankings.habitSuccessTop3.map { it.memberId })
+                    .containsExactly(1L)
+
+                assertThat(rankings.penaltyVerifyTop3.map { it.memberId })
+                    .containsExactly(1L)
+
+                assertThat(rankings.habitVerifyTop3.map { it.count })
+                    .containsExactly(0)
+
+                assertThat(rankings.habitSuccessTop3.map { it.count })
+                    .containsExactly(0)
+
+                assertThat(rankings.penaltyVerifyTop3.map { it.count })
+                    .containsExactly(0)
             }
         }
 
