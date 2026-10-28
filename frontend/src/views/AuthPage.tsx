@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMember } from '../context/MemberContext';
 import { SocialLoginButtons } from '../components/SocialLoginButtons';
+import { btnForest, inputClass } from '../components/DesignKit';
 
 export const AuthPage: React.FC<{
   initialMode?: 'login' | 'signup';
@@ -68,25 +69,29 @@ export const AuthPage: React.FC<{
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
+      <div className="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-[0_18px_40px_rgba(11,20,17,0.18)]">
         {/* Brand header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-forest-500 text-lime-400 font-extrabold text-2xl shadow-lg shadow-forest-500/20 mb-3">
-            🎯
+        <div className="relative overflow-hidden bg-gradient-to-br from-forest-500 to-forest-800 px-6 pb-8 pt-9 text-center text-white sm:px-8">
+          <div className="relative">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-400 text-2xl shadow-lg shadow-lime-400/25">
+              🎯
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight">내기? 내기!</h1>
+            <p className="mt-1.5 text-[13px] text-white/60">실천하면 습관! 실패하면 내기 한판!</p>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">내기? 내기!</h1>
         </div>
 
+        <div className="p-6 sm:p-8">
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-600 font-semibold text-center">
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-center text-xs font-semibold text-rose-600">
             {error}
           </div>
         )}
 
         {isLogin ? (
           /* Login Form */
-          <form onSubmit={handleLoginSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h2 className="text-left text-xl font-bold text-slate-900">로그인</h2>
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <h2 className="text-left text-xl font-extrabold tracking-tight text-slate-900">로그인</h2>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">아이디</label>
               <input
@@ -95,7 +100,7 @@ export const AuthPage: React.FC<{
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="아이디를 입력하세요"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
@@ -107,14 +112,14 @@ export const AuthPage: React.FC<{
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="비밀번호를 입력하세요"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-lime-400 bg-forest-500 hover:bg-forest-600 shadow-md shadow-forest-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              className={`${btnForest} mt-4 w-full disabled:cursor-wait`}
             >
               {isSubmitting ? '로그인 중...' : '로그인'}
             </button>
@@ -136,8 +141,8 @@ export const AuthPage: React.FC<{
           </form>
         ) : (
           /* Signup Form */
-          <form onSubmit={handleSignupSubmit} className="space-y-3.5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h2 className="text-left text-xl font-bold text-slate-900">회원가입</h2>
+          <form onSubmit={handleSignupSubmit} className="space-y-3.5">
+            <h2 className="text-left text-xl font-extrabold tracking-tight text-slate-900">회원가입</h2>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">닉네임</label>
               <input
@@ -146,7 +151,7 @@ export const AuthPage: React.FC<{
                 value={signupName}
                 onChange={(e) => setSignupName(e.target.value)}
                 placeholder="예: 정우, 멋진도전자"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
@@ -158,7 +163,7 @@ export const AuthPage: React.FC<{
                 value={signupUsername}
                 onChange={(e) => setSignupUsername(e.target.value)}
                 placeholder="영문/숫자 아이디"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
@@ -170,7 +175,7 @@ export const AuthPage: React.FC<{
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
                 placeholder="비밀번호"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
@@ -182,14 +187,14 @@ export const AuthPage: React.FC<{
                 value={signupPasswordConfirm}
                 onChange={(e) => setSignupPasswordConfirm(e.target.value)}
                 placeholder="비밀번호 재입력"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className={inputClass}
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-lime-400 bg-forest-500 hover:bg-forest-600 shadow-md shadow-forest-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              className={`${btnForest} mt-4 w-full disabled:cursor-wait`}
             >
               {isSubmitting ? '가입 중...' : '회원가입'}
             </button>
@@ -211,6 +216,7 @@ export const AuthPage: React.FC<{
         )}
 
         <SocialLoginButtons redirectTo={redirectTo} />
+        </div>
       </div>
     </div>
   );

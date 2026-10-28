@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import PenaltyDetailModal from '@/app/components/modal/PenaltyDetailModal';
+import { Eyebrow, HeroCard, HeroTile, HeroTiles, cardClass } from '@/components/DesignKit';
 import { apiRequest } from '@/lib/memberApi';
 
 interface VerifyCardItem {
@@ -199,231 +201,65 @@ export default function AdminVerificationPage({
   };
 
   return (
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
-          <div className="mb-8 border-b border-slate-100 pb-5">
-            <Link
-                href={`/group/${groupId}`}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 transition mb-3"
-            >
-              <span>←</span> 그룹으로 돌아가기
-            </Link>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">관리자 페이지</h1>
-            <p className="mt-1.5 text-sm text-slate-500">멤버가 올린 인증을 확인하고 승인하거나 반려해요.</p>
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-1 sm:px-6 sm:pb-10 sm:pt-2">
+        <Link
+            href={`/group/${groupId}`}
+            className="mb-3 flex w-fit items-center sm:mb-4 gap-1.5 text-xs font-bold text-slate-500 transition-colors hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>그룹으로 돌아가기</span>
+        </Link>
+
+        <HeroCard>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <Eyebrow>ADMIN</Eyebrow>
+              <h1 className="mt-2 text-[26px] font-extrabold leading-tight tracking-tight sm:text-[28px]">
+                미인증 내역 관리
+              </h1>
+            </div>
           </div>
+          <HeroTiles>
+            <HeroTile label="습관 인증 대기" value={habitVerifyList.length} unit="건" />
+            <HeroTile label="벌칙 인증 대기" value={penaltyList.length} unit="건" />
+          </HeroTiles>
+        </HeroCard>
 
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-5 bg-forest-500 rounded-full"></div>
-                <span className="text-lg font-extrabold text-slate-900">습관 인증 대기</span>
-                <span className="bg-forest-100 text-forest-700 text-xs font-bold px-2 py-0.5 rounded-full ml-1">
-                {habitVerifyList.length}
-              </span>
-              </div>
+        <PendingSection
+            title="습관 인증 대기"
+            accent="forest"
+            imageAlt="습관 인증 사진"
+            emptyText="대기 중인 습관 인증이 없습니다."
+            items={habitVerifyList}
+            selectedIds={selectedHabitVerifyIds}
+            onToggle={(id) =>
+                setSelectedHabitVerifyIds((prev) =>
+                    prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+                )
+            }
+            onToggleAll={toggleSelectAllHabits}
+            onBulk={handleBulkHabitAction}
+            onSingle={handleSingleHabitAction}
+            onOpen={(item) => setSelectedHabitVerify(item)}
+        />
 
-              <div className="flex items-center gap-2">
-                <button
-                    onClick={toggleSelectAllHabits}
-                    className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {selectedHabitVerifyIds.length === habitVerifyList.length && habitVerifyList.length > 0
-                      ? '선택 해제'
-                      : '전체 선택'}
-                </button>
-                <button
-                    onClick={() => handleBulkHabitAction('approve')}
-                    className="rounded-full bg-forest-50 px-4 py-1.5 text-xs font-bold text-forest-700 hover:bg-forest-100 transition-colors cursor-pointer"
-                >
-                  선택 승인
-                </button>
-                <button
-                    onClick={() => handleBulkHabitAction('reject')}
-                    className="rounded-full bg-rose-50 px-4 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
-                >
-                  선택 거절
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-5 overflow-x-auto pb-6 px-1">
-              {habitVerifyList.map((item) => {
-                const isChecked = selectedHabitVerifyIds.includes(item.id);
-                return (
-                    <div
-                        key={item.id}
-                        onClick={() => setSelectedHabitVerify(item)}
-                        className={`relative flex h-[280px] w-48 flex-shrink-0 flex-col justify-between rounded-[24px] bg-white p-4 border transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-                            isChecked ? 'border-forest-400 shadow-md ring-1 ring-forest-400' : 'border-slate-100 shadow-sm'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={() =>
-                                setSelectedHabitVerifyIds((prev) =>
-                                    prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
-                                )
-                            }
-                            className="h-4 w-4 rounded border-slate-300 text-forest-500 focus:ring-forest-400 cursor-pointer"
-                        />
-                        <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
-                      {item.date}
-                    </span>
-                      </div>
-
-                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-forest-50/50 border border-forest-50 overflow-hidden group">
-                        {item.imageUrl ? (
-                            <img
-                                src={item.imageUrl}
-                                alt="습관 인증 사진"
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                        ) : (
-                            <span className="text-xs font-medium text-forest-300">사진 없음</span>
-                        )}
-                      </div>
-
-                      <div className="text-center mb-3">
-                        <div className="truncate text-[13px] font-extrabold text-slate-800 mb-0.5">
-                          {item.habitTitle}
-                        </div>
-                        <div className="text-[11px] font-medium text-slate-400">{item.memberName}</div>
-                      </div>
-
-                      <div className="flex gap-2 pt-3 border-t border-slate-50 mt-auto">
-                        <button
-                            onClick={(e) => handleSingleHabitAction(e, item.id, 'approve')}
-                            className="flex-1 py-1.5 rounded-xl bg-forest-500 text-lime-400 hover:bg-forest-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
-                        >
-                          승인
-                        </button>
-                        <button
-                            onClick={(e) => handleSingleHabitAction(e, item.id, 'reject')}
-                            className="flex-1 py-1.5 rounded-xl bg-white text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-[12px] font-bold transition-all cursor-pointer"
-                        >
-                          거절
-                        </button>
-                      </div>
-                    </div>
-                );
-              })}
-
-              {habitVerifyList.length === 0 && (
-                  <div className="w-full py-16 text-center text-sm font-medium text-slate-400 rounded-3xl border border-dashed border-slate-200">
-                    대기 중인 습관 인증이 없습니다.
-                  </div>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-5 bg-rose-400 rounded-full"></div>
-                <span className="text-lg font-extrabold text-slate-900">벌칙 인증 대기</span>
-                <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5 rounded-full ml-1">
-                {penaltyList.length}
-              </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                    onClick={toggleSelectAllPenalties}
-                    className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  {selectedPenaltyIds.length === penaltyList.length && penaltyList.length > 0 ? '선택 해제' : '전체 선택'}
-                </button>
-                <button
-                    onClick={() => handleBulkPenaltyAction('approve')}
-                    className="rounded-full bg-forest-50 px-4 py-1.5 text-xs font-bold text-forest-700 hover:bg-forest-100 transition-colors cursor-pointer"
-                >
-                  선택 승인
-                </button>
-                <button
-                    onClick={() => handleBulkPenaltyAction('reject')}
-                    className="rounded-full bg-rose-50 px-4 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
-                >
-                  선택 거절
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-5 overflow-x-auto pb-6 px-1">
-              {penaltyList.map((item) => {
-                const isChecked = selectedPenaltyIds.includes(item.id);
-                return (
-                    <div
-                        key={item.id}
-                        onClick={() => setSelectedPenalty(item)}
-                        className={`relative flex h-[280px] w-48 flex-shrink-0 flex-col justify-between rounded-[24px] bg-white p-4 border transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-                            isChecked ? 'border-forest-400 shadow-md ring-1 ring-forest-400' : 'border-slate-100 shadow-sm'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={() =>
-                                setSelectedPenaltyIds((prev) =>
-                                    prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
-                                )
-                            }
-                            className="h-4 w-4 rounded border-slate-300 text-forest-500 focus:ring-forest-400 cursor-pointer"
-                        />
-                        <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
-                      {item.date}
-                    </span>
-                      </div>
-
-                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-forest-50/50 border border-forest-50 overflow-hidden group">
-                        {item.imageUrl ? (
-                            <img
-                                src={item.imageUrl}
-                                alt="인증 사진"
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                        ) : (
-                            <span className="text-xs font-medium text-forest-300">사진 없음</span>
-                        )}
-                      </div>
-
-                      <div className="text-center mb-3">
-                        <div className="truncate text-[13px] font-extrabold text-slate-800 mb-0.5">
-                          {item.habitTitle}
-                        </div>
-                        <div className="text-[11px] font-medium text-slate-400">{item.memberName}</div>
-                      </div>
-
-                      <div className="flex gap-2 pt-3 border-t border-slate-50 mt-auto">
-                        <button
-                            onClick={(e) => handleSinglePenaltyAction(e, item.id, 'approve')}
-                            className="flex-1 py-1.5 rounded-xl bg-forest-500 text-lime-400 hover:bg-forest-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
-                        >
-                          승인
-                        </button>
-                        <button
-                            onClick={(e) => handleSinglePenaltyAction(e, item.id, 'reject')}
-                            className="flex-1 py-1.5 rounded-xl bg-white text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-[12px] font-bold transition-all cursor-pointer"
-                        >
-                          거절
-                        </button>
-                      </div>
-                    </div>
-                );
-              })}
-
-              {penaltyList.length === 0 && (
-                  <div className="w-full py-16 text-center text-sm font-medium text-slate-400 rounded-3xl border border-dashed border-slate-200">
-                    대기 중인 벌칙 인증이 없습니다.
-                  </div>
-              )}
-            </div>
-          </section>
-        </div>
+        <PendingSection
+            title="벌칙 인증 대기"
+            accent="rose"
+            imageAlt="인증 사진"
+            emptyText="대기 중인 벌칙 인증이 없습니다."
+            items={penaltyList}
+            selectedIds={selectedPenaltyIds}
+            onToggle={(id) =>
+                setSelectedPenaltyIds((prev) =>
+                    prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+                )
+            }
+            onToggleAll={toggleSelectAllPenalties}
+            onBulk={handleBulkPenaltyAction}
+            onSingle={handleSinglePenaltyAction}
+            onOpen={(item) => setSelectedPenalty(item)}
+        />
 
         {selectedPenalty && (
             <PenaltyDetailModal
@@ -453,5 +289,143 @@ export default function AdminVerificationPage({
             />
         )}
       </main>
+  );
+}
+
+interface PendingSectionProps<T extends HabitVerifyCardItem> {
+  title: string;
+  // 제목 옆 막대와 건수 알약 색: 습관은 숲색, 벌칙은 장미색
+  accent: 'forest' | 'rose';
+  imageAlt: string;
+  emptyText: string;
+  items: T[];
+  selectedIds: number[];
+  onToggle: (id: number) => void;
+  onToggleAll: () => void;
+  onBulk: (action: 'approve' | 'reject') => void;
+  onSingle: (event: React.MouseEvent | null, id: number, action: 'approve' | 'reject') => void;
+  onOpen: (item: T) => void;
+}
+
+// 대기 중인 인증을 카드로 보여 주고 선택·승인·거절하는 영역. 습관 인증과 벌칙 인증이 같이 쓴다.
+function PendingSection<T extends HabitVerifyCardItem>({
+                                                         title,
+                                                         accent,
+                                                         imageAlt,
+                                                         emptyText,
+                                                         items,
+                                                         selectedIds,
+                                                         onToggle,
+                                                         onToggleAll,
+                                                         onBulk,
+                                                         onSingle,
+                                                         onOpen,
+                                                       }: PendingSectionProps<T>) {
+  const allSelected = selectedIds.length === items.length && items.length > 0;
+
+  return (
+      <section className={`mt-6 ${cardClass}`}>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className={`h-5 w-1.5 rounded-full ${accent === 'rose' ? 'bg-rose-400' : 'bg-forest-500'}`} />
+            <h2 className="text-[17px] font-extrabold tracking-tight text-slate-900">{title}</h2>
+            <span
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
+                    accent === 'rose' ? 'bg-rose-50 text-rose-600' : 'bg-lime-50 text-forest-500'
+                }`}
+            >
+              {items.length}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+                onClick={onToggleAll}
+                className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+            >
+              {allSelected ? '선택 해제' : '전체 선택'}
+            </button>
+            <button
+                onClick={() => onBulk('approve')}
+                className="rounded-full bg-lime-50 px-3.5 py-1.5 text-xs font-extrabold text-forest-500 transition-colors hover:bg-lime-100 cursor-pointer"
+            >
+              선택 승인
+            </button>
+            <button
+                onClick={() => onBulk('reject')}
+                className="rounded-full bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-100 cursor-pointer"
+            >
+              선택 거절
+            </button>
+          </div>
+        </div>
+
+        <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-4 pt-1">
+          {items.map((item) => {
+            const isChecked = selectedIds.includes(item.id);
+            return (
+                <div
+                    key={item.id}
+                    onClick={() => onOpen(item)}
+                    className={`relative flex h-[286px] w-48 flex-shrink-0 cursor-pointer flex-col rounded-3xl border bg-white p-3.5 transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_14px_30px_rgba(14,21,18,0.1)] ${
+                        isChecked ? 'border-forest-500 shadow-[0_0_0_2px_rgba(15,61,46,0.12)]' : 'border-slate-200'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <input
+                        type="checkbox"
+                        checked={isChecked}
+                        aria-label="선택"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => onToggle(item.id)}
+                        className="h-[18px] w-[18px] cursor-pointer rounded border-slate-300 accent-forest-500"
+                    />
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-400">
+                      {item.date}
+                    </span>
+                  </div>
+
+                  <div className="group relative my-3 flex h-28 w-full items-center justify-center overflow-hidden rounded-[18px] bg-forest-50/60">
+                    {item.imageUrl ? (
+                        <img
+                            src={item.imageUrl}
+                            alt={imageAlt}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                    ) : (
+                        <span className="text-xs font-medium text-forest-300">사진 없음</span>
+                    )}
+                  </div>
+
+                  <div className="text-center">
+                    <div className="truncate text-[13px] font-extrabold text-slate-900">{item.habitTitle}</div>
+                    <div className="mt-0.5 text-[11px] font-semibold text-slate-400">{item.memberName}</div>
+                  </div>
+
+                  <div className="mt-auto flex gap-2 border-t border-slate-100 pt-3">
+                    <button
+                        onClick={(e) => onSingle(e, item.id, 'approve')}
+                        className="flex-1 cursor-pointer rounded-xl bg-forest-500 py-2 text-xs font-extrabold text-lime-400 transition-colors hover:bg-forest-800"
+                    >
+                      승인
+                    </button>
+                    <button
+                        onClick={(e) => onSingle(e, item.id, 'reject')}
+                        className="flex-1 cursor-pointer rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-500 transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      거절
+                    </button>
+                  </div>
+                </div>
+            );
+          })}
+
+          {items.length === 0 && (
+              <div className="w-full rounded-[22px] border border-dashed border-slate-200 py-12 text-center text-sm font-medium text-slate-400">
+                {emptyText}
+              </div>
+          )}
+        </div>
+      </section>
   );
 }

@@ -273,9 +273,9 @@ export function MemberPage({ groupId, memberId }: Props) {
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8 pt-1 sm:pb-10 sm:pt-2">
             {/* Top Nav */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex h-4 items-center justify-between mb-3 sm:mb-4">
                 <Link
                     href={`/group/${groupId}`}
                     className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"

@@ -14,6 +14,7 @@ import { memberHandle } from '@/lib/memberDisplay';
 import type { MemberProvider } from '@/lib/memberApi';
 import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+import { DarkPill, HeroCard, HeroTile, HeroTiles, btnGhost, btnLime } from '@/components/DesignKit';
 
 interface RankingItem {
     rank: number;
@@ -194,9 +195,9 @@ export default function GroupDetailPage({
     const isRoomFinished = group.status === 'FINISH' || (group.deadline && new Date(group.deadline) < new Date());
 
     return (
-        <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 md:py-8">
+        <main className="mx-auto max-w-5xl px-4 pb-8 pt-1 sm:px-6 sm:pb-10 sm:pt-2">
             {/* Top Nav */}
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between sm:mb-4">
                 <Link
                     href="/main"
                     className="flex items-center gap-1.5 text-xs font-bold text-slate-500 transition-colors hover:text-slate-900"
@@ -206,83 +207,61 @@ export default function GroupDetailPage({
                 </Link>
             </div>
 
-            {/* 그룹 정보와 인증 사진/멤버 탭을 경계 없이 한 카드로 통합 */}
-            <section className="rounded-[2rem] border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60">
-              <div className="p-6 sm:p-8">
+            {/* 방 정보: 숲색 히어로 */}
+            <HeroCard>
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-                                {group.title}
-                            </h1>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <DarkPill tone={isRoomFinished ? 'neutral' : 'lime'}>
+                                {isRoomFinished ? '완료' : '● 진행 중'}
+                            </DarkPill>
                             {currentRole === 'OWNER' && (
-                                <span className="text-2xl" role="img" aria-label="방장" title="방장">
-                                    👑
-                                </span>
+                                <span className="text-xl" role="img" aria-label="방장" title="방장">👑</span>
                             )}
                         </div>
-                        <p className="max-w-2xl text-sm leading-6 text-slate-500">
+                        <h1 className="mt-3 text-[26px] font-extrabold leading-tight tracking-tight sm:text-[28px]">
+                            {group.title}
+                        </h1>
+                        <p className="mt-2 max-w-2xl text-[13px] leading-6 text-white/60">
                             {group.description || '함께 목표를 실천해보세요!'}
                         </p>
                     </div>
 
-                    <button
-                        onClick={handleLeaveGroup}
-                        className="shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition cursor-pointer"
-                    >
-                        방 탈퇴
-                    </button>
-                </div>
-
-                {/* 핵심 정보 칸 */}
-                <div className="mt-5 flex flex-wrap gap-3">
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p className="text-[11px] font-bold text-slate-500">👥 참여 인원</p>
-                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
-                            {group.currentMemberCount} / {group.memberLimit}명
-                        </p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p className="text-[11px] font-bold text-slate-500">📅 마감 기한</p>
-                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
-                            {group.deadline ? `${group.deadline}까지` : '상시 진행'}
-                        </p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p className="text-[11px] font-bold text-slate-500">벌칙</p>
-                        <p className="mt-0.5 text-lg font-extrabold text-slate-900">
-                            {group.penalty || '벌칙 없음'}
-                        </p>
+                    <div className="flex shrink-0 items-center gap-2">
+                        {currentRole === 'OWNER' && (
+                            <button onClick={() => setIsEditModalOpen(true)} className={btnGhost}>
+                                ⚙ 방 설정
+                            </button>
+                        )}
+                        <button
+                            onClick={handleLeaveGroup}
+                            className="inline-flex items-center rounded-xl bg-rose-400/15 px-3.5 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/25 cursor-pointer"
+                        >
+                            방 탈퇴
+                        </button>
                     </div>
                 </div>
 
-                {/* 컨트롤 버튼부 */}
-                <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                    <button
-                        onClick={handleCopyInvite}
-                        className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-extrabold text-white shadow-md shadow-slate-900/20 hover:bg-slate-800 transition cursor-pointer"
-                    >
+                <HeroTiles>
+                    <HeroTile label="👥" title="참여 인원" compact value={group.currentMemberCount} unit={` / ${group.memberLimit}명`} />
+                    <HeroTile label="📅" title="마감 기한" compact value={group.deadline ? `${group.deadline}까지` : '상시 진행'} />
+                    <HeroTile label="🎁" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
+                </HeroTiles>
+
+                <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
+                    <button onClick={handleCopyInvite} className={btnLime}>
                         초대 코드 복사
                     </button>
-
                     {currentRole === 'OWNER' && (
-                        <>
-                            <button
-                                onClick={() => setIsEditModalOpen(true)}
-                                className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-                            >
-                                방 설정
-                            </button>
-                            <Link
-                                href={`/admin/group/${rawId}/verification`}
-                                className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition text-center"
-                            >
-                                미인증 내역 관리
-                            </Link>
-                        </>
+                        <Link href={`/admin/group/${rawId}/verification`} className={btnGhost}>
+                            미인증 내역 관리
+                        </Link>
                     )}
                 </div>
-              </div>
+            </HeroCard>
+
+            {/* 인증 사진 / 멤버 목록 */}
+            <section className="mt-6 rounded-[28px] bg-white shadow-[0_10px_30px_rgba(14,21,18,0.07),0_1px_2px_rgba(14,21,18,0.05)]">
 
                 {group.status === 'FINISH' && group.rankings && (
                     <div className="-mt-4 px-6 pb-6 sm:px-8">
