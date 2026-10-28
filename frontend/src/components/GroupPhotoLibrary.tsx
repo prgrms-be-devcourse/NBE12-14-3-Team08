@@ -776,20 +776,12 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
 
   return (
     <section aria-label="인증 사진">
-      {/* 아이콘 탭과 갤러리가 한 카드로 이어진다. 윗줄: 왼쪽 년/월/주, 가운데 탭, 오른쪽 멤버 필터 */}
+      {/* 아이콘 탭과 갤러리가 한 카드로 이어진다. 윗줄: 가운데 탭, 오른쪽 멤버 필터 (년/월/주는 갤러리 왼쪽 위에 사진과 겹쳐 놓인다) */}
       <div className="@container">
         <GroupContentBar
           view={view}
           onViewChange={onViewChange}
           memberCount={memberCount}
-          left={
-            <p
-              aria-live="polite"
-              className="min-h-7 text-lg font-extrabold tabular-nums leading-7 tracking-tight text-slate-900 @max-[400px]:text-base"
-            >
-              {periodLabel && current !== null ? periodLabel : ''}
-            </p>
-          }
           right={<MemberFilterDropdown members={members} value={filter} onChange={selectFilter} />}
         />
 
@@ -804,6 +796,16 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
         >
           <div ref={contentRef}>{body}</div>
         </div>
+
+        {/* 지금 보는 년/월/주. 사진 위에 겹쳐 왼쪽 위에 떠 있고 클릭은 사진으로 통과시킨다 */}
+        <p
+          aria-live="polite"
+          className={`pointer-events-none absolute left-3 top-3 z-[6] rounded-full border border-white/80 bg-white/90 px-3 py-1 text-sm font-extrabold tabular-nums tracking-tight text-slate-900 shadow-lg backdrop-blur-xl transition-opacity ${
+            periodLabel && current !== null ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {periodLabel && current !== null ? periodLabel : ''}
+        </p>
 
         <div className="absolute bottom-3.5 left-1/2 z-[6] flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/80 bg-white/70 p-1.5 shadow-xl backdrop-blur-xl">
           <button
