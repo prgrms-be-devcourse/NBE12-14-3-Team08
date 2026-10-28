@@ -213,7 +213,7 @@ export default function PenaltyPlaygroundTestPage() {
             imageUrl="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=60"
             description="알고리즘 문제 풀이를 깜빡 놓쳐서 약속대로 스타벅스 아메리카노 테이크아웃해서 인증합니다! ㅠㅠ"
             verifyDate="2026.09.23"
-            statusText="미인증 대기"
+            penaltyText="스타벅스 아메리카노 사기"
         />
       </div>
   );

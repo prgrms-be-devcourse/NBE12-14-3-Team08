@@ -13,7 +13,8 @@ interface EditRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
   groupId: number;
-  initialData: UpdateGroupRequest;
+  // 비밀번호는 방 정보로 받지 않고 모달 안에서 빈 값으로 시작한다
+  initialData: Omit<UpdateGroupRequest, 'password'>;
   onSuccess?: () => void;
 }
 
