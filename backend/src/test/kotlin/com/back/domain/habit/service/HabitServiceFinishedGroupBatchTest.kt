@@ -30,25 +30,14 @@ import java.util.UUID
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class HabitServiceFinishedGroupBatchTest {
-
-    @Autowired
-    private lateinit var habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class HabitServiceFinishedGroupBatchTest @Autowired constructor(
+    private val habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     // 그룹 생성일 14일 전(오늘과 같은 요일), 가입일/습관 생성일 10일 전, 인증 기록 없음
     // -> 이번 주 판정 시 주 3회 미달로 실패해야 하는 습관을 만든다.

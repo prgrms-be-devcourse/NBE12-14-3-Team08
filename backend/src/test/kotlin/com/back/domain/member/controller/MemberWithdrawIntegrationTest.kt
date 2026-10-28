@@ -5,6 +5,7 @@ import com.back.domain.group.repository.GroupRepository
 import com.back.domain.groupMember.entity.GroupMemberStatus
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.member.entity.MemberStatus
+import com.sun.tools.javac.parser.Tokens
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -13,17 +14,15 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import sun.security.jgss.GSSUtil.login
 import java.time.LocalDate
 
 // 회원 탈퇴 DELETE /api/members/me 통합 테스트.
 // 진행 중인 방이 있으면 막고, 없으면 탈퇴시키면서 종료된 방의 멤버 기록은 LEFT로 남기는지, 탈퇴 후 토큰이 모두 거절되는지 확인한다.
-class MemberWithdrawIntegrationTest : MemberApiTestSupport() {
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
+class MemberWithdrawIntegrationTest @Autowired constructor(
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository
+) : MemberApiTestSupport() {
 
     private var memberId: Long = 0L
     private lateinit var tokens: Tokens

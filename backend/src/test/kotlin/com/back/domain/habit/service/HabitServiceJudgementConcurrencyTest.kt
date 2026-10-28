@@ -29,28 +29,15 @@ import java.util.UUID
 // 실제로 커밋되는 트랜잭션이 필요해서 @Transactional 없이 실행하고, 끝나면 만든 데이터를 직접 지운다.
 @SpringBootTest
 @ActiveProfiles("test")
-class HabitServiceJudgementConcurrencyTest {
-
-    @Autowired
-    private lateinit var habitService: HabitService
-
-    @Autowired
-    private lateinit var habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var jdbc: JdbcTemplate
+class HabitServiceJudgementConcurrencyTest @Autowired constructor(
+    private val habitService: HabitService,
+    private val habitWeeklyCheckScheduler: HabitWeeklyCheckScheduler,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val jdbc: JdbcTemplate
+) {
 
     private class OverdueGroup(val groupId: Long, val ownerId: Long, val habitCount: Int)
 

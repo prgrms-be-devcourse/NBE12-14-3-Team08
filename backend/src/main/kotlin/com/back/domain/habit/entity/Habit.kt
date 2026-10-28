@@ -51,7 +51,7 @@ class Habit private constructor(
     }
 
     companion object {
-        @JvmStatic
+
         fun create(
             groupMember: GroupMember,
             title: String,

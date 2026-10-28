@@ -22,13 +22,13 @@ import org.springframework.dao.DataIntegrityViolationException
 // DB 유니크 제약(group_member_id, habit_id)이 이 규칙을 지키므로, 엔티티를 Kotlin으로 바꾸면서 제약이 빠지지 않는지 고정한다.
 // (테스트 DB 스키마는 엔티티에서 만들어져서, 제약이 빠져도 다른 테스트는 조용히 통과한다)
 @DataJpaTest
-class PenaltyVerifyOnePerHabitTest {
-
-    @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var memberRepository: MemberRepository
+class PenaltyVerifyOnePerHabitTest @Autowired constructor(
+    private val penaltyVerifyRepository: PenaltyVerifyRepository,
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository
+) {
 
     @Test
     @DisplayName("같은 멤버의 같은 습관에 벌칙 인증을 두 번 만들 수 없다")

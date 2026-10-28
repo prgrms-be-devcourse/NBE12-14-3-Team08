@@ -127,7 +127,7 @@ class PenaltyVerify private constructor(
     companion object {
         // 습관 이름과 방의 벌칙 문구는 실패 시점 값으로 남긴다 (이후 바뀌어도 이 벌칙 기록은 그대로)
         // @JvmStatic: Java 코드(TestDataInit, SettlementServiceTest)가 PenaltyVerify.create(...)로 부른다
-        @JvmStatic
+
         fun create(groupMember: GroupMember, habit: Habit): PenaltyVerify =
             PenaltyVerify(
                 groupMember = groupMember,

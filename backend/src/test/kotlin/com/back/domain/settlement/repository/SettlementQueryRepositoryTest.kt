@@ -29,28 +29,15 @@ import java.util.UUID
 // 결산이 쓰는 그룹 단위 조회 쿼리를 PostgreSQL에서 확인한다. (테스트마다 롤백)
 // 결산은 이 결과로 인증자와 닉네임을 바로 읽으므로, 연관 엔티티가 한 번에 채워져 있어야 N+1이 생기지 않는다.
 @DataJpaTest
-class SettlementQueryRepositoryTest {
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var habitVerifyRepository: HabitVerifyRepository
-
-    @Autowired
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
+class SettlementQueryRepositoryTest @Autowired constructor(
+    private val groupRepository: GroupRepository,
+    private val memberRepository: MemberRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository,
+    private val entityManager: EntityManager
+) {
 
     private class Participant(val groupMember: GroupMember, val habit: Habit)
 

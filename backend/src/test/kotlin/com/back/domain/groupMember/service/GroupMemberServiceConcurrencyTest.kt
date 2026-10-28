@@ -22,17 +22,17 @@ import java.time.LocalDate
 import java.util.UUID
 
 @SpringBootTest
-class GroupMemberServiceConcurrencyTest {
-
-    @Autowired private lateinit var groupMemberService: GroupMemberService
-    @Autowired private lateinit var groupService: GroupService
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var passwordEncoder: PasswordEncoder
-    @Autowired private lateinit var habitRepository: HabitRepository
-    @Autowired private lateinit var habitVerifyRepository: HabitVerifyRepository
-    @Autowired private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class GroupMemberServiceConcurrencyTest @Autowired constructor(
+    private val groupMemberService: GroupMemberService,
+    private val groupService: GroupService,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val passwordEncoder: PasswordEncoder,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     private var groupId: Long = 0
     private lateinit var inviteCode: String

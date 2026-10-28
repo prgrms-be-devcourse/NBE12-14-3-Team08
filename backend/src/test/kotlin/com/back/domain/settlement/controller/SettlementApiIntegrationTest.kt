@@ -47,40 +47,19 @@ import java.util.UUID
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class SettlementApiIntegrationTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
-
-    @Autowired
-    private lateinit var jdbc: JdbcTemplate
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
-
-    @Autowired
-    private lateinit var groupMemberRepository: GroupMemberRepository
-
-    @Autowired
-    private lateinit var habitRepository: HabitRepository
-
-    @Autowired
-    private lateinit var habitVerifyRepository: HabitVerifyRepository
-
-    @Autowired
-    private lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
+class SettlementApiIntegrationTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val entityManager: EntityManager,
+    private val jdbc: JdbcTemplate,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository,
+    private val authTokenService: AuthTokenService
+) {
 
     companion object {
         // 그룹을 14일 전에 만든 것으로 되돌린다. 이 날이 마감일 인증을 세는 시작일이다.

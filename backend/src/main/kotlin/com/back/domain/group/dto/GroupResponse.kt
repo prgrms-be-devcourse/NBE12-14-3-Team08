@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 
 interface GroupResponse {
 
-    @JvmRecord
+     
     data class Detail(
         val id: Long?,
         val title: String,
@@ -27,7 +27,7 @@ interface GroupResponse {
     ) {
         companion object {
 
-            @JvmStatic
+
             fun from(
                 group: Group,
                 baseInviteUrl: String,
@@ -71,7 +71,7 @@ interface GroupResponse {
         }
     }
 
-    @JvmRecord
+     
     data class Simple(
         val id: Long?,
         val title: String,
@@ -82,14 +82,14 @@ interface GroupResponse {
         val role: String
     )
 
-    @JvmRecord
+     
     data class Rankings(
         val habitVerifyTop3: List<Ranking>,
         val penaltyVerifyTop3: List<Ranking>,
         val habitSuccessTop3: List<Ranking>
     )
 
-    @JvmRecord
+     
     data class Ranking(
         val rank: Int,
         val memberId: Long,

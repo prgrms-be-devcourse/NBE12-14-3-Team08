@@ -7,7 +7,7 @@ data class LoginResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun of(accessToken: String, refreshToken: String): LoginResponse =
             LoginResponse(accessToken, refreshToken, "Bearer")
     }

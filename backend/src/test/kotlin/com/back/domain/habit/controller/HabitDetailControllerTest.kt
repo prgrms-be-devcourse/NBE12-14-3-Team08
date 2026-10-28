@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jsonMapper
 import java.time.LocalDate
 
 // 습관 상세 조회(GET /api/habits/{id})의 접근 권한을 확인한다. (Testcontainers PostgreSQL, 테스트 종료 시 롤백)
@@ -26,16 +27,11 @@ import java.time.LocalDate
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class HabitDetailControllerTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
+class HabitDetailControllerTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService
+) {
 
     private lateinit var ownerToken: String
     private lateinit var memberToken: String

@@ -31,14 +31,14 @@ import kotlin.jvm.optionals.getOrNull
 //    (언젠가 Spring이 바뀌어 이 테스트가 실패하면 findByIdOrNull로 바꿔도 된다는 신호)
 // 서비스 단위 테스트는 레포지토리를 목으로 바꾸기 때문에, 실제 쿼리는 여기서만 확인된다.
 @DataJpaTest
-class PenaltyVerifyFindByIdEntityGraphTest {
-
-    @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var memberRepository: MemberRepository
-    @Autowired lateinit var entityManager: EntityManager
+class PenaltyVerifyFindByIdEntityGraphTest @Autowired constructor(
+    private val penaltyVerifyRepository: PenaltyVerifyRepository,
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val entityManager: EntityManager
+) {
 
     private val statistics
         get() = entityManager.entityManagerFactory.unwrap(SessionFactory::class.java).statistics

@@ -13,10 +13,9 @@ import org.springframework.dao.DataIntegrityViolationException
 
 // Testcontainers PostgreSQL에서 MemberRepository의 조회 쿼리와 유니크 제약을 검증한다. (테스트마다 롤백)
 @DataJpaTest
-class MemberRepositoryTest {
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
+class MemberRepositoryTest @Autowired constructor(
+    private val memberRepository: MemberRepository
+) {
 
     private fun save(username: String, refreshToken: String? = null): Member {
         val member = Member.create("닉네임", username, "encoded-password")

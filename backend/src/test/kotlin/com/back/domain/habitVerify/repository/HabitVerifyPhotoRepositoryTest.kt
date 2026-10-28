@@ -28,14 +28,14 @@ import java.util.UUID
 // 그룹 인증 사진 쿼리(findPhotosByGroupId)를 PostgreSQL에서 확인한다. (테스트마다 롤백)
 // 서비스는 이 결과를 그대로 자르기만 하므로, 어떤 인증이 어떤 순서로 나오는지는 여기서 고정한다.
 @DataJpaTest
-class HabitVerifyPhotoRepositoryTest {
-
-    @Autowired private lateinit var habitVerifyRepository: HabitVerifyRepository
-    @Autowired private lateinit var habitRepository: HabitRepository
-    @Autowired private lateinit var groupRepository: GroupRepository
-    @Autowired private lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired private lateinit var memberRepository: MemberRepository
-    @Autowired private lateinit var entityManager: EntityManager
+class HabitVerifyPhotoRepositoryTest @Autowired constructor(
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val habitRepository: HabitRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val memberRepository: MemberRepository,
+    private val entityManager: EntityManager
+) {
 
     private class Participant(val member: Member, val habit: Habit)
 

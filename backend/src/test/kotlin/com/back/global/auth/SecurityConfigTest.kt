@@ -27,10 +27,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class SecurityConfigTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
+class SecurityConfigTest @Autowired constructor(
+    private val mockMvc: MockMvc
+) {
 
     @ParameterizedTest(name = "POST {0}은 토큰 없이 컨트롤러까지 도달한다")
     @ValueSource(strings = ["/api/members", "/api/auth/login", "/api/auth/refresh"])

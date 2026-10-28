@@ -31,19 +31,12 @@ import javax.crypto.SecretKey
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class AuthenticationFailureStatusTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var groupRepository: GroupRepository
+class AuthenticationFailureStatusTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val authTokenService: AuthTokenService,
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository
+) {
 
     @Value("\${jwt.secret}")
     private lateinit var jwtSecret: String

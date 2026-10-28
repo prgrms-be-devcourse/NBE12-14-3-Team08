@@ -36,16 +36,11 @@ import java.time.LocalDate
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class HabitApiContractTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var jsonMapper: JsonMapper
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
+class HabitApiContractTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val jsonMapper: JsonMapper,
+    private val authTokenService: AuthTokenService
+) {
 
     private var groupId: Long = 0L
     private lateinit var ownerToken: String // 방장 (습관 없음)

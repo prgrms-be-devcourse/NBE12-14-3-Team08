@@ -26,14 +26,14 @@ import kotlin.jvm.optionals.getOrNull
 // 시드를 바꾸면 이 테스트의 숫자도 함께 바꾼다.
 // 스프링 빈으로 띄우지 않고 직접 만들어서, 다른 @DataJpaTest와 같은 컨텍스트(DB 커넥션)를 쓴다.
 @DataJpaTest
-class TestDataInitTest {
-
-    @Autowired lateinit var memberRepository: MemberRepository
-    @Autowired lateinit var groupRepository: GroupRepository
-    @Autowired lateinit var groupMemberRepository: GroupMemberRepository
-    @Autowired lateinit var habitRepository: HabitRepository
-    @Autowired lateinit var habitVerifyRepository: HabitVerifyRepository
-    @Autowired lateinit var penaltyVerifyRepository: PenaltyVerifyRepository
+class TestDataInitTest @Autowired constructor(
+    private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val habitRepository: HabitRepository,
+    private val habitVerifyRepository: HabitVerifyRepository,
+    private val penaltyVerifyRepository: PenaltyVerifyRepository
+) {
 
     private lateinit var testDataInit: TestDataInit
 

@@ -27,16 +27,11 @@ import org.springframework.transaction.annotation.Transactional
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class GroupMemberControllerIntegrationTest {
-
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    private lateinit var authTokenService: AuthTokenService
+class GroupMemberControllerIntegrationTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val memberRepository: MemberRepository,
+    private val authTokenService: AuthTokenService
+) {
 
     @Nested
     @DisplayName("초대 코드로 그룹 조회")
