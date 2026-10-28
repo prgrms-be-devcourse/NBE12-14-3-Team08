@@ -73,11 +73,8 @@ export const AuthPage: React.FC<{
         {/* Brand header */}
         <div className="relative overflow-hidden bg-gradient-to-br from-forest-500 to-forest-800 px-6 pb-8 pt-9 text-center text-white sm:px-8">
           <div className="relative">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-400 text-2xl shadow-lg shadow-lime-400/25">
-              🎯
-            </div>
+            <img src="/logo.png" alt="내기? 내기! 로고" className="mx-auto mb-3 h-16 w-16 rounded-2xl shadow-lg shadow-black/20" />
             <h1 className="text-2xl font-extrabold tracking-tight">내기? 내기!</h1>
-            <p className="mt-1.5 text-[13px] text-white/60">실천하면 습관! 실패하면 내기 한판!</p>
           </div>
         </div>
 
