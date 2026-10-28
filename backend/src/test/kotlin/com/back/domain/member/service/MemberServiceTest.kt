@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.NullAndEmptySource
 import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -138,6 +139,20 @@ class MemberServiceTest {
 
             verify(exactly = 0) { memberRepository.save(any<Member>()) }
             verify(exactly = 0) { passwordEncoder.encode(any()) }
+        }
+
+        @Test
+        @DisplayName("저장할 때 아이디 유니크 제약을 위반하면(동시 가입에서 진 요청) 중복과 같은 IllegalStateException이고 토큰은 만들지 않는다")
+        fun 동시_가입에서_유니크_위반() {
+            every { memberRepository.existsByUsername("user-1") } returns false
+            every { passwordEncoder.encode("password1234") } returns "encoded-password"
+            every { memberRepository.save(any<Member>()) } throws DataIntegrityViolationException("uk_member_username")
+
+            assertThatThrownBy { memberService.join(CreateMemberRequest("닉네임", "user-1", "password1234")) }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessage("이미 사용 중인 아이디입니다.")
+
+            verify(exactly = 0) { authTokenService.createRefreshToken(any()) }
         }
 
         @Test
