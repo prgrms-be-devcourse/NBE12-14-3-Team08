@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-
+import { Footer } from "@/components/Footer";
 import type { Metadata } from 'next';
 import './globals.css';
 import { MemberProvider } from '../context/MemberContext';
@@ -24,9 +24,15 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="bg-slate-50 text-slate-900 antialiased selection:bg-emerald-200 selection:text-emerald-900">
-        <MemberProvider><Header />{children}</MemberProvider>
-      </body>
+      <MemberProvider>
+          <body className="flex flex-col min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+          <Header />
+          <main className="flex-grow flex-1">
+              {children}
+          </main>
+          <Footer />
+          </body>
+      </MemberProvider>
     </html>
   );
 }

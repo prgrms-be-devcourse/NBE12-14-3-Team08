@@ -237,10 +237,10 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
             ) : (
               <button
                 type="button"
-                onClick={() => router.push('/main')}
+                onClick={() => router.push(`/group/${groupId}`)}
                 className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-600"
               >
-                방 목록으로
+                방으로 이동
               </button>
             )}
           </footer>
