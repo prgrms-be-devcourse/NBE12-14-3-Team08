@@ -22,7 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import kotlin.jvm.optionals.getOrNull
 
 // TestDataInit은 local 프로필에서만 실행돼서 다른 테스트로는 확인되지 않는다.
-// 시드 데이터(그룹 3, 회원 12, 습관 23, 습관 인증 대기 5·승인 36, 벌칙 대기 11)를 만드는지 고정한다.
+// 시드 데이터(그룹 3, 회원 12, 습관 23, 습관 인증 대기 5·승인 203, 벌칙 대기 11)를 만드는지 고정한다.
+// 승인 203건은 완료된 방(독서 챌린지)의 36건과 모각코 챌린지 1기의 갤러리 예시 사진 167건(최근 35일)이다.
 // 시드를 바꾸면 이 테스트의 숫자도 함께 바꾼다.
 // 스프링 빈으로 띄우지 않고 직접 만들어서, 다른 @DataJpaTest와 같은 컨텍스트(DB 커넥션)를 쓴다.
 @DataJpaTest
@@ -74,7 +75,7 @@ class TestDataInitTest @Autowired constructor(
         assertThat(after.habits - before.habits).isEqualTo(23)
         assertThat(after.failedHabits - before.failedHabits).isEqualTo(11)
         assertThat(after.pendingHabitVerifies - before.pendingHabitVerifies).isEqualTo(5)
-        assertThat(after.approvedHabitVerifies - before.approvedHabitVerifies).isEqualTo(36)
+        assertThat(after.approvedHabitVerifies - before.approvedHabitVerifies).isEqualTo(203)
         assertThat(after.pendingPenalties - before.pendingPenalties).isEqualTo(11)
     }
 
