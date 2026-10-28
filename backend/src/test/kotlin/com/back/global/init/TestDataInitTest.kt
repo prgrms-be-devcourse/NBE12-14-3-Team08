@@ -1,6 +1,8 @@
 package com.back.global.init
 
+import com.back.domain.group.entity.GroupStatus
 import com.back.domain.group.repository.GroupRepository
+import com.back.domain.groupMember.entity.GroupMemberRole
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
@@ -19,11 +21,13 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.time.LocalDate
 import kotlin.jvm.optionals.getOrNull
 
 // TestDataInit은 local 프로필에서만 실행돼서 다른 테스트로는 확인되지 않는다.
-// 시드 데이터(그룹 3, 회원 12, 습관 23, 습관 인증 대기 5·승인 203, 벌칙 대기 11)를 만드는지 고정한다.
-// 승인 203건은 완료된 방(독서 챌린지)의 36건과 모각코 챌린지 1기의 갤러리 예시 사진 167건(최근 35일)이다.
+// 시드 데이터(그룹 4, 회원 12, 습관 28, 습관 인증 대기 5·승인 245, 벌칙 대기 11)를 만드는지 고정한다.
+// 승인 245건은 완료된 방(독서 챌린지)의 36건, 모각코 챌린지 1기의 갤러리 예시 사진 167건(최근 35일),
+// 방장asd가 방장인 완료된 방(새벽 러닝 챌린지)의 42건이다.
 // 시드를 바꾸면 이 테스트의 숫자도 함께 바꾼다.
 // 스프링 빈으로 띄우지 않고 직접 만들어서, 다른 @DataJpaTest와 같은 컨텍스트(DB 커넥션)를 쓴다.
 @DataJpaTest
@@ -59,7 +63,7 @@ class TestDataInitTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("그룹 3개와 회원·습관·습관 인증(대기·승인)·벌칙 대기 데이터를 만든다")
+    @DisplayName("그룹 4개와 회원·습관·습관 인증(대기·승인)·벌칙 대기 데이터를 만든다")
     fun 시드_데이터를_만든다() {
         val before = counts()
 
@@ -69,13 +73,14 @@ class TestDataInitTest @Autowired constructor(
         assertThat(groupRepository.existsByInviteCode("MOGAK100")).isTrue()
         assertThat(groupRepository.existsByInviteCode("FITNESS200")).isTrue()
         assertThat(groupRepository.existsByInviteCode("FINISH300")).isTrue()
-        assertThat(after.groups - before.groups).isEqualTo(3)
+        assertThat(groupRepository.existsByInviteCode("DONE400")).isTrue()
+        assertThat(after.groups - before.groups).isEqualTo(4)
         assertThat(after.members - before.members).isEqualTo(12)
-        assertThat(after.groupMembers - before.groupMembers).isEqualTo(12)
-        assertThat(after.habits - before.habits).isEqualTo(23)
-        assertThat(after.failedHabits - before.failedHabits).isEqualTo(11)
+        assertThat(after.groupMembers - before.groupMembers).isEqualTo(16)
+        assertThat(after.habits - before.habits).isEqualTo(28)
+        assertThat(after.failedHabits - before.failedHabits).isEqualTo(12)
         assertThat(after.pendingHabitVerifies - before.pendingHabitVerifies).isEqualTo(5)
-        assertThat(after.approvedHabitVerifies - before.approvedHabitVerifies).isEqualTo(203)
+        assertThat(after.approvedHabitVerifies - before.approvedHabitVerifies).isEqualTo(245)
         assertThat(after.pendingPenalties - before.pendingPenalties).isEqualTo(11)
     }
 
@@ -88,6 +93,28 @@ class TestDataInitTest @Autowired constructor(
         assertThat(owner.nickname).isEqualTo("방장asd")
         assertThat(owner.password).isEqualTo("encoded-1234")
         assertThat(owner.refreshToken).isEqualTo("refresh-token-${owner.id}")
+    }
+
+    @Test
+    @DisplayName("방장asd가 방장인 완료된 방에는 마감일 이전의 승인·거절 인증과 승인된 벌칙이 들어간다")
+    fun 방장이_방장인_완료된_방을_만든다() {
+        testDataInit.run()
+
+        val owner = requireNotNull(memberRepository.findByUsername("asd").getOrNull())
+        val group = requireNotNull(groupRepository.findByInviteCode("DONE400"))
+        val ownerMember = groupMemberRepository.findAll().single { it.group.id == group.id && it.member.id == owner.id }
+        assertThat(ownerMember.role).isEqualTo(GroupMemberRole.OWNER)
+        assertThat(group.status).isEqualTo(GroupStatus.FINISH)
+        assertThat(group.deadline).isBefore(LocalDate.now())
+
+        val verifies = habitVerifyRepository.findAllByGroupId(requireNotNull(group.id))
+        assertThat(verifies).allSatisfy { assertThat(it.verifyDate).isBeforeOrEqualTo(group.deadline) }
+        assertThat(verifies.count { it.status == HabitVerifyStatus.APPROVED }).isEqualTo(42)
+        assertThat(verifies.count { it.status == HabitVerifyStatus.REJECTED }).isEqualTo(3)
+
+        val penalties = penaltyVerifyRepository.findAllByGroupId(requireNotNull(group.id))
+        assertThat(penalties).hasSize(1)
+        assertThat(penalties.single().status).isEqualTo(PenaltyVerifyStatus.APPROVED)
     }
 
     @Test
