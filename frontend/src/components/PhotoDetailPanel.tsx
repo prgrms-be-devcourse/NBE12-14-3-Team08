@@ -115,7 +115,7 @@ export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose, writ
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <div className="flex items-center justify-between gap-3">
           <span className="flex min-w-0 items-center gap-2 text-sm font-extrabold text-slate-900">
-            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-xs font-black text-emerald-700">
+            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-forest-100 bg-forest-50 text-xs font-black text-forest-700">
               {photo.memberNickname.slice(0, 1)}
             </span>
             <span className="truncate">{photo.memberNickname}</span>
@@ -123,7 +123,7 @@ export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose, writ
           <span className="flex-none text-xs font-semibold text-slate-500">{formatShortDate(photo.verifyDate)}</span>
         </div>
 
-        <h2 className="mt-4 text-sm font-extrabold text-emerald-700">{photo.habitTitle}</h2>
+        <h2 className="mt-4 text-sm font-extrabold text-forest-700">{photo.habitTitle}</h2>
         <p className={`mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 ${photo.description ? 'text-slate-700' : 'text-slate-500'}`}>
           {photo.description || '작성된 인증 내용이 없습니다.'}
         </p>

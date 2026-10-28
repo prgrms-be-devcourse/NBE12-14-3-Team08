@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMember } from '../context/MemberContext';
 import { DeleteAccountModal } from '../components/DeleteAccountModal';
+import { Eyebrow, HeroCard, btnForest, cardClass, inputClass } from '../components/DesignKit';
 import { MemberNavigation } from '../components/MemberNavigation';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { ProfileUpdateModal } from '../components/ProfileUpdateModal';
@@ -35,7 +36,7 @@ export const MyPage: React.FC = () => {
         <button
           type="button"
           onClick={() => router.push('/login')}
-          className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
+          className="rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 hover:bg-forest-600"
         >
           로그인하러 가기
         </button>
@@ -88,25 +89,28 @@ export const MyPage: React.FC = () => {
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <HeroCard>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-emerald-600">내기? 내기!</p>
-            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">마이페이지</h1>
+            <Eyebrow>MY PAGE</Eyebrow>
+            <h1 className="mt-2 text-[26px] font-extrabold tracking-tight sm:text-3xl">마이페이지</h1>
           </div>
           <MemberNavigation embedded />
         </div>
 
-        <div className="mt-8 flex items-center gap-4">
+        <div className="mt-6 flex items-center gap-4">
           <ProfileAvatar nickname={currentUser.name} />
           <div>
-            <p className="text-lg font-extrabold text-slate-900">{currentUser.name}</p>
-            <p className="mt-0.5 text-sm text-slate-400">{memberHandle(currentUser.provider, currentUser.username)}</p>
+            <p className="text-lg font-extrabold">{currentUser.name}</p>
+            <p className="mt-0.5 text-sm text-white/55">{memberHandle(currentUser.provider, currentUser.username)}</p>
           </div>
         </div>
+      </HeroCard>
 
-        <form onSubmit={handleSave} className="mt-8">
+      <section className={`mt-6 ${cardClass}`}>
+        <h2 className="text-base font-extrabold text-slate-900">회원 정보</h2>
+        <form onSubmit={handleSave} className="mt-5">
           <div className="max-w-md space-y-5">
             {isSocial ? (
               <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
@@ -120,7 +124,7 @@ export const MyPage: React.FC = () => {
                 type="text"
                 readOnly
                 value={currentUser.username}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
               />
               <p className="mt-1.5 text-xs text-slate-400">아이디는 변경할 수 없습니다.</p>
             </div>
@@ -135,7 +139,7 @@ export const MyPage: React.FC = () => {
                 onChange={(event) => {
                   setNameEdit({ userId: currentUser.id, value: event.target.value });
                 }}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
               />
             </div>
             {!isSocial && (
@@ -149,7 +153,7 @@ export const MyPage: React.FC = () => {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 placeholder="비밀번호를 변경할 때만 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
               />
             </div>
             <div>
@@ -161,7 +165,7 @@ export const MyPage: React.FC = () => {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 placeholder="변경할 새 비밀번호를 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
               />
             </div>
             <div>
@@ -173,7 +177,7 @@ export const MyPage: React.FC = () => {
                 value={newPasswordConfirm}
                 onChange={(event) => setNewPasswordConfirm(event.target.value)}
                 placeholder="새 비밀번호를 한 번 더 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={inputClass}
               />
             </div>
               </>
@@ -184,14 +188,14 @@ export const MyPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
-              className="rounded-xl bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100"
+              className="rounded-2xl bg-rose-50 px-5 py-3 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100 cursor-pointer"
             >
               회원 탈퇴
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 transition-colors hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-60"
+              className={`${btnForest} px-6 disabled:cursor-wait`}
             >
               {isSaving ? '저장 중...' : '변경사항 저장'}
             </button>

@@ -96,14 +96,14 @@ export function ModalActions({
     onClose,
     submitting,
     submitLabel,
-    tone = "emerald",
+    tone = "forest",
 }: {
     onClose: () => void;
     submitting: boolean;
     submitLabel: string;
-    tone?: "emerald" | "rose";
+    tone?: "forest" | "rose";
 }) {
-    const toneClass = tone === "rose" ? "bg-rose-500 hover:bg-rose-600" : "bg-emerald-500 hover:bg-emerald-600";
+    const toneClass = tone === "rose" ? "bg-rose-500 hover:bg-rose-600 text-white" : "bg-forest-500 hover:bg-forest-600 text-lime-400";
     return (
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <button
@@ -117,7 +117,7 @@ export function ModalActions({
             <button
                 type="submit"
                 disabled={submitting}
-                className={`px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm disabled:opacity-50 ${toneClass}`}
+                className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm disabled:opacity-50 ${toneClass}`}
             >
                 {submitting ? "처리 중..." : submitLabel}
             </button>

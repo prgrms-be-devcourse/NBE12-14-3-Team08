@@ -29,7 +29,7 @@ export function SocialLoginButtons({ redirectTo = '/main' }: { redirectTo?: stri
       <button
         type="button"
         onClick={handleGoogle}
-        className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-300 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer"
+        className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-2xl border border-slate-300 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 cursor-pointer"
       >
         {/* 구글 브랜드 가이드의 "G" 로고 */}
         <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">

@@ -16,20 +16,20 @@ export function Footer() {
                     </div>
 
                     <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-semibold">
-                        <Link href="/" className="hover:text-emerald-500 transition-colors text-slate-600">
+                        <Link href="/" className="hover:text-forest-600 transition-colors text-slate-600">
                             홈
                         </Link>
-                        <Link href="/docs/terms-of-service" className="hover:text-emerald-500 transition-colors text-slate-600">
+                        <Link href="/docs/terms-of-service" className="hover:text-forest-600 transition-colors text-slate-600">
                             이용약관
                         </Link>
-                        <Link href="/docs/privacy-policy" className="hover:text-emerald-500 transition-colors font-bold text-slate-900">
+                        <Link href="/docs/privacy-policy" className="hover:text-forest-600 transition-colors font-bold text-slate-900">
                             개인정보처리방침
                         </Link>
                         <a
                             href="https://github.com/prgrms-be-devcourse/NBE12-14-3-Team08"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-emerald-500 transition-colors text-slate-600"
+                            className="hover:text-forest-600 transition-colors text-slate-600"
                         >
                             GitHub
                         </a>

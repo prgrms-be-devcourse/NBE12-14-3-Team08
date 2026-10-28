@@ -56,8 +56,8 @@ const PENALTY_STATUS_META: Record<PenaltyVerifyStatus, {
     },
     APPROVED: {
         statusLabel: "인증완료",
-        dotClassName: "bg-emerald-500",
-        badgeClassName: "text-emerald-700 bg-emerald-100",
+        dotClassName: "bg-forest-500",
+        badgeClassName: "text-forest-700 bg-forest-100",
         action: "detail",
     },
     REJECTED: {
@@ -273,9 +273,9 @@ export function MemberPage({ groupId, memberId }: Props) {
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8 pt-1 sm:pb-10 sm:pt-2">
             {/* Top Nav */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex h-4 items-center justify-between mb-3 sm:mb-4">
                 <Link
                     href={`/group/${groupId}`}
                     className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
@@ -723,7 +723,7 @@ const VERIFY_STATUS_LABEL: Record<HabitVerifyStatus, string> = {
 
 // 인증 상태 점 (달력, 앨범 공통). 사진 위에서도 보이도록 옅은 그림자를 둔다.
 const STATUS_DOT_CLASS: Record<HabitVerifyStatus, string> = {
-    APPROVED: "bg-emerald-500",
+    APPROVED: "bg-forest-500",
     PENDING: "bg-amber-400",
     REJECTED: "bg-rose-400",
 };
@@ -774,7 +774,7 @@ function VerifyLegend({ showThisWeek = false }: { showThisWeek?: boolean }) {
     return (
         <div className="flex items-center justify-end gap-x-2.5 whitespace-nowrap text-[11px] font-bold text-slate-500">
             <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                <span className="w-2.5 h-2.5 rounded-full bg-forest-500 inline-block" />
                 성공
             </span>
             <span className="flex items-center gap-1">
@@ -982,7 +982,7 @@ function VerifyCalendar({
                     >
                         <ChevronLeft className="w-4 h-4 text-slate-500" />
                     </button>
-                    <CalendarIcon className="w-4 h-4 text-emerald-600" />
+                    <CalendarIcon className="w-4 h-4 text-forest-600" />
                     <h3 className="text-sm font-extrabold text-slate-900">
                         {year}년 {month + 1}월
                     </h3>
@@ -1266,7 +1266,7 @@ function HabitHistoryHeatmap({ habitId }: { habitId: number }) {
     const colorFor = (dateStr: string) => {
         if (dateStr < habitStartStr || dateStr > todayStr) return "bg-transparent";
         const status = verifyByDate.get(dateStr)?.status;
-        if (status === "APPROVED") return "bg-emerald-500";
+        if (status === "APPROVED") return "bg-forest-500";
         if (status === "PENDING") return "bg-amber-400";
         if (status === "REJECTED") return "bg-rose-400";
         return "bg-slate-200/70";
@@ -1287,7 +1287,7 @@ function HabitHistoryHeatmap({ habitId }: { habitId: number }) {
                 <span className="text-[11px] text-slate-500">{habit.title} 인증 기록</span>
                 <div className="flex items-center gap-2 text-[10px] text-slate-400">
                     <span className="flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+                        <span className="w-2.5 h-2.5 rounded-sm bg-forest-500 inline-block" />
                         성공
                     </span>
                     <span className="flex items-center gap-1">
@@ -1415,7 +1415,7 @@ function CertifyModal({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="오늘 어떻게 실천했는지 적어주세요."
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 resize-none"
                     />
                 </div>
 
@@ -1476,7 +1476,7 @@ function CreateHabitModal({
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="예: 매일 30분 운동하기"
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     />
                 </div>
 
@@ -1487,7 +1487,7 @@ function CreateHabitModal({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="습관에 대한 설명을 적어주세요."
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 resize-none"
                     />
                 </div>
 
@@ -1499,7 +1499,7 @@ function CreateHabitModal({
                         max={7}
                         value={days}
                         onChange={(e) => setDays(Number(e.target.value))}
-                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     />
                 </div>
 
@@ -1626,7 +1626,7 @@ function ConfirmModal({
 // ---------- 모달: 성공 인증 상세 ----------
 
 const CERT_STATUS_META = {
-    APPROVED: { chipClass: "bg-emerald-50 text-emerald-700", dotClass: "bg-emerald-500" },
+    APPROVED: { chipClass: "bg-forest-50 text-forest-700", dotClass: "bg-forest-500" },
     PENDING: { chipClass: "bg-amber-50 text-amber-700", dotClass: "bg-amber-400" },
     REJECTED: { chipClass: "bg-rose-50 text-rose-700", dotClass: "bg-rose-400" },
 } as const;

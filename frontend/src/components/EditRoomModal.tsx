@@ -7,7 +7,7 @@ import type { CreateGroupRequest } from '../lib/groupApi';
 
 type UpdateGroupRequest = CreateGroupRequest;
 
-const inputClassName = 'w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500';
+const inputClassName = 'w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-500';
 
 interface EditRoomModalProps {
   isOpen: boolean;
@@ -95,8 +95,8 @@ export function EditRoomModal({
                 onChange={(event) => setForm({ ...form, memberLimit: Number(event.target.value) })} className={inputClassName} />
             </Field>
           </div>
-          <Field label="실패 시 벌칙">
-            <input value={form.penalty} onChange={(event) => setForm({ ...form, penalty: event.target.value })}
+          <Field label="실패 시 벌칙" required>
+            <input required value={form.penalty} onChange={(event) => setForm({ ...form, penalty: event.target.value })}
               className={inputClassName} placeholder="예: 커피 사기" />
           </Field>
           
@@ -111,7 +111,7 @@ export function EditRoomModal({
             <button type="button" onClick={onClose} disabled={isSubmitting}
               className="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100">취소</button>
             <button type="submit" disabled={isSubmitting}
-              className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-60">
+              className="rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 shadow-md shadow-forest-500/20 hover:bg-forest-600 disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? '수정 중...' : '수정 완료'}
             </button>
           </div>

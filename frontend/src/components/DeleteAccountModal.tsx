@@ -69,7 +69,7 @@ export function DeleteAccountModal({
             {isSubmitting ? '처리 중...' : '회원 탈퇴'}
           </button>
           <button ref={cancelButtonRef} type="button" onClick={onClose} disabled={isSubmitting}
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-600 disabled:opacity-60">
+            className="rounded-xl bg-forest-500 px-5 py-2.5 text-sm font-bold text-lime-400 shadow-sm transition-colors hover:bg-forest-600 disabled:opacity-60">
             돌아가기
           </button>
         </div>

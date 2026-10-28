@@ -135,7 +135,7 @@ export default function PenaltySubmitModal({
             <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="rounded-xl border border-black bg-emerald-100 px-5 py-2 text-xs font-extrabold text-gray-900 transition-colors hover:bg-emerald-200 disabled:bg-gray-200"
+                className="rounded-xl border border-black bg-forest-100 px-5 py-2 text-xs font-extrabold text-gray-900 transition-colors hover:bg-forest-200 disabled:bg-gray-200"
             >
               {isLoading ? '등록 중...' : '인증 등록'}
             </button>

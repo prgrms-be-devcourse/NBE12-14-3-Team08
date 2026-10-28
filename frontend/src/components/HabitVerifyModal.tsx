@@ -18,7 +18,7 @@ interface HabitVerifyModalProps {
 }
 
 const inputClassName =
-  'w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500';
+  'w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-500';
 
 export function HabitVerifyModal({
   isOpen,
@@ -236,7 +236,7 @@ export function HabitVerifyModal({
             </label>
 
             <label className="block cursor-pointer">
-              <div className="flex h-52 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition hover:border-emerald-300 hover:bg-emerald-50">
+              <div className="flex h-52 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition hover:border-forest-300 hover:bg-forest-50">
                 {previewUrl ? (
                   <img
                     src={previewUrl}
@@ -344,7 +344,7 @@ export function HabitVerifyModal({
               isUploading ||
               !imageUrl
             }
-            className="w-full rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 shadow-md shadow-forest-500/20 hover:bg-forest-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isUploading
               ? '이미지 업로드 중...'

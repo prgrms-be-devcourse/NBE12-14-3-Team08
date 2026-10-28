@@ -7,6 +7,7 @@ import com.back.domain.groupMember.entity.GroupMember
 import com.back.domain.groupMember.entity.GroupMemberRole
 import com.back.domain.groupMember.repository.GroupMemberRepository
 import com.back.domain.habit.entity.Habit
+import com.back.domain.habit.entity.HabitStatus
 import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.habitVerify.entity.HabitVerify
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
@@ -39,9 +40,14 @@ class TestDataInit(
 
     @Transactional
     override fun run(vararg args: String) {
-        if (groupRepository.existsByInviteCode("MOGAK100")) {
-            return
+        if (!groupRepository.existsByInviteCode("MOGAK100")) {
+            seedBaseData()
         }
+        // 기본 데이터가 이미 있는 DB에도 갤러리 예시 사진을 한 번만 채워 넣는다
+        seedGalleryPhotos()
+    }
+
+    private fun seedBaseData() {
 
         // Spring Security의 encode()는 반환 타입이 nullable이라 MemberService와 같은 방식으로 확인한다
         val encodedPassword = checkNotNull(passwordEncoder.encode("1234")) { "비밀번호를 암호화하지 못했습니다." }
@@ -198,6 +204,36 @@ class TestDataInit(
         println("=================================================================")
     }
 
+    // 모각코 챌린지 1기의 사진 갤러리용 승인 인증. 멤버마다 빠뜨리는 날을 달리해 최근 5주 사진을 만든다.
+    private fun seedGalleryPhotos() {
+        val group = groupRepository.findByInviteCode("MOGAK100") ?: return
+        val groupId = group.requiredId
+
+        val habits = listOf("asd", "chulsoo", "younghee", "minsoo", "jiwon", "hyunwoo").mapNotNull { username ->
+            val member = memberRepository.findByUsername(username).getOrNull() ?: return@mapNotNull null
+            habitRepository.findByGroupMember_Member_IdAndGroupMember_Group_IdAndStatus(
+                member.requiredId,
+                groupId,
+                HabitStatus.ACTIVE,
+            )
+        }
+        if (habits.isEmpty()) return
+
+        // 어제 인증이 이미 있으면 이전에 채워 넣은 것으로 보고 건너뛴다
+        val marker = LocalDate.now().minusDays(1)
+        if (habitVerifyRepository.existsByHabitIdAndVerifyDate(habits.first().requiredId, marker)) return
+
+        habits.forEachIndexed { memberIndex, habit ->
+            for (daysAgo in 1..35) {
+                if ((daysAgo + memberIndex) % (memberIndex + 3) == 0) continue
+                val date = LocalDate.now().minusDays(daysAgo.toLong())
+                if (habitVerifyRepository.existsByHabitIdAndVerifyDate(habit.requiredId, date)) continue
+                val image = GALLERY_IMAGES[(daysAgo * 3 + memberIndex) % GALLERY_IMAGES.size]
+                createApprovedHabitVerify(habit, date, "${daysAgo}일 전 인증 - ${habit.title}", image)
+            }
+        }
+    }
+
     // 있으면 그대로 쓰고, 없으면 만들어 저장한 뒤 리프레시 토큰까지 넣는다
     // findByUsername은 아직 Optional을 돌려줘서 getOrNull()로 받는다 (MemberRepository가 nullable로 바뀌면 함께 정리)
     private fun getOrCreateMember(username: String, nickname: String, password: String): Member =
@@ -227,5 +263,21 @@ class TestDataInit(
 
     private fun createApprovedHabitVerify(habit: Habit, verifyDate: LocalDate, description: String, imageUrl: String) {
         habitVerifyRepository.save(HabitVerify.create(habit, verifyDate, description, imageUrl).apply { approve() })
+    }
+
+    private companion object {
+        // 갤러리 예시 사진. 같은 사진이 여러 번 나오지 않도록 열 장을 돌려 쓴다.
+        val GALLERY_IMAGES = listOf(
+            "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&auto=format&fit=crop&q=60",
+        )
     }
 }

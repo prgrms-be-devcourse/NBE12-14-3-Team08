@@ -5,7 +5,7 @@ export function ProfileAvatar({ nickname }: { nickname: string }) {
     <div
       role="img"
       aria-label={`${nickname} 프로필`}
-      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-emerald-300 bg-emerald-100 text-2xl font-black text-emerald-700 shadow-sm ring-4 ring-emerald-50"
+      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-lime-400 text-2xl font-black text-forest-900 shadow-sm ring-4 ring-lime-400/25"
     >
       {initial}
     </div>
