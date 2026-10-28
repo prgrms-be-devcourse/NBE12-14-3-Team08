@@ -36,6 +36,9 @@ interface PenaltyVerifyRepository : JpaRepository<PenaltyVerify, Long> {
 
     fun countByGroupMember_Group_IdAndGroupMember_Member_Id(groupId: Long, memberId: Long): Long
 
+    // 메인 화면의 "누적 벌칙": 방과 상태를 가리지 않고 내가 받은 벌칙 인증 전체 (멤버 상세의 벌칙 횟수와 같은 기준)
+    fun countByGroupMember_Member_Id(memberId: Long): Long
+
     @Query(
         """
         SELECT pv FROM PenaltyVerify pv
