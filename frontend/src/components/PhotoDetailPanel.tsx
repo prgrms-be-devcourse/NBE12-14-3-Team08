@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { GroupPhoto } from '@/lib/habitApi';
 import { formatShortDate } from '@/lib/photoLibrary';
+import { useMember } from '@/context/MemberContext';
 import { ImageLightbox } from './ModalKit';
+import { ReactionCommentSection, type EngagementSnapshot } from './ReactionCommentSection';
 
 interface PhotoDetailPanelProps {
   groupId: number | string;
@@ -15,6 +17,9 @@ interface PhotoDetailPanelProps {
   onPrev: (() => void) | null;
   onNext: (() => void) | null;
   onClose: () => void;
+  // 종료된 방에서는 false: 하트·댓글을 읽기만 할 수 있다.
+  writable: boolean;
+  onEngagementChange?: (snapshot: EngagementSnapshot) => void;
 }
 
 const iconButtonClass =
@@ -24,7 +29,8 @@ const iconButtonClass =
 // 넓은 화면(lg 이상)에서는 페이지 본문을 밀지 않고 그 위에 겹쳐 오른쪽에 붙으며, 패널 밖의
 // 사진은 계속 눌러 고를 수 있다. 좁은 화면에서는 화면 전체를 덮는다. ← → 로 앞뒤 사진, Esc로 닫기,
 // 사진을 누르면 크게 본다.
-export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose }: PhotoDetailPanelProps) {
+export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose, writable, onEngagementChange }: PhotoDetailPanelProps) {
+  const { currentUser } = useMember();
   const [expanded, setExpanded] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -121,6 +127,16 @@ export function PhotoDetailPanel({ groupId, photo, onPrev, onNext, onClose }: Ph
         <p className={`mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 ${photo.description ? 'text-slate-700' : 'text-slate-500'}`}>
           {photo.description || '작성된 인증 내용이 없습니다.'}
         </p>
+
+        <div className="-mx-6 mt-5">
+          <ReactionCommentSection
+            kind="habit"
+            targetId={photo.id}
+            isOwnVerify={currentUser?.id === String(photo.memberId)}
+            writable={writable}
+            onChange={onEngagementChange}
+          />
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-slate-100 px-6 py-4">

@@ -43,6 +43,10 @@ export interface GroupPhoto {
   imageUrl: string;
   imageWidth?: number | null;
   imageHeight?: number | null;
+  // 하트·댓글 개수와 내가 하트를 눌렀는지. getGroupPhotos가 includeEngagement로 요청해야 채워진다.
+  reactionCount?: number;
+  commentCount?: number;
+  reactedByMe?: boolean;
 }
 
 export interface GroupPhotoPage {
@@ -131,7 +135,7 @@ export const habitApi = {
     groupId: number | string,
     params: { size?: number; cursor?: string | null; memberId?: number | null } = {}
   ) => {
-    const query = new URLSearchParams();
+    const query = new URLSearchParams({ includeEngagement: 'true' });
     if (params.size) query.set('size', String(params.size));
     if (params.cursor) query.set('cursor', params.cursor);
     if (params.memberId != null) query.set('memberId', String(params.memberId));
