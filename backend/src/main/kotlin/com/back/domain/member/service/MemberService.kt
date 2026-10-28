@@ -35,6 +35,11 @@ class MemberService(
         val username = requireNotNull(request.username) { "아이디는 필수입니다." }
         val password = requireNotNull(request.password) { "비밀번호는 필수입니다." }
 
+        // 탈퇴한 회원의 아이디(withdrawn_ + id)와 겹치지 않도록 이 접두사는 가입에 쓸 수 없다.
+        if (username.startsWith(Member.WITHDRAWN_USERNAME_PREFIX)) {
+            throw IllegalArgumentException("사용할 수 없는 아이디입니다.")
+        }
+
         if (memberRepository.existsByUsername(username)) {
             throw IllegalStateException("이미 사용 중인 아이디입니다.")
         }
@@ -55,14 +60,15 @@ class MemberService(
         val password = requireNotNull(request.password) { "비밀번호는 필수입니다." }
 
         val member = memberRepository.findByUsername(username)
-            .orElseThrow { UnauthorizedException("아이디 또는 비밀번호가 일치하지 않습니다.") }
+            .orElseThrow { UnauthorizedException(LOGIN_FAILED_MESSAGE) }
 
-        if (!passwordEncoder.matches(password, member.password)) {
-            throw UnauthorizedException("아이디 또는 비밀번호가 일치하지 않습니다.")
+        // 탈퇴한 회원은 아이디가 익명화돼 있어 원래 아이디로는 찾아지지 않는다. 직접 익명 아이디로 시도해도 비밀번호를 비교하지 않고 같은 실패로 돌려준다.
+        if (member.status == MemberStatus.WITHDRAWN) {
+            throw UnauthorizedException(LOGIN_FAILED_MESSAGE)
         }
 
-        if (member.status == MemberStatus.WITHDRAWN) {
-            throw UnauthorizedException("탈퇴한 회원은 로그인할 수 없습니다.")
+        if (!passwordEncoder.matches(password, member.password)) {
+            throw UnauthorizedException(LOGIN_FAILED_MESSAGE)
         }
 
         return member.requiredId
@@ -155,6 +161,10 @@ class MemberService(
     // PasswordEncoder.encode는 null을 돌려줄 수 있다고 선언되어 있어(null 입력일 때) 여기서 걸러낸다.
     private fun encode(rawPassword: String): String =
         checkNotNull(passwordEncoder.encode(rawPassword)) { "비밀번호를 암호화하지 못했습니다." }
+
+    private companion object {
+        const val LOGIN_FAILED_MESSAGE = "아이디 또는 비밀번호가 일치하지 않습니다."
+    }
 
     private fun findMember(memberId: Long): Member =
         memberRepository.findByIdOrNull(memberId)

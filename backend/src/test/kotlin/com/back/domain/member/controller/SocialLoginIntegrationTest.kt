@@ -173,16 +173,25 @@ class SocialLoginIntegrationTest : MemberApiTestSupport() {
     }
 
     @Test
-    @DisplayName("탈퇴한 소셜 회원이 다시 로그인하면 401이고 새 회원은 만들어지지 않는다")
-    fun 탈퇴_후_재로그인_거절() {
-        val tokens = socialLoginOk("user-i")
-        perform(HttpMethod.DELETE, "/api/members/me", tokens.accessToken).andExpect(status().isNoContent())
+    @DisplayName("탈퇴한 소셜 회원이 같은 구글 계정으로 다시 로그인하면 새 회원으로 가입되고 이전 회원은 식별자가 비워진 채 남는다")
+    fun 탈퇴_후_재로그인은_새_회원() {
+        val oldTokens = socialLoginOk("user-i")
+        val oldMemberId = me(oldTokens).get("memberId").asLong()
+        perform(HttpMethod.DELETE, "/api/members/me", oldTokens.accessToken).andExpect(status().isNoContent())
 
-        socialLogin("user-i")
-            .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").value("탈퇴한 회원은 로그인할 수 없습니다."))
+        val newTokens = socialLoginOk("user-i")
 
+        val newMe = me(newTokens)
+        assertThat(newMe.get("memberId").asLong()).isNotEqualTo(oldMemberId)
+        assertThat(newMe.get("provider").asString()).isEqualTo("GOOGLE")
+        val old = memberRepository.findById(oldMemberId).orElseThrow()
+        assertThat(old.providerId).isNull()
+        assertThat(old.provider).isEqualTo(MemberProvider.LOCAL)
+        assertThat(old.username).isEqualTo("withdrawn_$oldMemberId")
+        // 구글 식별자를 가진 회원은 새로 가입한 회원 한 명뿐이다.
         assertThat(memberRepository.findAll().count { it.providerId == "user-i" }).isEqualTo(1)
+        // 이전 회원의 토큰은 계속 거절된다.
+        perform(HttpMethod.GET, "/api/members/me", oldTokens.accessToken).andExpect(status().isUnauthorized())
     }
 
     @Test

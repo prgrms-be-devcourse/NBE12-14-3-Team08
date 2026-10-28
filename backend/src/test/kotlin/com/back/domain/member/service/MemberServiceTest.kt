@@ -112,6 +112,19 @@ class MemberServiceTest {
             assertThat(saved.captured.status).isEqualTo(MemberStatus.ACTIVE)
         }
 
+        @ParameterizedTest(name = "아이디={0}")
+        @ValueSource(strings = ["withdrawn_1", "withdrawn_", "withdrawn_abc"])
+        @DisplayName("탈퇴한 회원의 익명 아이디 접두사(withdrawn_)로 시작하면 IllegalArgumentException이고 저장도 암호화도 하지 않는다")
+        fun 예약된_접두사_아이디(username: String) {
+            assertThatThrownBy { memberService.join(CreateMemberRequest("닉네임", username, "password1234")) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessage("사용할 수 없는 아이디입니다.")
+
+            verify(exactly = 0) { memberRepository.existsByUsername(any()) }
+            verify(exactly = 0) { memberRepository.save(any<Member>()) }
+            verify(exactly = 0) { passwordEncoder.encode(any()) }
+        }
+
         @Test
         @DisplayName("응답에 비밀번호나 리프레시 토큰은 담기지 않는다")
         fun 응답에는_민감한_값이_없다() {
@@ -228,27 +241,16 @@ class MemberServiceTest {
         }
 
         @Test
-        @DisplayName("탈퇴한 회원이 비밀번호를 맞게 입력하면 탈퇴 안내 메시지의 UnauthorizedException이다")
+        @DisplayName("탈퇴한 회원은 비밀번호를 맞게 입력해도 비밀번호를 비교하지 않고 일반 실패 메시지다 (탈퇴 여부를 알려주지 않는다)")
         fun 탈퇴한_회원() {
             val withdrawn = member().also { it.withdraw() }
-            every { memberRepository.findByUsername("user-1") } returns Optional.of(withdrawn)
-            every { passwordEncoder.matches("password1234", "encoded-password") } returns true
+            every { memberRepository.findByUsername("withdrawn_1") } returns Optional.of(withdrawn)
 
-            assertThatThrownBy { memberService.authenticate(LoginRequest("user-1", "password1234")) }
-                .isInstanceOf(UnauthorizedException::class.java)
-                .hasMessage("탈퇴한 회원은 로그인할 수 없습니다.")
-        }
-
-        @Test
-        @DisplayName("탈퇴한 회원이라도 비밀번호가 틀리면 탈퇴 여부를 알려주지 않고 일반 실패 메시지다")
-        fun 탈퇴한_회원도_틀린_비밀번호면_일반_메시지() {
-            val withdrawn = member().also { it.withdraw() }
-            every { memberRepository.findByUsername("user-1") } returns Optional.of(withdrawn)
-            every { passwordEncoder.matches("wrong", "encoded-password") } returns false
-
-            assertThatThrownBy { memberService.authenticate(LoginRequest("user-1", "wrong")) }
+            assertThatThrownBy { memberService.authenticate(LoginRequest("withdrawn_1", "password1234")) }
                 .isInstanceOf(UnauthorizedException::class.java)
                 .hasMessage(LOGIN_FAIL_MESSAGE)
+
+            verify(exactly = 0) { passwordEncoder.matches(any(), any()) }
         }
 
         @Test
@@ -526,6 +528,32 @@ class MemberServiceTest {
             assertThat(member.status).isEqualTo(MemberStatus.WITHDRAWN)
             assertThat(member.refreshToken).isNull()
             verify(exactly = 0) { memberRepository.delete(any<Member>()) }
+        }
+
+        @Test
+        @DisplayName("탈퇴하면 아이디와 비밀번호가 익명 값으로 바뀌고 닉네임은 남아 같은 아이디로 다시 가입할 수 있다")
+        fun 탈퇴하면_익명화된다() {
+            val member = member(nickname = "홍길동", username = "user-1", password = "encoded-password")
+            stubFind(member)
+            every { groupMemberRepository.findAllByMemberId(MEMBER_ID) } returns emptyList()
+
+            memberService.deleteMember(MEMBER_ID)
+
+            assertThat(member.username).isEqualTo("withdrawn_$MEMBER_ID")
+            assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
+            assertThat(member.nickname).isEqualTo("홍길동")
+            // 원래 아이디는 비어 있게 되어 다시 가입할 수 있다 (존재 여부 검사는 저장소가 한다)
+            every { memberRepository.existsByUsername("user-1") } returns false
+            every { passwordEncoder.encode("password1234") } returns "encoded-new"
+            every { memberRepository.save(any<Member>()) } answers {
+                firstArg<Member>().also { ReflectionTestUtils.setField(it, "id", 2L) }
+            }
+            every { authTokenService.createRefreshToken(2L) } returns "new-refresh"
+
+            val rejoined = memberService.join(CreateMemberRequest("홍길동", "user-1", "password1234"))
+
+            assertThat(rejoined.memberId).isEqualTo(2L)
+            assertThat(rejoined.username).isEqualTo("user-1")
         }
 
         @Test

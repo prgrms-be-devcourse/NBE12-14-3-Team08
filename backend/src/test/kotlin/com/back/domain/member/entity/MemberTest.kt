@@ -143,10 +143,13 @@ class MemberTest {
     @DisplayName("탈퇴")
     inner class Withdraw {
 
+        // 탈퇴하면 id로 익명 아이디를 만들기 때문에 저장된 것처럼 id를 준다.
+        private fun savedMember(): Member = member().also { ReflectionTestUtils.setField(it, "id", 5L) }
+
         @Test
         @DisplayName("탈퇴하면 WITHDRAWN이 되고 리프레시 토큰이 폐기된다")
         fun 탈퇴() {
-            val member = member()
+            val member = savedMember()
             member.updateRefreshToken("refresh-token")
 
             member.withdraw()
@@ -157,26 +160,47 @@ class MemberTest {
         }
 
         @Test
-        @DisplayName("탈퇴해도 아이디, 닉네임, 비밀번호는 지워지지 않는다")
-        fun 탈퇴해도_정보는_남는다() {
-            val member = member()
+        @DisplayName("탈퇴하면 아이디와 비밀번호가 지정한 값으로 바뀌고 닉네임은 그대로 남는다")
+        fun 탈퇴하면_계정_정보는_익명화되고_닉네임은_남는다() {
+            val member = savedMember()
 
             member.withdraw()
 
-            assertThat(member.username).isEqualTo("user-1")
+            assertThat(member.username).isEqualTo("withdrawn_5")
+            assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
             assertThat(member.nickname).isEqualTo("닉네임")
-            assertThat(member.password).isEqualTo("encoded-password")
         }
 
         @Test
-        @DisplayName("두 번 호출해도 WITHDRAWN 그대로다 (엔티티는 막지 않고 서비스가 막는다)")
+        @DisplayName("익명 아이디는 회원마다 id가 달라 서로 겹치지 않는다")
+        fun 익명_아이디는_회원마다_다르다() {
+            val first = savedMember()
+            val second = member().also { ReflectionTestUtils.setField(it, "id", 6L) }
+
+            first.withdraw()
+            second.withdraw()
+
+            assertThat(first.username).isNotEqualTo(second.username)
+            assertThat(first.username).startsWith(Member.WITHDRAWN_USERNAME_PREFIX)
+            assertThat(second.username).startsWith(Member.WITHDRAWN_USERNAME_PREFIX)
+        }
+
+        @Test
+        @DisplayName("탈퇴 후의 비밀번호 값은 BCrypt 해시 형식이 아니라 어떤 비밀번호와도 일치하지 않는다")
+        fun 탈퇴_비밀번호는_해시_형식이_아니다() {
+            assertThat(Member.WITHDRAWN_PASSWORD).doesNotStartWith("$2")
+        }
+
+        @Test
+        @DisplayName("두 번 호출해도 WITHDRAWN과 같은 값 그대로다 (엔티티는 막지 않고 서비스가 막는다)")
         fun 두_번_탈퇴해도_예외가_없다() {
-            val member = member()
+            val member = savedMember()
 
             member.withdraw()
             member.withdraw()
 
             assertThat(member.status).isEqualTo(MemberStatus.WITHDRAWN)
+            assertThat(member.username).isEqualTo("withdrawn_5")
         }
     }
 }
