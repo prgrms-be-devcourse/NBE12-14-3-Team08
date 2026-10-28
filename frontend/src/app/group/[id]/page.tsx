@@ -14,6 +14,8 @@ import { memberHandle } from '@/lib/memberDisplay';
 import type { MemberProvider } from '@/lib/memberApi';
 import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+import { habitApi } from '@/lib/habitApi';
+import { summarizeThisWeek, type WeekSummary } from '@/lib/habitWeek';
 import { DarkPill, HeroCard, HeroTile, HeroTiles, btnGhost, btnLime } from '@/components/DesignKit';
 
 interface RankingItem {
@@ -34,6 +36,7 @@ interface GroupDetailData {
     title: string;
     description: string;
     status?: string;
+    createDate?: string;
     startDate?: string;
     deadline?: string;
     penalty?: string;
@@ -71,7 +74,9 @@ export default function GroupDetailPage({
     const [loading, setLoading] = useState(true);
     const [currentRole, setCurrentRole] = useState<'OWNER' | 'MEMBER'>('MEMBER');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [view, setView] = useState<'photos' | 'members'>('photos');
+    const [view, setView] = useState<'photos' | 'members'>('members');
+    // 멤버 뷰의 주간 게이지: 습관 id별 이번 주 승인 수와 목표
+    const [weekByHabit, setWeekByHabit] = useState<Record<number, WeekSummary>>({});
 
     const fetchGroupData = useCallback(async () => {
         if (!rawId || isNaN(Number(rawId))) return;
@@ -84,6 +89,7 @@ export default function GroupDetailPage({
                 title: groupData.title || '',
                 description: groupData.description || '',
                 status: groupData.status || (groupData.finished ? 'FINISH' : 'ACTIVE'),
+                createDate: groupData.createDate,
                 startDate: groupData.startDate,
                 deadline: groupData.deadline,
                 penalty: groupData.penalty || '',
@@ -144,6 +150,42 @@ export default function GroupDetailPage({
         setLoading(true);
         fetchGroupData();
     }, [rawId, authReady, currentUser, router, fetchGroupData]);
+
+    const groupCreateDate = group?.createDate;
+    const groupRunning = !!group && group.status !== 'FINISH' && !(group.deadline && new Date(group.deadline) < new Date());
+    useEffect(() => {
+        if (view !== 'members' || !groupCreateDate || !groupRunning) return;
+        const targets = members.filter((m) => m.habitId !== null);
+        if (targets.length === 0) return;
+
+        let cancelled = false;
+        Promise.all(
+            targets.map(async (m) => {
+                try {
+                    const habitId = m.habitId as number;
+                    const [habit, verifies] = await Promise.all([habitApi.getHabit(habitId), habitApi.getHabitVerifications(habitId)]);
+                    if (habit.status !== 'ACTIVE') return null;
+                    const week = summarizeThisWeek({
+                        verifies: verifies.filter((v) => v.habitId === habit.id),
+                        goal: habit.days,
+                        habitCreateDate: habit.createDate,
+                        groupCreateDate,
+                        today: new Date(),
+                    });
+                    return [habitId, week] as const;
+                } catch {
+                    return null;
+                }
+            })
+        ).then((entries) => {
+            if (cancelled) return;
+            setWeekByHabit(Object.fromEntries(entries.filter((entry) => entry !== null)));
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [view, members, groupCreateDate, groupRunning]);
 
     const handleCopyInvite = () => {
         const inviteText = group?.inviteLink || group?.inviteCode || '';
@@ -289,40 +331,76 @@ export default function GroupDetailPage({
                         {members.map((m, index) => {
                             const linkHref = `/group/${rawId}/member/${m.memberId}`;
 
+                            const isMe = currentUser !== null && String(m.memberId) === String(currentUser.id);
+                            const week = m.habitId !== null ? weekByHabit[m.habitId] : undefined;
+
                             return (
                                 <div
                                     key={`member-${m.id}-${index}`}
                                     onClick={() => router.push(linkHref)}
-                                    className="group flex flex-col rounded-3xl border border-slate-200/80 bg-white p-5 transition-all hover:border-forest-400 hover:shadow-lg hover:shadow-forest-500/5 cursor-pointer"
+                                    className="group flex flex-col rounded-[22px] border border-slate-100 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-lime-400 hover:shadow-[0_10px_24px_rgba(14,21,18,0.08)] cursor-pointer"
                                 >
-                                    <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-3.5">
-                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest-50 text-sm font-black text-forest-600 border border-forest-100">
+                                    <div className="flex w-full items-center gap-3.5">
+                                        {/* 아바타: 나는 라임-민트 링, 다른 멤버는 연한 링 */}
+                                        <div
+                                            className={`h-[46px] w-[46px] flex-none rounded-full p-[3px] ${
+                                                isMe ? '' : 'bg-[#e7efe9]'
+                                            }`}
+                                            style={isMe ? { background: 'conic-gradient(from 200deg, #c6f24a, #34e6a4, #c6f24a)' } : undefined}
+                                        >
+                                            <div
+                                                className={`grid h-full w-full place-items-center rounded-full text-[15px] font-black ${
+                                                    isMe ? 'bg-forest-500 text-white' : 'bg-white text-forest-500'
+                                                }`}
+                                            >
                                                 {m.nickname.slice(0, 1)}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-sm font-extrabold text-slate-900 group-hover:text-forest-600 transition-colors">
-                                                        {m.nickname}
-                                                    </span>
-                                                    {m.role === 'OWNER' && <span className="text-xs">👑</span>}
-                                                </div>
-                                                <span className="text-[11px] font-semibold text-slate-400">
-                                                    {memberHandle(m.provider, m.username)}
-                                                </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-4 text-right">
-                                            <div className="hidden sm:block">
-                                                <div className="text-xs font-bold text-slate-800">
-                                                    {m.habitTitle || '등록된 습관 없음'}
-                                                </div>
-                                                <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                                                    {m.habitDescription || '습관 설명이 없습니다.'}
-                                                </div>
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                                                <span className="text-sm font-extrabold text-slate-900">{m.nickname}</span>
+                                                <span className="text-[11px] font-semibold text-slate-400">
+                                                    {memberHandle(m.provider, m.username)}
+                                                </span>
+                                                {isMe && (
+                                                    <span className="rounded-full bg-lime-50 px-2 py-0.5 text-[11px] font-extrabold text-forest-500">
+                                                        나
+                                                    </span>
+                                                )}
+                                                {m.role === 'OWNER' && <span className="text-xs">👑</span>}
                                             </div>
-                                            <span className="text-sm font-bold text-slate-300 group-hover:text-forest-500 transition-colors">
+                                            <div className="mt-0.5 truncate text-xs text-slate-400" title={m.habitDescription || undefined}>
+                                                {m.habitTitle || '아직 진행 중인 습관이 없어요'}
+                                                {week && ` · 주 ${week.goal}회`}
+                                            </div>
+                                        </div>
+
+                                        <div className="ml-auto flex items-center gap-3 text-right">
+                                            {isRoomFinished ? (
+                                                m.habitDescription && (
+                                                    <div className="hidden max-w-[200px] truncate text-[11px] text-slate-400 sm:block">
+                                                        {m.habitDescription}
+                                                    </div>
+                                                )
+                                            ) : week ? (
+                                                <div className="min-w-[110px] sm:min-w-[120px]" title={`이번 주 승인 ${week.approved}회 / 목표 ${week.goal}회`}>
+                                                    <b className="text-xs font-extrabold tabular-nums text-slate-900">
+                                                        {week.approved} / {week.goal}회
+                                                    </b>
+                                                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#eef2f0]" aria-hidden="true">
+                                                        <div
+                                                            className="h-full rounded-full bg-gradient-to-r from-[#34e6a4] to-lime-400"
+                                                            style={{ width: `${week.goal > 0 ? Math.min(100, (week.approved / week.goal) * 100) : 0}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : m.habitId === null ? (
+                                                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-500">
+                                                    습관 없음
+                                                </span>
+                                            ) : null}
+                                            <span className="text-sm font-extrabold text-slate-300 transition-colors group-hover:text-forest-500">
                                                 →
                                             </span>
                                         </div>

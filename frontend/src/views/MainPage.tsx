@@ -57,7 +57,6 @@ export function MainPage() {
 
   const groups = lists[status];
   const finished = status === 'FINISH';
-  const ownedCount = lists.ACTIVE.filter((group) => group.role === 'OWNER').length;
   const count = (value: number) => (isLoading ? '-' : value);
 
   return (
@@ -79,8 +78,9 @@ export function MainPage() {
         </div>
         <HeroTiles>
           <HeroTile label="진행 중인 방" value={count(lists.ACTIVE.length)} unit="개" />
-          <HeroTile label="내가 방장인 방" value={count(ownedCount)} unit="개" />
-          <HeroTile label="완료된 방" value={count(lists.FINISH.length)} unit="개" />
+          {/* TODO: 이번 주 승인·누적 벌칙은 방 전체를 합산하는 API가 없어 시안의 예시 값을 고정으로 보여 준다 */}
+          <HeroTile label="이번 주 승인" value="3" unit=" / 4회" />
+          <HeroTile label="누적 벌칙" value="1" unit="회" />
         </HeroTiles>
       </HeroCard>
 

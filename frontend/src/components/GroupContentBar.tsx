@@ -49,24 +49,6 @@ export function GroupContentBar({ view, onViewChange, memberCount, left, right }
         <button
           type="button"
           role="tab"
-          data-view="photos"
-          aria-selected={view === 'photos'}
-          aria-controls="group-view-panel"
-          tabIndex={view === 'photos' ? 0 : -1}
-          aria-label="인증 사진"
-          title="인증 사진"
-          onClick={() => onViewChange('photos')}
-          className={tabClass(view === 'photos')}
-        >
-          {/* 격자(3×3) 아이콘 */}
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6" aria-hidden="true">
-            <path d="M3 3h5v5H3zM9.5 3h5v5h-5zM16 3h5v5h-5zM3 9.5h5v5H3zM9.5 9.5h5v5h-5zM16 9.5h5v5h-5zM3 16h5v5H3zM9.5 16h5v5h-5zM16 16h5v5h-5z" />
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          role="tab"
           data-view="members"
           aria-selected={view === 'members'}
           aria-controls="group-view-panel"
@@ -91,12 +73,24 @@ export function GroupContentBar({ view, onViewChange, memberCount, left, right }
             <circle cx="12" cy="10" r="2.8" />
             <path d="M6.8 19c.7-2.7 2.7-4.2 5.2-4.2s4.5 1.5 5.2 4.2" />
           </svg>
-          <span
-            aria-hidden="true"
-            className="absolute left-[calc(50%+11px)] top-2.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-forest-500 px-1 text-[10px] font-black text-lime-400"
-          >
-            {memberCount}
-          </span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          data-view="photos"
+          aria-selected={view === 'photos'}
+          aria-controls="group-view-panel"
+          tabIndex={view === 'photos' ? 0 : -1}
+          aria-label="인증 사진"
+          title="인증 사진"
+          onClick={() => onViewChange('photos')}
+          className={tabClass(view === 'photos')}
+        >
+          {/* 격자(3×3) 아이콘 */}
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6" aria-hidden="true">
+            <path d="M3 3h5v5H3zM9.5 3h5v5h-5zM16 3h5v5h-5zM3 9.5h5v5H3zM9.5 9.5h5v5h-5zM16 9.5h5v5h-5zM3 16h5v5H3zM9.5 16h5v5h-5zM16 16h5v5h-5z" />
+          </svg>
         </button>
       </div>
 
