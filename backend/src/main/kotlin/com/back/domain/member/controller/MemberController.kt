@@ -2,8 +2,10 @@ package com.back.domain.member.controller
 
 import com.back.domain.member.dto.CreateMemberRequest
 import com.back.domain.member.dto.MemberResponse
+import com.back.domain.member.dto.MemberSummaryResponse
 import com.back.domain.member.dto.UpdateMemberRequest
 import com.back.domain.member.service.MemberService
+import com.back.domain.member.service.MemberSummaryService
 import com.back.global.security.LoginMemberId
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/members")
 class MemberController(
     private val memberService: MemberService,
+    private val memberSummaryService: MemberSummaryService,
 ) {
 
     @Operation(
@@ -49,6 +52,18 @@ class MemberController(
         @LoginMemberId memberId: Long,
     ): ResponseEntity<MemberResponse> =
         ResponseEntity.ok(memberService.getMember(memberId))
+
+    @Operation(
+        summary = "내 요약 조회",
+        description = "메인(방 목록) 화면 상단에 보여 줄 내 수치를 조회합니다. (본인만 가능)\n\n" +
+            "- weeklyApprovedCount / weeklyGoalCount: 참여 중인 진행 중인 방의 활성 습관 전체에서, 이번 주(방을 만든 요일부터 7일) 승인된 인증 수와 목표 횟수의 합입니다.\n" +
+            "- penaltyCount: 방과 상태를 가리지 않고 내가 받은 벌칙 인증 수입니다.",
+    )
+    @GetMapping("/me/summary")
+    fun getMySummary(
+        @LoginMemberId memberId: Long,
+    ): ResponseEntity<MemberSummaryResponse> =
+        ResponseEntity.ok(memberSummaryService.getSummary(memberId))
 
     @Operation(
         summary = "내 정보 수정",

@@ -32,7 +32,8 @@ export default function AdminVerificationPage({
   params: Promise<{ groupId: string }> | { groupId: string };
 }) {
   const resolvedParams = params instanceof Promise ? use(params) : params;
-  const groupId = Number(resolvedParams?.groupId) || 1;
+  const groupId = Number(resolvedParams?.groupId);
+  const validGroupId = Number.isInteger(groupId) && groupId > 0;
 
   const [penaltyList, setPenaltyList] = useState<VerifyCardItem[]>([]);
   const [selectedPenaltyIds, setSelectedPenaltyIds] = useState<number[]>([]);
@@ -80,9 +81,11 @@ export default function AdminVerificationPage({
       }
     };
 
+    if (!validGroupId) return;
+
     fetchPendingPenalties();
     fetchPendingHabitVerifications();
-  }, [groupId]);
+  }, [groupId, validGroupId]);
 
   const handleSingleHabitAction = async (
       e: React.MouseEvent | null,
@@ -199,6 +202,17 @@ export default function AdminVerificationPage({
       setSelectedPenaltyIds(penaltyList.map((p) => p.id));
     }
   };
+
+  if (!validGroupId) {
+    return (
+        <main className="mx-auto max-w-5xl px-4 py-24 text-center text-sm text-slate-500 sm:px-6">
+          올바르지 않은 방 주소입니다.{' '}
+          <Link href="/main" className="font-bold text-forest-600 hover:underline">
+            방 목록으로
+          </Link>
+        </main>
+    );
+  }
 
   return (
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-1 sm:px-6 sm:pb-10 sm:pt-2">

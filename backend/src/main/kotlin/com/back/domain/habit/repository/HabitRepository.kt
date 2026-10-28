@@ -94,4 +94,25 @@ interface HabitRepository : JpaRepository<Habit, Long> {
         """,
     )
     fun deleteHabitsByGroupId(@Param("groupId") groupId: Long?): Int
+
+    // 메인 화면의 "이번 주 승인" 집계용: 내가 아직 참여 중인 진행 중인 방에서, 아직 포기하지 않은 내 습관.
+    // 마감일이 지난 방은 Group.isFinished()와 같은 기준(마감일 다음 날부터 종료)으로 뺀다.
+    // 방은 습관마다 달라 요일 계산에 필요하므로 한 번에 같이 읽는다.
+    @Query(
+        """
+        select h
+        from Habit h
+        join fetch h.groupMember gm
+        join fetch gm.group g
+        where gm.member.id = :memberId
+            and gm.status = com.back.domain.groupMember.entity.GroupMemberStatus.ACTIVE
+            and h.status = com.back.domain.habit.entity.HabitStatus.ACTIVE
+            and g.status <> com.back.domain.group.entity.GroupStatus.FINISH
+            and (g.deadline is null or g.deadline >= :today)
+        """,
+    )
+    fun findActiveHabitsInRunningGroups(
+        @Param("memberId") memberId: Long,
+        @Param("today") today: java.time.LocalDate,
+    ): List<Habit>
 }

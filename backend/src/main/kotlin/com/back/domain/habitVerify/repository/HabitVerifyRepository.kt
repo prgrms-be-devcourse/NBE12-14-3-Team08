@@ -139,4 +139,25 @@ interface HabitVerifyRepository : JpaRepository<HabitVerify, Long> {
         """,
     )
     fun deleteHabitVerifiesByGroupId(@Param("groupId") groupId: Long): Int
+
+    // 습관별 이번 주 승인 건수 집계용: 승인된 인증의 (습관 id, 인증 날짜)만 읽는다.
+    // 습관마다 주의 시작일이 달라 기준일(from)은 가장 이른 주 시작일로 주고, 습관별로 다시 걸러 센다.
+    @Query(
+        """
+        select hv.habit.id as habitId, hv.verifyDate as verifyDate
+        from HabitVerify hv
+        where hv.habit.id in :habitIds
+            and hv.status = com.back.domain.habitVerify.entity.HabitVerifyStatus.APPROVED
+            and hv.verifyDate >= :from
+        """,
+    )
+    fun findApprovedVerifyDates(
+        @Param("habitIds") habitIds: Collection<Long>,
+        @Param("from") from: LocalDate,
+    ): List<ApprovedVerifyDate>
+}
+
+interface ApprovedVerifyDate {
+    val habitId: Long
+    val verifyDate: LocalDate
 }

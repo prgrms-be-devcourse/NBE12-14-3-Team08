@@ -10,6 +10,13 @@ export interface MemberResponse {
   provider: MemberProvider;
 }
 
+// 메인(방 목록) 화면 상단의 내 요약. 이번 주 승인·목표는 참여 중인 진행 중인 방의 활성 습관 전체의 합이다.
+export interface MemberSummary {
+  weeklyApprovedCount: number;
+  weeklyGoalCount: number;
+  penaltyCount: number;
+}
+
 interface AuthSession {
   accessToken: string;
   refreshToken: string;
@@ -112,6 +119,7 @@ export const memberApi = {
       body: JSON.stringify({ code, redirectUri }),
     }),
   getMe: () => apiRequest<MemberResponse>('/members/me', {}, true),
+  getMySummary: () => apiRequest<MemberSummary>('/members/me/summary', {}, true),
   updateMe: (nickname: string, currentPassword?: string, newPassword?: string) =>
     apiRequest<MemberResponse>('/members/me', {
       method: 'PATCH',
