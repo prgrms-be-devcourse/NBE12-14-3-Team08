@@ -56,32 +56,7 @@ class GroupMember protected constructor() : BaseEntity() {
         status = GroupMemberStatus.LEFT
     }
 
-    // Java 호출부(TestDataInit)가 쓰던 Lombok builder를 대신한다.
-    // 호출부가 모두 Kotlin으로 전환되면 create()로 바꾸고 제거한다.
-    class Builder {
-        private lateinit var group: Group
-        private lateinit var member: Member
-        private lateinit var role: GroupMemberRole
-        private var status: GroupMemberStatus = GroupMemberStatus.ACTIVE
-
-        fun group(group: Group) = apply { this.group = group }
-        fun member(member: Member) = apply { this.member = member }
-        fun role(role: GroupMemberRole) = apply { this.role = role }
-        fun status(status: GroupMemberStatus) = apply { this.status = status }
-
-        fun build(): GroupMember =
-            GroupMember().also {
-                it.group = group
-                it.member = member
-                it.role = role
-                it.status = status
-            }
-    }
-
     companion object {
-
-        fun builder(): Builder = Builder()
-
 
         fun create(
             group: Group,

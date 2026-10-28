@@ -64,13 +64,13 @@ class HabitServiceTest {
     }
 
     private fun group(status: GroupStatus, deadline: LocalDate?): Group {
-        val group = Group.builder()
-            .title("아침 기상 챌린지")
-            .penalty("커피 1잔 쏘기")
-            .memberLimit(10)
-            .status(status)
-            .deadline(deadline)
-            .build()
+        val group = Group(
+            title = "아침 기상 챌린지",
+            penalty = "커피 1잔 쏘기",
+            memberLimit = 10,
+            status = status,
+            deadline = deadline,
+        )
         ReflectionTestUtils.setField(group, "id", GROUP_ID)
         return group
     }

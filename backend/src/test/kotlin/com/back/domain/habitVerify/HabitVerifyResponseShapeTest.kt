@@ -57,13 +57,13 @@ class HabitVerifyResponseShapeTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode("HVSHAPECODE")
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = "HVSHAPECODE",
+                memberLimit = 5,
+            )
         )
         // 방장 본인의 습관 인증이라 목록 조회와 검토 대기 조회를 한 사람으로 할 수 있다.
         val owner = memberRepository.save(Member.create("방장", "hv-shape-owner", "pass1234"))

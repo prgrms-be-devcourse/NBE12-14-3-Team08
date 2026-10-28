@@ -11,6 +11,8 @@ import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.penaltyverify.entity.PenaltyVerify
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
 import com.back.domain.settlement.dto.SettlementResponse
+import com.back.global.entity.requiredCreateDate
+import com.back.global.entity.requiredId
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
@@ -55,7 +57,7 @@ class SettlementService(
         habitVerifies: List<HabitVerify>,
         penaltyVerifies: List<PenaltyVerify>,
     ): SettlementResponse.PersonalStats {
-        val memberId = requireNotNull(currentGroupMember.member.id) { "조회된 그룹 멤버의 회원 ID가 없습니다." }
+        val memberId = currentGroupMember.member.requiredId
 
         val myVerifies = habitVerifies.filter { it.habit.groupMember.member.id == memberId }
 
@@ -80,11 +82,11 @@ class SettlementService(
         val rejectedVerifications = mutableMapOf<Long, Long>()
         val penaltyDelays = mutableMapOf<Long, Long>()
 
-        val groupStartDate = requireNotNull(group.createDate) { "그룹 생성일이 없습니다." }.toLocalDate()
+        val groupStartDate = group.requiredCreateDate.toLocalDate()
 
         for (verify in habitVerifies) {
             val member = verify.habit.groupMember.member
-            val memberId = requireNotNull(member.id) { "인증을 올린 회원의 ID가 없습니다." }
+            val memberId = member.requiredId
 
             nicknames.putIfAbsent(memberId, member.nickname)
 
@@ -105,7 +107,7 @@ class SettlementService(
 
         for (penalty in penaltyVerifies) {
             val member = penalty.groupMember.member
-            val memberId = requireNotNull(member.id) { "벌칙 대상 회원의 ID가 없습니다." }
+            val memberId = member.requiredId
 
             nicknames.putIfAbsent(memberId, member.nickname)
 

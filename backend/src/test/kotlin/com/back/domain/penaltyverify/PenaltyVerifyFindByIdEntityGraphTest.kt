@@ -105,13 +105,13 @@ class PenaltyVerifyFindByIdEntityGraphTest @Autowired constructor(
 
     private fun savePenaltyVerify(key: String): PenaltyVerify {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode(key.uppercase().take(10))
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = key.uppercase().take(10),
+                memberLimit = 5,
+            )
         )
         val member = memberRepository.save(Member.create("회원", key, "pass1234"))
         val groupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))

@@ -13,6 +13,7 @@ import com.back.domain.habit.repository.HabitRepository
 import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
+import com.back.global.entity.requiredId
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
@@ -64,9 +65,7 @@ class GroupMemberService(
             val group = findGroupByInviteCode(inviteCode)
             validateNotFinished(group)
 
-            val groupId = requireNotNull(group.id) {
-                "그룹 ID가 아직 생성되지 않았습니다."
-            }
+            val groupId = group.requiredId
 
             JoinTarget(
                 groupId = groupId,
@@ -235,9 +234,7 @@ class GroupMemberService(
         }
 
         if (!isFinished) {
-            val groupMemberId = requireNotNull(groupMember.id) {
-                "그룹 멤버 ID가 아직 생성되지 않았습니다."
-            }
+            val groupMemberId = groupMember.requiredId
 
             deleteGroupMemberDataBulk(groupMemberId)
             groupMemberRepository.delete(groupMember)
@@ -289,9 +286,7 @@ class GroupMemberService(
             throw BusinessRuleException("현재 활동 중인 멤버만 추방할 수 있습니다.")
         }
 
-        val targetId = requireNotNull(kickTarget.id) {
-            "그룹 멤버 ID가 아직 생성되지 않았습니다."
-        }
+        val targetId = kickTarget.requiredId
 
         deleteGroupMemberDataBulk(targetId)
         groupMemberRepository.delete(kickTarget)
@@ -314,9 +309,7 @@ class GroupMemberService(
 
     @Transactional
     fun deleteGroupAndAllMembers(group: Group) {
-        val groupId = requireNotNull(group.id) {
-            "그룹 ID가 아직 생성되지 않았습니다."
-        }
+        val groupId = group.requiredId
 
         habitVerifyRepository.deleteHabitVerifiesByGroupId(groupId)
         penaltyVerifyRepository.deletePenaltyVerifiesByGroupId(groupId)

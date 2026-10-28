@@ -46,13 +46,13 @@ class PenaltyVerifySubmitFinishedGroupTest @Autowired constructor(
     @Test
     @DisplayName("종료된 방에서 벌칙을 제출하면 400이고, 벌칙은 미제출(REQUIRED) 그대로다")
     fun 종료된_방_제출_400() {
-        val group = Group.builder()
-            .title("아침 기상 챌린지")
-            .penalty("커피 1잔 쏘기")
-            .password("1234")
-            .inviteCode("FINISHEDCODE")
-            .memberLimit(5)
-            .build()
+        val group = Group(
+            title = "아침 기상 챌린지",
+            penalty = "커피 1잔 쏘기",
+            password = "1234",
+            inviteCode = "FINISHEDCODE",
+            memberLimit = 5,
+        )
         group.finish()
         groupRepository.save(group)
 

@@ -47,11 +47,11 @@ class SettlementServiceTest {
         val member = Member.create("일반회원", "member", "pass1234")
         ReflectionTestUtils.setField(member, "id", 2L)
 
-        val group = Group.builder()
-            .title("아침 기상 챌린지")
-            .penalty("커피 1잔 쏘기")
-            .memberLimit(10)
-            .build()
+        val group = Group(
+            title = "아침 기상 챌린지",
+            penalty = "커피 1잔 쏘기",
+            memberLimit = 10,
+        )
         ReflectionTestUtils.setField(group, "id", 100L)
         ReflectionTestUtils.setField(group, "createDate", LocalDateTime.of(2026, 10, 1, 9, 0))
         group.finish()

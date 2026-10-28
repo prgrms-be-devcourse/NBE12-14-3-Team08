@@ -57,13 +57,13 @@ class PenaltyVerifyRepositoryTest @Autowired constructor(
 
     private fun saveGroup(): Group =
         groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode(uniqueName("code"))
-                .memberLimit(10)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = uniqueName("code"),
+                memberLimit = 10,
+            )
         )
 
     // 벌칙은 습관 하나에 하나씩 생기므로, 벌칙마다 습관을 새로 만든다

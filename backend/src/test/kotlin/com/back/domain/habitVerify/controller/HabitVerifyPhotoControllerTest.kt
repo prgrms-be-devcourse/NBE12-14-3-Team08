@@ -67,7 +67,7 @@ class HabitVerifyPhotoControllerTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         group = groupRepository.save(
-            Group.builder().title("그룹").penalty("벌칙").password("1234").inviteCode(uniqueName("code")).memberLimit(10).build(),
+            Group(title = "그룹", penalty = "벌칙", password = "1234", inviteCode = uniqueName("code"), memberLimit = 10),
         )
         alice = memberRepository.save(Member.create("앨리스", uniqueName("alice"), "pass1234"))
         bob = memberRepository.save(Member.create("밥", uniqueName("bob"), "pass1234"))

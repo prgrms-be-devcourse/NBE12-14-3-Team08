@@ -52,13 +52,13 @@ class HabitVerifyRepositoryTest @Autowired constructor(
 
     private fun saveGroup(): Group =
         groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode(uniqueName("code"))
-                .memberLimit(10)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = uniqueName("code"),
+                memberLimit = 10,
+            )
         )
 
     private fun saveHabit(group: Group, title: String): Habit {

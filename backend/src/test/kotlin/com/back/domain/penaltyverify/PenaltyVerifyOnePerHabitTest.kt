@@ -34,13 +34,13 @@ class PenaltyVerifyOnePerHabitTest @Autowired constructor(
     @DisplayName("같은 멤버의 같은 습관에 벌칙 인증을 두 번 만들 수 없다")
     fun 같은_습관에_벌칙_인증은_하나만() {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode("ONEPERHABIT")
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = "ONEPERHABIT",
+                memberLimit = 5,
+            )
         )
         val member = memberRepository.save(Member.create("회원", "one-per-habit", "pass1234"))
         val groupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))

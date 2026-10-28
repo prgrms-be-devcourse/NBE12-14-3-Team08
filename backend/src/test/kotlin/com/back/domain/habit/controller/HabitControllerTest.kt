@@ -391,13 +391,13 @@ class HabitControllerTest @Autowired constructor(
         @DisplayName("실패 습관 조회: 같은 멤버라도 다른 그룹의 실패 습관은 포함되지 않는다")
         fun 다른_그룹의_실패_습관은_제외() {
             val otherGroup = groupRepository.save(
-                Group.builder()
-                    .title("다른 그룹")
-                    .penalty("커피 사기")
-                    .password("1234")
-                    .inviteCode("OTHERGROUP01")
-                    .memberLimit(5)
-                    .build(),
+                Group(
+                    title = "다른 그룹",
+                    penalty = "커피 사기",
+                    password = "1234",
+                    inviteCode = "OTHERGROUP01",
+                    memberLimit = 5,
+                ),
             )
             val inOtherGroup = groupMemberRepository.save(
                 GroupMember.create(otherGroup, memberRepository.findById(memberId).orElseThrow(), GroupMemberRole.MEMBER),

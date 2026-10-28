@@ -67,13 +67,13 @@ class HabitVerifyControllerTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode("HABITCODE")
-                .memberLimit(10)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = "HABITCODE",
+                memberLimit = 10,
+            )
         )
 
         val owner = memberRepository.save(Member.create("방장", "owner", "pass1234"))

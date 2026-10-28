@@ -71,7 +71,7 @@ class PenaltyVerifyEngagementResetTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         group = groupRepository.save(
-            Group.builder().title("벌칙 정리 방").penalty("커피").password("1234").inviteCode("PRESET01").memberLimit(10).build(),
+            Group(title = "벌칙 정리 방", penalty = "커피", password = "1234", inviteCode = "PRESET01", memberLimit = 10),
         )
         owner = memberRepository.save(Member.create("방장", "prs-owner", "pass1234"))
         memberA = memberRepository.save(Member.create("에이", "prs-a", "pass1234"))

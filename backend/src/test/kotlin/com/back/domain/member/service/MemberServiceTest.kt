@@ -75,7 +75,7 @@ class MemberServiceTest {
     }
 
     private fun group(status: GroupStatus, deadline: LocalDate?): Group =
-        Group.builder().title("테스트 방").status(status).deadline(deadline).build()
+        Group(title = "테스트 방", status = status, deadline = deadline)
 
     private fun groupMember(
         group: Group,

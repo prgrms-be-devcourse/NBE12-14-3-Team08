@@ -3,6 +3,7 @@ package com.back.domain.group.dto
 
 import com.back.domain.group.entity.Group
 import com.back.domain.group.entity.GroupStatus
+import com.back.global.entity.requiredCreateDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -35,21 +36,9 @@ interface GroupResponse {
                 currentMemberCount: Long,
                 rankings: Rankings? = null
             ): Detail {
-                val createdAt = requireNotNull(group.createDate) {
-                    "그룹 생성 일시는 필수입니다."
-                }
+                val createdAt = group.requiredCreateDate
 
-                val currentStatus =
-                    if (
-                        group.status == GroupStatus.ACTIVE &&
-                        group.deadline?.let {
-                            LocalDate.now().isAfter(it)
-                        } == true
-                    ) {
-                        GroupStatus.FINISH
-                    } else {
-                        group.status
-                    }
+                val currentStatus = if (group.isFinished()) GroupStatus.FINISH else group.status
 
                 return Detail(
                     id = group.id,

@@ -33,13 +33,13 @@ class BaseEntityLazyProxyTest @Autowired constructor(
     // 그룹 멤버를 새로 조회해, 아직 읽지 않은 회원(지연 로딩 프록시)과 실제 회원 id를 돌려준다
     private fun memberProxyAndId(): Pair<Member, Long> {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode("PROXYCODE")
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = "PROXYCODE",
+                memberLimit = 5,
+            )
         )
         val member = memberRepository.save(Member.create("회원", "proxy-member", "pass1234"))
         val groupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))

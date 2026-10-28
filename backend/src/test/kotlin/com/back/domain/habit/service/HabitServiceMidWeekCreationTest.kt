@@ -74,12 +74,12 @@ class HabitServiceMidWeekCreationTest {
 
         init {
             val now = LocalDateTime.now()
-            val group = Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .memberLimit(10)
-                .status(GroupStatus.ACTIVE)
-                .build()
+            val group = Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                memberLimit = 10,
+                status = GroupStatus.ACTIVE,
+            )
             ReflectionTestUtils.setField(group, "id", GROUP_ID)
             // 14일(2주)은 요일이 같으므로 방 생성 요일은 "오늘 - offsetDays"가 된다.
             ReflectionTestUtils.setField(group, "createDate", now.minusDays(14 + offsetDays))

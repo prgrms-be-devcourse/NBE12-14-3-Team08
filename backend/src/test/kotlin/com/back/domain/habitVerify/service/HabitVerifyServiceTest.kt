@@ -66,11 +66,11 @@ class HabitVerifyServiceTest {
 
     @BeforeEach
     fun setUp() {
-        group = Group.builder()
-            .title("아침 기상 챌린지")
-            .penalty("커피 1잔 쏘기")
-            .memberLimit(10)
-            .build()
+        group = Group(
+            title = "아침 기상 챌린지",
+            penalty = "커피 1잔 쏘기",
+            memberLimit = 10,
+        )
         ReflectionTestUtils.setField(group, "id", GROUP_ID)
 
         val owner = Member.create("방장", "owner", "pass1234")

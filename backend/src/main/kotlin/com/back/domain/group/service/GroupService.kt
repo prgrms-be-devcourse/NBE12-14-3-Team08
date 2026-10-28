@@ -16,6 +16,7 @@ import com.back.domain.habitVerify.repository.HabitVerifyRepository
 import com.back.domain.member.repository.MemberRepository
 import com.back.domain.penaltyverify.entity.PenaltyVerifyStatus
 import com.back.domain.penaltyverify.repository.PenaltyVerifyRepository
+import com.back.global.entity.requiredId
 import com.back.global.exception.BusinessRuleException
 import com.back.global.exception.EntityNotFoundException
 import com.back.global.exception.ForbiddenException
@@ -276,9 +277,7 @@ class GroupService(
             throw BusinessRuleException("이미 마감된 그룹입니다.")
         }
 
-        val groupId = requireNotNull(group.id) {
-            "그룹 ID가 아직 생성되지 않았습니다."
-        }
+        val groupId = group.requiredId
 
         val currentMemberCount =
             groupMemberRepository.countByGroupIdAndStatus(
@@ -310,7 +309,7 @@ class GroupService(
 
         // LEFT 멤버도 포함하여 모든 그룹 멤버를 먼저 등록한다.
         val statsByMemberId = groupMembers.associate { groupMember ->
-            val memberId = requireNotNull(groupMember.member.id)
+            val memberId = groupMember.member.requiredId
 
             memberId to MemberRankingStats(
                 memberId = memberId,
