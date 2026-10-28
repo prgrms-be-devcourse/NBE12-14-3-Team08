@@ -299,7 +299,7 @@ export default function GroupDetailPage({
                 <HeroTiles>
                     <HeroTile label="👥" title="참여 인원" compact value={group.currentMemberCount} unit={` / ${group.memberLimit}명`} />
                     <HeroTile label="📅" title="마감 기한" compact value={group.deadline ? `${group.deadline}까지` : '상시 진행'} />
-                    <HeroTile label="☕" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
+                    <HeroTile label="🚨" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
                 </HeroTiles>
 
                 {/* 마감된 방은 새로 초대하거나 인증을 검토할 일이 없어 버튼을 숨긴다 */}

@@ -120,7 +120,7 @@ export function InvitePage() {
                 label="기간"
                 value={preview.deadline ? `${preview.startDate} ~ ${preview.deadline}` : `${preview.startDate}부터`}
               />
-              <InfoRow icon="☕" label="실패 시 벌칙" value={preview.penalty || '벌칙 없음'} emphasis />
+              <InfoRow icon="🚨" label="실패 시 벌칙" value={preview.penalty || '벌칙 없음'} emphasis />
             </div>
 
             <button

@@ -361,7 +361,7 @@ function PersonalSlide({ stats }: { stats: SettlementPersonalStats }) {
     { icon: '✅', label: '인증 승인', value: `${stats.approvedCount}회`, tone: 'emerald' as const },
     { icon: '📸', label: '전체 인증', value: `${stats.totalVerifyCount}회`, tone: 'sky' as const },
     { icon: '↩️', label: '인증 거절', value: `${stats.rejectedCount}회`, tone: 'rose' as const },
-    { icon: '☕', label: '벌칙', value: `${stats.penaltyCount}회`, tone: 'amber' as const },
+    { icon: '🚨', label: '벌칙', value: `${stats.penaltyCount}회`, tone: 'amber' as const },
   ];
 
   return (
