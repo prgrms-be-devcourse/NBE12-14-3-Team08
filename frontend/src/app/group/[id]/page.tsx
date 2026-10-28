@@ -287,7 +287,7 @@ export default function GroupDetailPage({
                 <HeroTiles>
                     <HeroTile label="👥" title="참여 인원" compact value={group.currentMemberCount} unit={` / ${group.memberLimit}명`} />
                     <HeroTile label="📅" title="마감 기한" compact value={group.deadline ? `${group.deadline}까지` : '상시 진행'} />
-                    <HeroTile label="🎁" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
+                    <HeroTile label="☕" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
                 </HeroTiles>
 
                 <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
