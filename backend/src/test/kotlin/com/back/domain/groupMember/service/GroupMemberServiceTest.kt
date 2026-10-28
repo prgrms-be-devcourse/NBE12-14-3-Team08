@@ -456,7 +456,7 @@ class GroupMemberServiceTest {
                         group, LockModeType.PESSIMISTIC_WRITE
                     )
                 } answers {
-                    group.password = "changed_encoded_pass"
+                    ReflectionTestUtils.setField(group, "password", "changed_encoded_pass")
                     Unit
                 }
 

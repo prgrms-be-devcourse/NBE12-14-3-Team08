@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
+import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import sun.security.jgss.GSSUtil.login
@@ -50,7 +51,7 @@ class MemberWithdrawIntegrationTest @Autowired constructor(
 
     private fun setDeadline(groupId: Long, deadline: LocalDate) {
         val group = groupRepository.findById(groupId).orElseThrow()
-        group.deadline = deadline
+        ReflectionTestUtils.setField(group, "deadline", deadline)
         groupRepository.saveAndFlush(group)
     }
 

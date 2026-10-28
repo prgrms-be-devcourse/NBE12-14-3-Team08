@@ -12,28 +12,45 @@ import java.time.LocalDate
 @Entity
 @Table(name = "groups")
 class Group(
+    title: String = "",
+    description: String? = null,
+    deadline: LocalDate? = null,
+    penalty: String = "",
+    password: String = "",
+    inviteCode: String = "",
+    memberLimit: Int = 0,
+    status: GroupStatus = GroupStatus.ACTIVE,
+) : BaseEntity() {
+
     @Column(nullable = false)
-    var title: String = "",
+    var title: String = title
+        protected set
 
-    var description: String? = null,
+    var description: String? = description
+        protected set
 
-    var deadline: LocalDate? = null,
+    var deadline: LocalDate? = deadline
+        protected set
 
     @Column(nullable = false)
-    var penalty: String = "",
+    var penalty: String = penalty
+        protected set
 
     @Column(nullable = false)
-    var password: String = "",
+    var password: String = password
+        protected set
 
     @Column(nullable = false, unique = true)
-    var inviteCode: String = "",
+    var inviteCode: String = inviteCode
+        protected set
 
-    var memberLimit: Int = 0,
+    var memberLimit: Int = memberLimit
+        protected set
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    var status: GroupStatus = GroupStatus.ACTIVE
-) : BaseEntity() {
+    var status: GroupStatus = status
+        protected set
 
     fun updateGroup(
         title: String?,

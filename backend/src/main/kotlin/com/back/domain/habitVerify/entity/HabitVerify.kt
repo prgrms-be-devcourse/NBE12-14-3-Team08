@@ -99,7 +99,9 @@ class HabitVerify private constructor(
         // 가로와 세로는 함께 있거나 함께 없어야 하고, 있으면 양수여야 한다.
         private fun requireImageSize(imageWidth: Int?, imageHeight: Int?) {
             require((imageWidth == null) == (imageHeight == null)) { "사진의 가로와 세로 크기는 함께 있어야 합니다." }
-            require(imageWidth == null || (imageWidth > 0 && imageHeight!! > 0)) { "사진의 가로와 세로 크기는 1 이상이어야 합니다." }
+            if (imageWidth != null && imageHeight != null) {
+                require(imageWidth > 0 && imageHeight > 0) { "사진의 가로와 세로 크기는 1 이상이어야 합니다." }
+            }
         }
     }
 }
