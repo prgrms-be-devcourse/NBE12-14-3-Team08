@@ -1,6 +1,7 @@
 package com.back.domain.habitVerify.dto
 
 import com.back.domain.habitVerify.entity.HabitVerify
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.back.global.entity.requiredId
 import java.time.LocalDate
 
@@ -16,6 +17,14 @@ data class HabitVerifyPhotoResponse(
     // 크기를 저장하기 전에 올라온 인증은 둘 다 null이다. 화면은 null이면 정사각형으로 보여 준다.
     val imageWidth: Int?,
     val imageHeight: Int?,
+    // 하트·댓글 개수와 내가 하트를 눌렀는지. includeEngagement=true로 요청했을 때만 채워지고,
+    // 그렇지 않으면 null이라 응답에 필드 자체가 없다. (기존 응답의 모양을 바꾸지 않는다)
+    @get:JsonInclude(JsonInclude.Include.NON_NULL)
+    val reactionCount: Long? = null,
+    @get:JsonInclude(JsonInclude.Include.NON_NULL)
+    val commentCount: Long? = null,
+    @get:JsonInclude(JsonInclude.Include.NON_NULL)
+    val reactedByMe: Boolean? = null,
 ) {
     companion object {
         // 목록 쿼리가 사진이 있는 인증만 골라 오므로 imageUrl은 null일 수 없다
