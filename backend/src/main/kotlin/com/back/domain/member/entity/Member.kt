@@ -1,6 +1,7 @@
 package com.back.domain.member.entity
 
 import com.back.global.entity.BaseEntity
+import com.back.global.entity.requiredId
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -68,14 +69,30 @@ class Member private constructor(
     fun matchesRefreshToken(refreshToken: String?): Boolean =
         this.refreshToken != null && this.refreshToken == refreshToken
 
+    // 탈퇴한 회원은 행을 지우지 않고 익명화한다. (인증·벌칙 기록이 이 회원을 참조하고 있어 지우면 관계가 깨진다)
+    // 사람을 가리키는 값(닉네임·아이디·비밀번호·소셜 식별자)은 지정한 값으로 바꾼다.
+    // 그러면 같은 아이디와 같은 소셜 계정으로 새로 가입할 수 있다. 이미 탈퇴한 회원에게 다시 호출해도 같은 값이 된다.
     fun withdraw() {
         status = MemberStatus.WITHDRAWN
         refreshToken = null
+        nickname = WITHDRAWN_NICKNAME
+        username = "$WITHDRAWN_USERNAME_PREFIX$requiredId"
+        password = WITHDRAWN_PASSWORD
+        provider = MemberProvider.LOCAL
+        providerId = null
     }
 
     fun isSocial(): Boolean = provider != MemberProvider.LOCAL
 
     companion object {
+        // 탈퇴한 회원의 닉네임. 종료된 방의 멤버 목록·통계·정산에 이 이름으로 표시된다.
+        const val WITHDRAWN_NICKNAME = "탈퇴한 회원"
+
+        // 탈퇴한 회원의 아이디는 이 접두사 + 회원 id다. 가입 때 이 접두사로 시작하는 아이디를 막아, 탈퇴할 때 아이디가 겹치지 않게 한다.
+        const val WITHDRAWN_USERNAME_PREFIX = "withdrawn_"
+
+        // BCrypt 해시 형식이 아니라 어떤 입력과도 일치하지 않는다. (탈퇴 회원은 비밀번호 비교 전에 로그인을 거절한다)
+        const val WITHDRAWN_PASSWORD = "!withdrawn"
 
         fun create(nickname: String, username: String, encodedPassword: String): Member =
             Member(nickname, username, encodedPassword, MemberProvider.LOCAL, null)

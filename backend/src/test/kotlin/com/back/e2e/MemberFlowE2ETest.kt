@@ -16,6 +16,10 @@ class MemberFlowE2ETest : E2ETestSupport() {
     private fun storedValue(column: String, username: String): String? =
         jdbc.queryForObject("select $column from member where username = ?", String::class.java, username)
 
+    // 탈퇴하면 아이디가 바뀌므로 탈퇴 전후를 같은 회원으로 보려면 id로 조회한다.
+    private fun storedValueById(column: String, memberId: Long): String? =
+        jdbc.queryForObject("select $column from member where id = ?", String::class.java, memberId)
+
     @Test
     @DisplayName("시나리오 1: 가입, 로그인, 내 정보 조회, 닉네임과 비밀번호 수정, 새 비밀번호로 다시 로그인한다")
     fun 가입부터_정보_수정까지() {
@@ -110,17 +114,22 @@ class MemberFlowE2ETest : E2ETestSupport() {
         expectStatus(call(HttpMethod.GET, "/api/members/me", tokens.accessToken), 200, "탈퇴 실패 후 내 정보")
         assertThat(storedValue("status", username)).isEqualTo("ACTIVE")
 
+        val memberId = jdbc.queryForObject("select id from member where username = ?", Long::class.java, username)!!
+
         // 마감일이 지나(어제) 방이 끝나면 탈퇴할 수 있다.
         jdbc.update("update groups set deadline = ? where id = ?", Date.valueOf(LocalDate.now().minusDays(1)), group.id)
         expectStatus(call(HttpMethod.DELETE, "/api/members/me", tokens.accessToken), 204, "방이 끝난 뒤 탈퇴")
 
-        // DB: 회원은 WITHDRAWN이고 리프레시 토큰이 폐기되며, 방의 멤버 기록은 LEFT로 남는다.
-        assertThat(storedValue("status", username)).isEqualTo("WITHDRAWN")
-        assertThat(storedValue("refresh_token", username)).isNull()
+        // DB: 회원은 WITHDRAWN이고 리프레시 토큰이 폐기되며, 닉네임, 아이디, 비밀번호는 익명 값으로 바뀐다. 방의 멤버 기록은 LEFT로 남는다.
+        assertThat(storedValueById("status", memberId)).isEqualTo("WITHDRAWN")
+        assertThat(storedValueById("refresh_token", memberId)).isNull()
+        assertThat(storedValueById("username", memberId)).isEqualTo("withdrawn_$memberId")
+        assertThat(storedValueById("password", memberId)).isEqualTo("!withdrawn")
+        assertThat(storedValueById("nickname", memberId)).isEqualTo("탈퇴한 회원")
         val memberStatuses = jdbc.queryForList(
-            "select gm.status from group_member gm join member m on m.id = gm.member_id where m.username = ?",
+            "select gm.status from group_member gm where gm.member_id = ?",
             String::class.java,
-            username,
+            memberId,
         )
         assertThat(memberStatuses).containsExactly("LEFT")
 
@@ -128,14 +137,23 @@ class MemberFlowE2ETest : E2ETestSupport() {
         expectStatus(call(HttpMethod.GET, "/api/members/me", tokens.accessToken), 401, "탈퇴 후 기존 액세스 토큰")
         expectStatus(call(HttpMethod.POST, "/api/auth/refresh", body = mapOf("refreshToken" to tokens.refreshToken)), 401, "탈퇴 후 기존 리프레시 토큰")
         val login = expectStatus(call(HttpMethod.POST, "/api/auth/login", body = loginBody(username, PASSWORD)), 401, "탈퇴 후 로그인")
-        assertThat(login.json.get("message").asString()).isEqualTo("탈퇴한 회원은 로그인할 수 없습니다.")
+        assertThat(login.json.get("message").asString()).isEqualTo("아이디 또는 비밀번호가 일치하지 않습니다.")
 
-        // 현재 동작: 탈퇴한 아이디는 계속 점유되어 다시 가입할 수 없다.
-        expectStatus(
+        // 탈퇴한 아이디로는 다시 가입할 수 있고, 새 회원은 다른 id이며 이전 기록을 이어받지 않는다.
+        val rejoin = expectStatus(
             call(HttpMethod.POST, "/api/members", body = mapOf("nickname" to "다시", "username" to username, "password" to PASSWORD)),
-            409,
+            201,
             "탈퇴한 아이디로 재가입",
         )
+        assertThat(rejoin.json.get("memberId").asLong()).isNotEqualTo(memberId)
+        val rejoinTokens = login(username)
+        expectStatus(call(HttpMethod.GET, "/api/members/me", rejoinTokens.accessToken), 200, "재가입한 회원 내 정보")
+        val newMemberships = jdbc.queryForList(
+            "select gm.status from group_member gm where gm.member_id = ?",
+            String::class.java,
+            rejoin.json.get("memberId").asLong(),
+        )
+        assertThat(newMemberships).isEmpty()
     }
 
     @Test

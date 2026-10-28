@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.test.util.ReflectionTestUtils
 
 // 가입 방식(provider)에 관한 Member 규칙을 DB 없이 확인한다.
 class MemberSocialTest {
@@ -40,16 +41,20 @@ class MemberSocialTest {
     }
 
     @Test
-    @DisplayName("탈퇴해도 가입 방식과 식별자는 남는다 (같은 구글 계정으로 새 회원이 만들어지지 않게 한다)")
-    fun 탈퇴해도_식별자는_남는다() {
+    @DisplayName("탈퇴하면 가입 방식과 소셜 식별자가 비워져 같은 구글 계정으로 새로 가입할 수 있다")
+    fun 탈퇴하면_식별자가_비워진다() {
         val member = Member.createSocial(MemberProvider.GOOGLE, "1234", "홍길동", "google_1234", "encoded")
+        ReflectionTestUtils.setField(member, "id", 9L)
         member.updateRefreshToken("refresh")
 
         member.withdraw()
 
         assertThat(member.status).isEqualTo(MemberStatus.WITHDRAWN)
         assertThat(member.refreshToken).isNull()
-        assertThat(member.provider).isEqualTo(MemberProvider.GOOGLE)
-        assertThat(member.providerId).isEqualTo("1234")
+        assertThat(member.provider).isEqualTo(MemberProvider.LOCAL)
+        assertThat(member.providerId).isNull()
+        assertThat(member.username).isEqualTo("withdrawn_9")
+        assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
+        assertThat(member.isSocial()).isFalse()
     }
 }

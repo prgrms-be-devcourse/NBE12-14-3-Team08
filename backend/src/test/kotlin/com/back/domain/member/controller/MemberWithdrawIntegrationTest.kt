@@ -4,6 +4,8 @@ import com.back.domain.group.dto.GroupRequest
 import com.back.domain.group.repository.GroupRepository
 import com.back.domain.groupMember.entity.GroupMemberStatus
 import com.back.domain.groupMember.repository.GroupMemberRepository
+import com.back.domain.member.entity.Member
+import com.back.domain.member.entity.MemberProvider
 import com.back.domain.member.entity.MemberStatus
 import com.sun.tools.javac.parser.Tokens
 import org.assertj.core.api.Assertions.assertThat
@@ -81,9 +83,10 @@ class MemberWithdrawIntegrationTest @Autowired constructor(
         perform(HttpMethod.GET, "/api/members/me", tokens.accessToken).andExpect(status().isUnauthorized())
         perform(HttpMethod.POST, "/api/auth/refresh", body = mapOf("refreshToken" to tokens.refreshToken))
             .andExpect(status().isUnauthorized())
+        // 아이디가 익명화돼 원래 아이디로는 찾아지지 않으므로 탈퇴 여부를 알려주지 않는 일반 실패 메시지다.
         login("withdraw-user")
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").value("탈퇴한 회원은 로그인할 수 없습니다."))
+            .andExpect(jsonPath("$.message").value("아이디 또는 비밀번호가 일치하지 않습니다."))
     }
 
     @Test
@@ -95,13 +98,80 @@ class MemberWithdrawIntegrationTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("탈퇴한 아이디로는 다시 가입할 수 없다 (현재 동작: 아이디가 계속 점유됨)")
-    fun 탈퇴한_아이디로_재가입할_수_없다() {
+    @DisplayName("탈퇴하면 회원 행은 남고 닉네임, 아이디, 비밀번호는 익명 값으로 바뀐다")
+    fun 탈퇴하면_익명화된다() {
         withdraw().andExpect(status().isNoContent())
 
-        signUp("withdraw-user")
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.message").value("이미 사용 중인 아이디입니다."))
+        val member = memberRepository.findById(memberId).orElseThrow()
+        assertThat(member.status).isEqualTo(MemberStatus.WITHDRAWN)
+        assertThat(member.username).isEqualTo("withdrawn_$memberId")
+        assertThat(member.password).isEqualTo(Member.WITHDRAWN_PASSWORD)
+        assertThat(member.nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
+        assertThat(member.provider).isEqualTo(MemberProvider.LOCAL)
+        assertThat(member.providerId).isNull()
+    }
+
+    @Test
+    @DisplayName("끝난 방의 멤버 목록에는 탈퇴한 회원이 익명 닉네임으로 남고, 방 기록은 그대로다")
+    fun 방의_멤버_목록에는_익명_닉네임으로_남는다() {
+        val groupId = createGroup()
+        setDeadline(groupId, LocalDate.now().minusDays(1))
+        withdraw().andExpect(status().isNoContent())
+
+        val members = groupMemberRepository.findByGroupIdWithHabit(groupId)
+
+        assertThat(members).hasSize(1)
+        assertThat(members[0].memberId).isEqualTo(memberId)
+        assertThat(members[0].nickname).isEqualTo(Member.WITHDRAWN_NICKNAME)
+        assertThat(members[0].username).isEqualTo("withdrawn_$memberId")
+        assertThat(membershipStatuses()).containsOnly(GroupMemberStatus.LEFT)
+    }
+
+    @Test
+    @DisplayName("탈퇴한 아이디로 다시 가입할 수 있고, 새 회원은 다른 id로 만들어져 로그인할 수 있다")
+    fun 탈퇴한_아이디로_재가입할_수_있다() {
+        withdraw().andExpect(status().isNoContent())
+
+        val newMemberId = signUpOk("withdraw-user", "다시가입")
+        val newTokens = loginOk("withdraw-user")
+
+        assertThat(newMemberId).isNotEqualTo(memberId)
+        val me = json(perform(HttpMethod.GET, "/api/members/me", newTokens.accessToken).andExpect(status().isOk()))
+        assertThat(me.get("memberId").asLong()).isEqualTo(newMemberId)
+        assertThat(me.get("username").asString()).isEqualTo("withdraw-user")
+        // 이전 회원의 기존 토큰은 새 회원 가입과 상관없이 계속 거절된다.
+        perform(HttpMethod.GET, "/api/members/me", tokens.accessToken).andExpect(status().isUnauthorized())
+    }
+
+    @Test
+    @DisplayName("재가입한 회원은 이전 회원의 방 기록을 이어받지 않고, 이전 기록은 LEFT로 남는다")
+    fun 재가입하면_이전_기록을_이어받지_않는다() {
+        val groupId = createGroup()
+        setDeadline(groupId, LocalDate.now().minusDays(1))
+        withdraw().andExpect(status().isNoContent())
+
+        val newMemberId = signUpOk("withdraw-user", "다시가입")
+
+        assertThat(groupMemberRepository.findAllByMemberId(newMemberId)).isEmpty()
+        assertThat(membershipStatuses()).containsOnly(GroupMemberStatus.LEFT)
+    }
+
+    @Test
+    @DisplayName("탈퇴한 회원의 익명 아이디로는 로그인할 수 없다")
+    fun 익명_아이디로_로그인할_수_없다() {
+        withdraw().andExpect(status().isNoContent())
+
+        login("withdrawn_$memberId", Member.WITHDRAWN_PASSWORD)
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("아이디 또는 비밀번호가 일치하지 않습니다."))
+    }
+
+    @Test
+    @DisplayName("익명 아이디 접두사(withdrawn_)로 시작하는 아이디는 가입할 수 없다 (탈퇴할 때 아이디가 겹치지 않게 한다)")
+    fun 예약된_접두사로는_가입할_수_없다() {
+        signUp("withdrawn_$memberId")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("사용할 수 없는 아이디입니다."))
     }
 
     @Test

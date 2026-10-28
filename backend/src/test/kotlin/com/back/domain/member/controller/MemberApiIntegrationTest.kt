@@ -235,7 +235,7 @@ class MemberApiIntegrationTest : MemberApiTestSupport() {
         }
 
         @Test
-        @DisplayName("탈퇴한 회원은 올바른 비밀번호로도 로그인할 수 없다")
+        @DisplayName("탈퇴한 회원은 올바른 비밀번호로도 로그인할 수 없고, 탈퇴 여부는 알려주지 않는 일반 실패 메시지다")
         fun 탈퇴한_회원은_로그인할_수_없다() {
             val memberId = signUpOk("login-withdrawn")
             memberRepository.findById(memberId).orElseThrow().withdraw()
@@ -243,7 +243,7 @@ class MemberApiIntegrationTest : MemberApiTestSupport() {
 
             login("login-withdrawn")
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("탈퇴한 회원은 로그인할 수 없습니다."))
+                .andExpect(jsonPath("$.message").value(LOGIN_FAIL_MESSAGE))
         }
     }
 
