@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Heart, MessageCircle } from 'lucide-react';
 import { habitApi, type GroupPhoto } from '@/lib/habitApi';
 import {
   DEFAULT_PHOTO_COLUMNS,
@@ -19,6 +20,7 @@ import {
 import { GroupContentBar, type GroupView } from './GroupContentBar';
 import { MemberFilterDropdown } from './MemberFilterDropdown';
 import { PhotoDetailPanel } from './PhotoDetailPanel';
+import type { EngagementSnapshot } from './ReactionCommentSection';
 
 interface GroupPhotoLibraryProps {
   groupId: number | string;
@@ -27,6 +29,8 @@ interface GroupPhotoLibraryProps {
   view: GroupView;
   onViewChange: (view: GroupView) => void;
   memberCount: number;
+  // 종료된 방이면 상세 패널에서 하트·댓글을 읽기만 할 수 있다.
+  finished?: boolean;
 }
 
 // 상세 패널에서 다음 사진으로 넘기다 끝에 닿기 전에 미리 다음 페이지를 불러올 남은 장 수
@@ -65,6 +69,19 @@ const WHEN_CLASS: Record<PhotoColumns, string> = {
   3: 'text-[11px]',
   5: 'text-[9px]',
   15: 'hidden',
+};
+// 하트·댓글 숫자 줄은 칸이 아주 작아져도 남기고 크기만 줄인다.
+const COUNT_CLASS: Record<PhotoColumns, string> = {
+  1: 'text-sm gap-3',
+  3: 'text-xs gap-2.5',
+  5: 'text-[10px] gap-2',
+  15: 'text-[6px] gap-1',
+};
+const COUNT_ICON_CLASS: Record<PhotoColumns, string> = {
+  1: 'h-4 w-4',
+  3: 'h-3.5 w-3.5',
+  5: 'h-3 w-3',
+  15: 'h-1.5 w-1.5',
 };
 
 function mergeById(current: GroupPhoto[], incoming: GroupPhoto[]): GroupPhoto[] {
@@ -145,7 +162,7 @@ function playZoomTransition(scroller: HTMLElement, before: Map<number, CellBox>)
 
 // 인증 사진을 아이폰 사진 앱처럼 모아 보는 라이브러리.
 // 날짜 내림차순(최신이 위)이고, 한 줄에 1·3·5·15장 단계를 오가며 스크롤하면 다음 페이지를 불러온다.
-export function GroupPhotoLibrary({ groupId, members, view, onViewChange, memberCount }: GroupPhotoLibraryProps) {
+export function GroupPhotoLibrary({ groupId, members, view, onViewChange, memberCount, finished = false }: GroupPhotoLibraryProps) {
   const [filter, setFilter] = useState<number | null>(null);
   const [columns, setColumns] = useState<PhotoColumns>(DEFAULT_PHOTO_COLUMNS);
   const [loaded, setLoaded] = useState<LoadedPhotos | null>(null);
@@ -566,6 +583,26 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
     selectPhoto(photo);
   };
 
+  // 상세 패널에서 하트·댓글이 바뀌면 칸 위의 숫자도 맞춘다.
+  const updateEngagement = useCallback((photoId: number, snapshot: EngagementSnapshot) => {
+    setLoaded((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((photo) =>
+          photo.id === photoId
+            ? {
+                ...photo,
+                reactionCount: snapshot.reactionCount,
+                commentCount: snapshot.commentCount,
+                reactedByMe: snapshot.reacted,
+              }
+            : photo,
+        ),
+      };
+    });
+  }, []);
+
   const closePhoto = () => {
     setSelected(null);
 
@@ -674,6 +711,18 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
                     </span>
                     <span className={`opacity-75 [@media(hover:none)]:hidden ${WHEN_CLASS[columns]}`}>
                       {formatShortDate(photo.verifyDate)}
+                    </span>
+                    <span
+                      className={`mt-0.5 flex items-center font-extrabold [@media(hover:none)]:mt-0 ${COUNT_CLASS[columns]}`}
+                    >
+                      <span className="flex items-center gap-0.5">
+                        <Heart className={COUNT_ICON_CLASS[columns]} fill="currentColor" strokeWidth={0} />
+                        {photo.reactionCount ?? 0}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <MessageCircle className={COUNT_ICON_CLASS[columns]} fill="currentColor" strokeWidth={0} />
+                        {photo.commentCount ?? 0}
+                      </span>
                     </span>
                   </span>
                   {selected?.id === photo.id && (
@@ -825,6 +874,8 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
             selectedIndex >= 0 && selectedIndex < items.length - 1 ? () => stepPhoto(items[selectedIndex + 1]) : null
           }
           onClose={closePhoto}
+          writable={!finished}
+          onEngagementChange={(snapshot) => updateEngagement(selected.id, snapshot)}
         />
       )}
     </section>

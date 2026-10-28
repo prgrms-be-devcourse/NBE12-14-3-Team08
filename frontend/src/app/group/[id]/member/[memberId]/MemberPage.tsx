@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useMember } from "@/context/MemberContext";
 import { ModalShell, ModalHeader, ModalActions, ImageLightbox } from "@/components/ModalKit";
+import { ReactionCommentSection } from "@/components/ReactionCommentSection";
 import {
     habitApi,
     uploadFileToSignedUrl,
@@ -30,7 +31,7 @@ import {
     type PenaltyVerifyDetail,
 } from "@/lib/habitApi";
 import { readImageSize } from "@/lib/imageSize";
-import { groupApi, type GroupDetailResponse } from "@/lib/groupApi";
+import { groupApi, isGroupFinished, type GroupDetailResponse } from "@/lib/groupApi";
 import { daysSince, formatWeekRange, summarizeThisWeek, type WeekSummary } from "@/lib/habitWeek";
 
 type Props = { groupId: string; memberId: string };
@@ -645,6 +646,7 @@ export function MemberPage({ groupId, memberId }: Props) {
                     activeHabitId={habit?.id ?? null}
                     habitTitleById={habitTitleById}
                     isMe={isMe}
+                    writable={!group || !isGroupFinished(group)}
                     direction={certDirection}
                     onNavigate={(target, dir) => {
                         setCertDetail(target);
@@ -700,7 +702,12 @@ export function MemberPage({ groupId, memberId }: Props) {
             )}
 
             {penaltyDetail && (
-                <PenaltyDetailPanel item={penaltyDetail} onClose={() => setPenaltyDetail(null)} />
+                <PenaltyDetailPanel
+                    item={penaltyDetail}
+                    isMe={isMe}
+                    writable={!group || !isGroupFinished(group)}
+                    onClose={() => setPenaltyDetail(null)}
+                />
             )}
         </div>
     );
@@ -1644,6 +1651,7 @@ function CertDetailPanel({
     activeHabitId,
     habitTitleById,
     isMe,
+    writable,
     direction,
     onNavigate,
     onClose,
@@ -1654,6 +1662,8 @@ function CertDetailPanel({
     activeHabitId: number | null;
     habitTitleById: Record<number, string>;
     isMe: boolean;
+    // 종료된 방에서는 false: 하트·댓글을 읽기만 할 수 있다
+    writable: boolean;
     direction: "left" | "right" | null;
     onNavigate: (target: HabitVerifyResponse, dir: "left" | "right") => void;
     onClose: () => void;
@@ -1816,6 +1826,17 @@ function CertDetailPanel({
                     >
                         {current.description || "등록된 내용이 없습니다."}
                     </p>
+
+                    {current.status === "APPROVED" && (
+                        <div className="-mx-6 mt-5">
+                            <ReactionCommentSection
+                                kind="habit"
+                                targetId={current.id}
+                                isOwnVerify={isMe}
+                                writable={writable}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -2028,7 +2049,17 @@ function PenaltyCertPanel({
 
 // ---------- 오른쪽 패널: 벌칙 수행 상세 ----------
 
-function PenaltyDetailPanel({ item, onClose }: { item: PenaltyVerifyDetail; onClose: () => void }) {
+function PenaltyDetailPanel({
+    item,
+    isMe,
+    writable,
+    onClose,
+}: {
+    item: PenaltyVerifyDetail;
+    isMe: boolean;
+    writable: boolean;
+    onClose: () => void;
+}) {
     const [expanded, setExpanded] = useState(false);
     const altText = "벌칙 수행 사진";
 
@@ -2073,6 +2104,10 @@ function PenaltyDetailPanel({ item, onClose }: { item: PenaltyVerifyDetail; onCl
                     {item.description || "등록된 내용이 없습니다."}
                 </p>
             </div>
+
+            {item.status === "APPROVED" && (
+                <ReactionCommentSection kind="penalty" targetId={item.id} isOwnVerify={isMe} writable={writable} />
+            )}
 
             {expanded &&
                 item.imageUrl &&

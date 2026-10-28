@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMember } from '@/context/MemberContext';
 import { apiRequest } from '@/lib/memberApi';
+import { isGroupFinished } from '@/lib/groupApi';
 import { EditRoomModal } from '@/components/EditRoomModal';
 import { MemberHabitHeatmap } from '@/components/MemberHabitHeatmap';
 import { GroupContentBar } from '@/components/GroupContentBar';
@@ -298,6 +299,7 @@ export default function GroupDetailPage({
                         view={view}
                         onViewChange={setView}
                         memberCount={group.currentMemberCount}
+                        finished={isGroupFinished({ status: group.status === 'FINISH' ? 'FINISH' : 'ACTIVE', deadline: group.deadline })}
                     />
                 )}
 
