@@ -94,9 +94,9 @@ export default function GroupDetailPage({
                 deadline: groupData.deadline,
                 penalty: groupData.penalty || '',
                 inviteCode: groupData.inviteCode || '',
-                memberLimit: groupData.memberLimit || 10,
+                memberLimit: groupData.memberLimit ?? 0,
                 inviteLink: groupData.inviteLink,
-                currentMemberCount: groupData.currentMemberCount || 1,
+                currentMemberCount: groupData.currentMemberCount ?? 0,
                 rankings: groupData.rankings ?? null,
             });
 
