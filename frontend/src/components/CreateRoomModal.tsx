@@ -86,8 +86,8 @@ export function CreateRoomModal({
                 onChange={(event) => setForm({ ...form, memberLimit: Number(event.target.value) })} className={inputClassName} />
             </Field>
           </div>
-          <Field label="실패 시 벌칙">
-            <input value={form.penalty} onChange={(event) => setForm({ ...form, penalty: event.target.value })}
+          <Field label="실패 시 벌칙" required>
+            <input required value={form.penalty} onChange={(event) => setForm({ ...form, penalty: event.target.value })}
               className={inputClassName} placeholder="예: 커피 사기" />
           </Field>
           <Field label="방 비밀번호" required>
