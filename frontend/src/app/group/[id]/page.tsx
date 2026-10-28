@@ -270,18 +270,29 @@ export default function GroupDetailPage({
                         </p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
-                        {currentRole === 'OWNER' && (
-                            <button onClick={() => setIsEditModalOpen(true)} className={btnGhost}>
-                                ⚙ 방 설정
+                    <div className="flex shrink-0 flex-col items-stretch gap-2">
+                        <div className="flex items-center gap-2">
+                            {currentRole === 'OWNER' && (
+                                <button onClick={() => setIsEditModalOpen(true)} className={btnGhost}>
+                                    ⚙ 방 설정
+                                </button>
+                            )}
+                            <button
+                                onClick={handleLeaveGroup}
+                                className="inline-flex items-center rounded-xl bg-rose-400/15 px-3.5 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/25 cursor-pointer"
+                            >
+                                방 탈퇴
                             </button>
+                        </div>
+                        {/* 마감된 방에서만: 결산 화면으로 이동 */}
+                        {isRoomFinished && (
+                            <Link
+                                href={`/group/${rawId}/settlement`}
+                                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-lime-400 px-3.5 py-2.5 text-xs font-extrabold text-forest-900 transition hover:-translate-y-0.5 cursor-pointer"
+                            >
+                                결산 확인하기
+                            </Link>
                         )}
-                        <button
-                            onClick={handleLeaveGroup}
-                            className="inline-flex items-center rounded-xl bg-rose-400/15 px-3.5 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/25 cursor-pointer"
-                        >
-                            방 탈퇴
-                        </button>
                     </div>
                 </div>
 
