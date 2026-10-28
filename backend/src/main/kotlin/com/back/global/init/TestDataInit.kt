@@ -45,6 +45,10 @@ class TestDataInit(
         }
         // 기본 데이터가 이미 있는 DB에도 갤러리 예시 사진을 한 번만 채워 넣는다
         seedGalleryPhotos()
+        // 방장asd가 방장인 완료된 방 예시도 같은 이유로 한 번만 채워 넣는다
+        seedFinishedRoomForOwner()
+        // 멤버가 많은 방(멤버 목록 스크롤 확인용)도 한 번만 채워 넣는다
+        seedCrowdedRoomForOwner()
     }
 
     private fun seedBaseData() {
@@ -234,6 +238,107 @@ class TestDataInit(
         }
     }
 
+    // 방장asd가 방장인 완료된 방. 마감이 지난 방의 멤버 목록(히트맵)·앨범·결산 화면을 볼 수 있게 한다.
+    // 마감일 기준 최근 14일 동안 멤버마다 승인·거절 인증을 다르게 채우고, 방장은 벌칙(승인)도 한 건 받는다.
+    private fun seedFinishedRoomForOwner() {
+        if (groupRepository.existsByInviteCode(FINISHED_ROOM_INVITE_CODE)) return
+        if (memberRepository.findByUsername(FINISHED_ROOM_OWNER).getOrNull() == null) return
+
+        val encodedPassword = checkNotNull(passwordEncoder.encode("1234")) { "비밀번호를 암호화하지 못했습니다." }
+        val deadline = LocalDate.now().minusDays(3)
+        val group = groupRepository.save(
+            Group(
+                title = "새벽 러닝 챌린지 (완료)",
+                description = "마감된 방 예시입니다. 2주 동안 아침마다 달리고 인증했어요.",
+                deadline = deadline,
+                penalty = "아이스크림 쏘기",
+                password = encodedPassword,
+                inviteCode = FINISHED_ROOM_INVITE_CODE,
+                memberLimit = 5,
+                status = GroupStatus.FINISH,
+            )
+        )
+
+        // 방장 외 참가자는 기본 시드 회원 중 있는 사람만 넣는다
+        val roster = listOf(
+            FinishedRoomEntry(FINISHED_ROOM_OWNER, "아침 러닝 3km", "공원 트랙 3바퀴 달리기", approved = 14, rejected = 0),
+            FinishedRoomEntry("chulsoo", "스트레칭 15분", "러닝 후 쿨다운", approved = 12, rejected = 2),
+            FinishedRoomEntry("younghee", "물 2L 마시기", "텀블러 채우고 인증", approved = 9, rejected = 1),
+            FinishedRoomEntry("minsoo", "계단으로 출근하기", "엘리베이터 금지", approved = 7, rejected = 0),
+        )
+
+        var ownerGroupMember: GroupMember? = null
+        roster.forEach { entry ->
+            val member = memberRepository.findByUsername(entry.username).getOrNull() ?: return@forEach
+            val isOwner = entry.username == FINISHED_ROOM_OWNER
+            val groupMember = createGroupMember(group, member, if (isOwner) GroupMemberRole.OWNER else GroupMemberRole.MEMBER)
+            if (isOwner) ownerGroupMember = groupMember
+
+            val habit = createActiveHabit(groupMember, entry.habitTitle, entry.habitDescription, 5)
+            for (offset in 0 until FINISHED_ROOM_DAYS) {
+                val date = deadline.minusDays((FINISHED_ROOM_DAYS - 1 - offset).toLong())
+                val description = "${offset + 1}일차 - ${entry.habitTitle}"
+                val image = GALLERY_IMAGES[(offset * 3 + entry.habitTitle.length) % GALLERY_IMAGES.size]
+                when {
+                    offset < entry.approved -> createApprovedHabitVerify(habit, date, description, image)
+                    offset < entry.approved + entry.rejected -> createRejectedHabitVerify(habit, date, description, image)
+                }
+            }
+        }
+
+        // 방장은 중간에 포기한 습관이 있어 벌칙을 한 번 수행했다
+        ownerGroupMember?.let { groupMember ->
+            val failed = createFailedHabit(groupMember, "야식 끊기", "저녁 8시 이후 금식", 7)
+            penaltyVerifyRepository.save(
+                PenaltyVerify.create(groupMember, failed).apply {
+                    submit(deadline.minusDays(1), "야식을 참지 못해 약속대로 아이스크림을 샀습니다!", GALLERY_IMAGES.first())
+                    approve()
+                }
+            )
+        }
+    }
+
+    // 방장asd가 방장이고 멤버가 14명인 진행 중인 방. 멤버 목록이 길어질 때 스크롤이 어떻게 생기는지 볼 수 있다.
+    // 앞쪽 멤버는 습관이 있고(오늘 승인 인증이 있거나 없음), 마지막 둘은 습관이 없다.
+    private fun seedCrowdedRoomForOwner() {
+        if (groupRepository.existsByInviteCode(CROWDED_ROOM_INVITE_CODE)) return
+        val owner = memberRepository.findByUsername(FINISHED_ROOM_OWNER).getOrNull() ?: return
+
+        val encodedPassword = checkNotNull(passwordEncoder.encode("1234")) { "비밀번호를 암호화하지 못했습니다." }
+        val group = groupRepository.save(
+            Group(
+                title = "북적북적 스터디 (멤버 많은 방)",
+                description = "멤버가 많을 때 목록이 어떻게 스크롤되는지 보는 예시 방입니다.",
+                deadline = LocalDate.now().plusDays(30),
+                penalty = "점심 쏘기",
+                password = encodedPassword,
+                inviteCode = CROWDED_ROOM_INVITE_CODE,
+                memberLimit = 20,
+                status = GroupStatus.ACTIVE,
+            )
+        )
+
+        val members = listOf(owner) + CROWDED_ROOM_NICKNAMES.mapIndexed { index, nickname ->
+            getOrCreateMember("crowd%02d".format(index + 1), nickname, encodedPassword)
+        }
+        members.forEachIndexed { index, member ->
+            val groupMember = createGroupMember(
+                group,
+                member,
+                if (index == 0) GroupMemberRole.OWNER else GroupMemberRole.MEMBER,
+            )
+            // 마지막 둘은 습관 없이 참여만 한 멤버
+            if (index >= members.size - 2) return@forEachIndexed
+
+            val goal = 3 + index % 5
+            val habit = createActiveHabit(groupMember, CROWDED_ROOM_HABITS[index % CROWDED_ROOM_HABITS.size], "주 ${goal}회 인증", goal)
+            // 세 명 중 한 명은 이번 주 인증이 아직 없다
+            if (index % 3 != 2) {
+                createApprovedHabitVerify(habit, LocalDate.now(), "오늘 인증 완료", GALLERY_IMAGES[index % GALLERY_IMAGES.size])
+            }
+        }
+    }
+
     // 있으면 그대로 쓰고, 없으면 만들어 저장한 뒤 리프레시 토큰까지 넣는다
     // findByUsername은 아직 Optional을 돌려줘서 getOrNull()로 받는다 (MemberRepository가 nullable로 바뀌면 함께 정리)
     private fun getOrCreateMember(username: String, nickname: String, password: String): Member =
@@ -265,7 +370,34 @@ class TestDataInit(
         habitVerifyRepository.save(HabitVerify.create(habit, verifyDate, description, imageUrl).apply { approve() })
     }
 
+    private fun createRejectedHabitVerify(habit: Habit, verifyDate: LocalDate, description: String, imageUrl: String) {
+        habitVerifyRepository.save(HabitVerify.create(habit, verifyDate, description, imageUrl).apply { reject() })
+    }
+
+    // 완료된 방 예시에 넣을 참가자 한 명: 습관 하나와 그 습관의 승인·거절 인증 횟수
+    private class FinishedRoomEntry(
+        val username: String,
+        val habitTitle: String,
+        val habitDescription: String,
+        val approved: Int,
+        val rejected: Int,
+    )
+
     private companion object {
+        const val FINISHED_ROOM_INVITE_CODE = "DONE400"
+        const val FINISHED_ROOM_OWNER = "asd"
+        const val FINISHED_ROOM_DAYS = 14
+        const val CROWDED_ROOM_INVITE_CODE = "CROWD500"
+
+        // 방장asd 외에 멤버 많은 방에 들어갈 13명
+        val CROWDED_ROOM_NICKNAMES = listOf(
+            "김하늘", "박서준", "최유나", "정민재", "오지우", "윤도현", "강다은",
+            "송태오", "한소희", "문지후", "배서연", "조현빈", "류하린",
+        )
+        val CROWDED_ROOM_HABITS = listOf(
+            "아침 7시 기상", "알고리즘 1문제", "영어 단어 30개", "스트레칭 15분", "독서 30페이지", "물 2L 마시기",
+        )
+
         // 갤러리 예시 사진. 같은 사진이 여러 번 나오지 않도록 열 장을 돌려 쓴다.
         val GALLERY_IMAGES = listOf(
             "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=60",

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { useMember } from '../context/MemberContext';
@@ -168,12 +169,13 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
   const goPrevious = () => setStep((current) => Math.max(current - 1, 0));
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <section className="relative mx-auto min-h-[calc(100vh-4rem)] max-w-5xl overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 text-slate-900 shadow-xl shadow-slate-200/60 sm:min-h-[calc(100vh-6rem)] sm:p-10">
+    // 헤더(65px)를 뺀 화면 높이에 맞춰 스크롤 없이 한 화면에 담는다
+    <main className="h-[calc(100svh-65px)] overflow-hidden px-4 py-3 sm:px-6 sm:py-5">
+      <section className="relative mx-auto h-full max-w-5xl overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 text-slate-900 shadow-xl shadow-slate-200/60 sm:p-6">
         <div aria-hidden="true" className="absolute -left-32 top-12 h-72 w-72 rounded-full bg-forest-200/50 blur-3xl" />
         <div aria-hidden="true" className="absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-violet-200/40 blur-3xl" />
 
-        <div className="relative mx-auto flex min-h-[calc(100vh-7rem)] max-w-4xl flex-col sm:min-h-[calc(100vh-11rem)]">
+        <div className="relative mx-auto flex h-full max-w-4xl flex-col">
         <header className="grid grid-cols-3 items-center gap-4">
           <button
             type="button"
@@ -189,14 +191,14 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
           <span aria-hidden="true" />
         </header>
 
-        <div className="mt-6 h-1 overflow-hidden rounded-full bg-slate-100">
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-gradient-to-r from-forest-500 to-lime-400 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <section className="flex flex-1 items-center justify-center py-8 sm:py-12">
+        <FitToHeight>
           {step === 0 && <IntroSlide nickname={nickname} onStart={goNext} />}
           {step === 1 && <PersonalSlide stats={settlement.personalStats} />}
           {step >= 2 && step < lastStep && (
@@ -207,10 +209,10 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
             />
           )}
           {step === lastStep && <ClosingSlide nickname={nickname} />}
-        </section>
+        </FitToHeight>
 
         {step > 0 && (
-          <footer className="flex items-center justify-between border-t border-slate-100 pt-5">
+          <footer className="flex items-center justify-between border-t border-slate-100 pt-3">
             <button
               type="button"
               onClick={goPrevious}
@@ -251,6 +253,43 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
   );
 }
 
+// 남은 높이에 슬라이드를 맞춘다. 내용이 더 크면 비율을 줄여 스크롤 없이 한 화면에 담는다.
+function FitToHeight({ children }: { children: ReactNode }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const inner = innerRef.current;
+    if (!box || !inner) return;
+
+    const update = () => {
+      // offsetHeight는 transform의 영향을 받지 않아 원래 크기를 그대로 준다
+      const next = Math.min(1, box.clientHeight / inner.offsetHeight);
+      setScale(Math.max(next, 0.4));
+    };
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(box);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={boxRef} className="relative min-h-0 flex-1 overflow-hidden">
+      <div
+        ref={innerRef}
+        className="absolute left-0 top-1/2 flex w-full justify-center"
+        style={{ transform: `translateY(-50%) scale(${scale})`, transformOrigin: 'center' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function SettlementStatus({
   message,
   actionLabel,
@@ -263,8 +302,8 @@ function SettlementStatus({
   onBack?: () => void;
 }) {
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center rounded-3xl border border-slate-100 bg-white p-6 text-slate-900 shadow-xl shadow-slate-200/60 sm:min-h-[calc(100vh-6rem)]">
+    <main className="h-[calc(100svh-65px)] overflow-hidden px-4 py-3 sm:px-6 sm:py-5">
+      <section className="mx-auto flex h-full max-w-5xl items-center justify-center rounded-3xl border border-slate-100 bg-white p-6 text-slate-900 shadow-xl shadow-slate-200/60">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center">
         <p className="text-sm font-bold text-slate-600">{message}</p>
         <div className="mt-6 flex justify-center gap-3">
@@ -296,20 +335,20 @@ function SettlementStatus({
 function IntroSlide({ nickname, onStart }: { nickname: string; onStart: () => void }) {
   return (
     <div className="w-full text-center">
-      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-lime-300 to-lime-400 text-5xl shadow-2xl shadow-forest-500/20">
+      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-to-br from-lime-300 to-lime-400 text-4xl shadow-2xl shadow-forest-500/20">
         🎉
       </div>
-      <p className="mt-8 text-sm font-black tracking-[0.3em] text-forest-600">HABIT RECAP</p>
-      <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+      <p className="mt-5 text-sm font-black tracking-[0.3em] text-forest-600">HABIT RECAP</p>
+      <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
         함께 만든 습관의<br />마지막 장면이에요
       </h1>
-      <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-slate-500 sm:text-base">
+      <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-500 sm:text-base">
         {nickname} 님과 방 멤버들이 쌓아온 인증과 벌칙 기록을<br className="hidden sm:block" /> 재미있는 결산으로 확인해보세요.
       </p>
       <button
         type="button"
         onClick={onStart}
-        className="mt-9 rounded-2xl bg-forest-500 px-8 py-4 text-sm font-black text-lime-400 shadow-xl shadow-forest-500/20 transition hover:-translate-y-0.5 hover:bg-forest-600"
+        className="mt-6 rounded-2xl bg-forest-500 px-8 py-3.5 text-sm font-black text-lime-400 shadow-xl shadow-forest-500/20 transition hover:-translate-y-0.5 hover:bg-forest-600"
       >
         내 결산 시작하기 →
       </button>
@@ -322,31 +361,31 @@ function PersonalSlide({ stats }: { stats: SettlementPersonalStats }) {
     { icon: '✅', label: '인증 승인', value: `${stats.approvedCount}회`, tone: 'emerald' as const },
     { icon: '📸', label: '전체 인증', value: `${stats.totalVerifyCount}회`, tone: 'sky' as const },
     { icon: '↩️', label: '인증 거절', value: `${stats.rejectedCount}회`, tone: 'rose' as const },
-    { icon: '☕', label: '벌칙', value: `${stats.penaltyCount}회`, tone: 'amber' as const },
+    { icon: '🚨', label: '벌칙', value: `${stats.penaltyCount}회`, tone: 'amber' as const },
   ];
 
   return (
     <div className="w-full max-w-3xl">
       <div className="flex flex-col items-center text-center">
         <ProfileAvatar nickname={stats.nickname} />
-        <p className="mt-4 text-xs font-black tracking-[0.2em] text-forest-600">MY RECORD</p>
-        <h2 className="mt-2 text-3xl font-black sm:text-4xl">{stats.nickname} 님의 개인 결산</h2>
-        <p className="mt-2 text-sm text-slate-500">이 방에서 남긴 기록을 한눈에 모았어요.</p>
+        <p className="mt-3 text-xs font-black tracking-[0.2em] text-forest-600">MY RECORD</p>
+        <h2 className="mt-1.5 text-2xl font-black sm:text-3xl">{stats.nickname} 님의 개인 결산</h2>
+        <p className="mt-1.5 text-sm text-slate-500">이 방에서 남긴 기록을 한눈에 모았어요.</p>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {personalStats.map((stat) => (
-          <article key={stat.label} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4 text-center sm:p-5">
+          <article key={stat.label} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-3.5 text-center">
             <div className={`mx-auto flex h-11 w-11 items-center justify-center rounded-2xl text-xl ring-1 ${toneClasses[stat.tone]}`}>
               {stat.icon}
             </div>
-            <p className="mt-4 text-xs font-bold text-slate-400">{stat.label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{stat.value}</p>
+            <p className="mt-3 text-xs font-bold text-slate-400">{stat.label}</p>
+            <p className="mt-0.5 text-xl font-black text-slate-900">{stat.value}</p>
           </article>
         ))}
       </div>
 
-      <div className="mt-5 rounded-3xl border border-forest-200 bg-forest-50 p-5 text-center">
+      <div className="mt-4 rounded-3xl border border-forest-200 bg-forest-50 p-4 text-center">
         <p className="text-sm font-bold text-forest-800">총 {stats.totalVerifyCount}번의 인증으로 꾸준함을 보여줬어요!</p>
         <p className="mt-1 text-xs text-forest-600">작은 반복이 멋진 습관을 만들었습니다.</p>
       </div>
@@ -366,21 +405,21 @@ function ComparisonSlide({
   return (
     <div className="w-full max-w-2xl text-center">
       <p className="text-xs font-black tracking-[0.22em] text-slate-400">GROUP RECORD {current} / {total}</p>
-      <div className={`mx-auto mt-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br ${card.gradient} text-5xl shadow-2xl`}>
+      <div className={`mx-auto mt-4 flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-to-br ${card.gradient} text-4xl shadow-2xl`}>
         {card.icon}
       </div>
-      <p className="mt-7 text-sm font-black text-forest-600">{card.eyebrow}</p>
-      <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{card.title}</h2>
+      <p className="mt-5 text-sm font-black text-forest-600">{card.eyebrow}</p>
+      <h2 className="mt-1.5 text-2xl font-black tracking-tight sm:text-3xl">{card.title}</h2>
 
-      <div className="mx-auto mt-8 max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-6">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-2xl font-black text-white">
+      <div className="mx-auto mt-5 max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-xl font-black text-white">
           {card.winner === '기록 없음' ? '-' : card.winner.charAt(0)}
         </div>
         <p className="mt-3 text-lg font-black">{card.winner}</p>
         <p className="mt-1 bg-gradient-to-r from-forest-600 to-lime-600 bg-clip-text text-2xl font-black text-transparent">
           {card.value}
         </p>
-        <p className="mt-4 text-xs leading-5 text-slate-500">{card.detail}</p>
+        <p className="mt-3 text-xs leading-5 text-slate-500">{card.detail}</p>
       </div>
     </div>
   );
@@ -389,15 +428,15 @@ function ComparisonSlide({
 function ClosingSlide({ nickname }: { nickname: string }) {
   return (
     <div className="w-full max-w-2xl text-center">
-      <p className="text-6xl">🏁</p>
-      <p className="mt-7 text-sm font-black tracking-[0.25em] text-forest-600">RECAP COMPLETE</p>
-      <h2 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">
+      <p className="text-5xl">🏁</p>
+      <p className="mt-4 text-sm font-black tracking-[0.25em] text-forest-600">RECAP COMPLETE</p>
+      <h2 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">
         {nickname} 님,<br />이번 습관도 수고했어요!
       </h2>
-      <p className="mx-auto mt-5 max-w-md text-sm leading-7 text-slate-500">
+      <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-slate-500">
         함께한 기록은 완료된 방에서 언제든 다시 볼 수 있어요. 다음 습관에서도 즐거운 도전을 이어가세요.
       </p>
-      <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-xs font-bold text-slate-400">이번 방의 한 줄 결산</p>
         <p className="mt-2 text-lg font-black text-slate-900">“혼자보다 함께여서 더 꾸준했던 시간”</p>
       </div>

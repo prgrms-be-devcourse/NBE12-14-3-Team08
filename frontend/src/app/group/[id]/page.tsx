@@ -14,6 +14,7 @@ import { memberHandle } from '@/lib/memberDisplay';
 import type { MemberProvider } from '@/lib/memberApi';
 import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+import { OverlayScrollArea } from '@/components/OverlayScrollArea';
 import { habitApi } from '@/lib/habitApi';
 import { summarizeThisWeek, type WeekSummary } from '@/lib/habitWeek';
 import { DarkPill, HeroCard, HeroTile, HeroTiles, btnGhost, btnLime } from '@/components/DesignKit';
@@ -269,37 +270,51 @@ export default function GroupDetailPage({
                         </p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
-                        {currentRole === 'OWNER' && (
-                            <button onClick={() => setIsEditModalOpen(true)} className={btnGhost}>
-                                ⚙ 방 설정
+                    <div className="flex shrink-0 flex-col items-stretch gap-2">
+                        <div className="flex items-center gap-2">
+                            {currentRole === 'OWNER' && (
+                                <button onClick={() => setIsEditModalOpen(true)} className={btnGhost}>
+                                    ⚙ 방 설정
+                                </button>
+                            )}
+                            <button
+                                onClick={handleLeaveGroup}
+                                className="inline-flex items-center rounded-xl bg-rose-400/15 px-3.5 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/25 cursor-pointer"
+                            >
+                                방 탈퇴
                             </button>
+                        </div>
+                        {/* 마감된 방에서만: 결산 화면으로 이동 */}
+                        {isRoomFinished && (
+                            <Link
+                                href={`/group/${rawId}/settlement`}
+                                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-lime-400 px-3.5 py-2.5 text-xs font-extrabold text-forest-900 transition hover:-translate-y-0.5 cursor-pointer"
+                            >
+                                결산 확인하기
+                            </Link>
                         )}
-                        <button
-                            onClick={handleLeaveGroup}
-                            className="inline-flex items-center rounded-xl bg-rose-400/15 px-3.5 py-2.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/25 cursor-pointer"
-                        >
-                            방 탈퇴
-                        </button>
                     </div>
                 </div>
 
                 <HeroTiles>
                     <HeroTile label="👥" title="참여 인원" compact value={group.currentMemberCount} unit={` / ${group.memberLimit}명`} />
                     <HeroTile label="📅" title="마감 기한" compact value={group.deadline ? `${group.deadline}까지` : '상시 진행'} />
-                    <HeroTile label="🎁" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
+                    <HeroTile label="🚨" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
                 </HeroTiles>
 
-                <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
-                    <button onClick={handleCopyInvite} className={btnLime}>
-                        초대 코드 복사
-                    </button>
-                    {currentRole === 'OWNER' && (
-                        <Link href={`/admin/group/${rawId}/verification`} className={btnGhost}>
-                            미인증 내역 관리
-                        </Link>
-                    )}
-                </div>
+                {/* 마감된 방은 새로 초대하거나 인증을 검토할 일이 없어 버튼을 숨긴다 */}
+                {!isRoomFinished && (
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
+                        <button onClick={handleCopyInvite} className={btnLime}>
+                            초대 코드 복사
+                        </button>
+                        {currentRole === 'OWNER' && (
+                            <Link href={`/admin/group/${rawId}/verification`} className={btnGhost}>
+                                미인증 내역 관리
+                            </Link>
+                        )}
+                    </div>
+                )}
             </HeroCard>
 
             {/* 인증 사진 / 멤버 목록 */}
@@ -327,7 +342,8 @@ export default function GroupDetailPage({
                 {view === 'members' && (
                     <div className="@container">
                         <GroupContentBar view={view} onViewChange={setView} memberCount={group.currentMemberCount} />
-                        <div id="group-view-panel" role="tabpanel" aria-label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
+                        {/* 높이는 앨범과 같게 고정하고, 인원이 많으면 앨범과 같은 모양의 스크롤바로 내린다 */}
+                        <OverlayScrollArea id="group-view-panel" role="tabpanel" label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
                         {members.map((m, index) => {
                             const linkHref = `/group/${rawId}/member/${m.memberId}`;
 
@@ -422,7 +438,7 @@ export default function GroupDetailPage({
                                 참여 중인 멤버가 없습니다.
                             </div>
                         )}
-                        </div>
+                        </OverlayScrollArea>
                     </div>
                 )}
                 </div>

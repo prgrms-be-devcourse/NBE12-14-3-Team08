@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+    const pathname = usePathname();
     const currentYear = new Date().getFullYear();
+
+    // 결산은 스크롤 없이 한 화면에 담는 전체 화면 페이지라 푸터를 두지 않는다
+    if (/^\/group\/[^/]+\/settlement\/?$/.test(pathname)) return null;
 
     return (
         <footer className="w-full border-t border-slate-100 bg-white py-8 text-slate-500">
