@@ -6,6 +6,7 @@ import { Eyebrow, HeroCard, HeroTile, HeroTiles, btnLime } from '../components/D
 import { CreateRoomModal } from '../components/CreateRoomModal';
 import { useMember } from '../context/MemberContext';
 import { groupApi } from '../lib/groupApi';
+import { memberApi, type MemberSummary } from '../lib/memberApi';
 import type { CreateGroupRequest, GroupStatus, GroupSummary } from '../lib/groupApi';
 
 const tabs: Array<{ status: GroupStatus; label: string }> = [
@@ -21,6 +22,8 @@ export function MainPage() {
   const [status, setStatus] = useState<GroupStatus>('ACTIVE');
   // 두 탭의 목록을 한 번에 불러와 히어로의 숫자와 탭 전환에 같이 쓴다
   const [lists, setLists] = useState<Record<GroupStatus, GroupSummary[]>>({ ACTIVE: [], FINISH: [] });
+  // 이번 주 승인·누적 벌칙. 못 불러오면 null로 두고 타일에 '-'를 보여 준다 (방 목록과는 따로 불러온다)
+  const [summary, setSummary] = useState<MemberSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -36,6 +39,9 @@ export function MainPage() {
     let cancelled = false;
     setIsLoading(true);
     setError('');
+    memberApi.getMySummary()
+      .then((data) => { if (!cancelled) setSummary(data); })
+      .catch(() => { if (!cancelled) setSummary(null); });
     Promise.all([groupApi.getMyGroups('ACTIVE'), groupApi.getMyGroups('FINISH')])
       .then(([active, finish]) => { if (!cancelled) setLists({ ACTIVE: active, FINISH: finish }); })
       .catch((caught) => {
@@ -78,9 +84,12 @@ export function MainPage() {
         </div>
         <HeroTiles>
           <HeroTile label="진행 중인 방" value={count(lists.ACTIVE.length)} unit="개" />
-          {/* TODO: 이번 주 승인·누적 벌칙은 방 전체를 합산하는 API가 없어 시안의 예시 값을 고정으로 보여 준다 */}
-          <HeroTile label="이번 주 승인" value="3" unit=" / 4회" />
-          <HeroTile label="누적 벌칙" value="1" unit="회" />
+          <HeroTile
+            label="이번 주 승인"
+            value={summary ? summary.weeklyApprovedCount : '-'}
+            unit={summary ? ` / ${summary.weeklyGoalCount}회` : undefined}
+          />
+          <HeroTile label="누적 벌칙" value={summary ? summary.penaltyCount : '-'} unit={summary ? '회' : undefined} />
         </HeroTiles>
       </HeroCard>
 
