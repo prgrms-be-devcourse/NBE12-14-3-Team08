@@ -290,16 +290,19 @@ export default function GroupDetailPage({
                     <HeroTile label="☕" title="벌칙" compact value={group.penalty || '벌칙 없음'} />
                 </HeroTiles>
 
-                <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
-                    <button onClick={handleCopyInvite} className={btnLime}>
-                        초대 코드 복사
-                    </button>
-                    {currentRole === 'OWNER' && (
-                        <Link href={`/admin/group/${rawId}/verification`} className={btnGhost}>
-                            미인증 내역 관리
-                        </Link>
-                    )}
-                </div>
+                {/* 마감된 방은 새로 초대하거나 인증을 검토할 일이 없어 버튼을 숨긴다 */}
+                {!isRoomFinished && (
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-5">
+                        <button onClick={handleCopyInvite} className={btnLime}>
+                            초대 코드 복사
+                        </button>
+                        {currentRole === 'OWNER' && (
+                            <Link href={`/admin/group/${rawId}/verification`} className={btnGhost}>
+                                미인증 내역 관리
+                            </Link>
+                        )}
+                    </div>
+                )}
             </HeroCard>
 
             {/* 인증 사진 / 멤버 목록 */}
