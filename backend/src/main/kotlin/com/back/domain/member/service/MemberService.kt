@@ -13,6 +13,7 @@ import com.back.domain.member.entity.MemberStatus
 import com.back.domain.member.repository.MemberRepository
 import com.back.global.exception.UnauthorizedException
 import com.back.global.entity.requiredId
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -41,7 +42,13 @@ class MemberService(
 
         val member = Member.create(nickname, username, encode(password))
 
-        val savedMember = memberRepository.save(member)
+        // 사전 확인(existsByUsername)은 친절한 메시지를 위한 것이고, 실제 방어선은 아이디 유니크 제약이다.
+        // 같은 아이디로 동시에 가입한 요청은 모두 확인을 통과하므로, 진 요청이 제약 위반으로 실패하면 같은 충돌(409)로 돌려준다.
+        val savedMember = try {
+            memberRepository.save(member)
+        } catch (e: DataIntegrityViolationException) {
+            throw IllegalStateException("이미 사용 중인 아이디입니다.", e)
+        }
 
         val refreshToken = authTokenService.createRefreshToken(savedMember.requiredId)
 

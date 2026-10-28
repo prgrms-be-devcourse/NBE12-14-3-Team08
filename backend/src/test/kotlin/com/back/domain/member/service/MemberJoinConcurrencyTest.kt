@@ -4,7 +4,6 @@ import com.back.domain.member.dto.CreateMemberRequest
 import com.back.support.ConcurrentRunner
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -51,7 +50,6 @@ class MemberJoinConcurrencyTest @Autowired constructor(
     }
 
     @Test
-    @Disabled("버그: 같은 아이디로 동시에 가입하면 진 요청이 409가 아니라 유니크 제약 위반(DataIntegrityViolationException, 500)으로 끝난다. 수정 이슈 처리 후 활성화")
     @DisplayName("동시에 가입했을 때 진 요청은 충돌(IllegalStateException, 409)로 끝난다")
     fun 동시에_가입하면_진_요청은_충돌로_끝난다() {
         val results = joinConcurrently()

@@ -70,9 +70,43 @@ class MemberRequestValidationTest {
         }
 
         @Test
-        @DisplayName("길이와 형식은 검증하지 않는다 (현재 동작: 1글자 비밀번호도 통과)")
-        fun 길이는_검증하지_않는다() {
+        @DisplayName("최소 길이와 형식은 검증하지 않는다 (현재 동작: 1글자 닉네임·아이디·비밀번호도 통과)")
+        fun 최소_길이는_검증하지_않는다() {
             assertThat(messages(CreateMemberRequest("a", "b", "c"))).isEmpty()
+        }
+
+        @Test
+        @DisplayName("닉네임과 아이디가 255자(컬럼 길이 한계)면 통과한다")
+        fun 최대_길이는_통과한다() {
+            assertThat(messages(CreateMemberRequest("가".repeat(255), "u".repeat(255), "password1234"))).isEmpty()
+        }
+
+        @Test
+        @DisplayName("닉네임이 256자 이상이면 이름 길이 메시지로 거절한다")
+        fun 닉네임이_너무_길다() {
+            assertThat(messages(CreateMemberRequest("가".repeat(256), "user-1", "password1234")))
+                .containsExactly("이름은 255자 이하여야 합니다.")
+        }
+
+        @Test
+        @DisplayName("아이디가 256자 이상이면 아이디 길이 메시지로 거절한다")
+        fun 아이디가_너무_길다() {
+            assertThat(messages(CreateMemberRequest("닉네임", "u".repeat(256), "password1234")))
+                .containsExactly("아이디는 255자 이하여야 합니다.")
+        }
+
+        @Test
+        @DisplayName("닉네임과 아이디가 모두 길면 두 메시지를 모두 돌려준다")
+        fun 둘_다_너무_길다() {
+            assertThat(messages(CreateMemberRequest("가".repeat(256), "u".repeat(256), "password1234")))
+                .containsExactlyInAnyOrder("이름은 255자 이하여야 합니다.", "아이디는 255자 이하여야 합니다.")
+        }
+
+        @Test
+        @DisplayName("공백뿐인 긴 닉네임은 필수 메시지와 길이 메시지가 함께 나온다")
+        fun 공백뿐인_긴_닉네임() {
+            assertThat(messages(CreateMemberRequest(" ".repeat(300), "user-1", "password1234")))
+                .containsExactlyInAnyOrder("이름은 필수입니다.", "이름은 255자 이하여야 합니다.")
         }
     }
 
@@ -138,6 +172,15 @@ class MemberRequestValidationTest {
     @Nested
     @DisplayName("수정 요청 UpdateMemberRequest")
     inner class Update {
+
+        @Test
+        @DisplayName("닉네임이 255자면 통과하고 256자 이상이면 이름 길이 메시지로 거절한다")
+        fun 닉네임_길이() {
+            assertThat(messages(UpdateMemberRequest(nickname = "가".repeat(255)))).isEmpty()
+            assertThat(messages(UpdateMemberRequest(nickname = "가".repeat(256))))
+                .containsExactly("이름은 255자 이하여야 합니다.")
+        }
+
 
         @Test
         @DisplayName("검증 제약이 없어 모두 비어 있어도 통과한다 (비어 있으면 서비스가 바꾸지 않고 넘어간다)")

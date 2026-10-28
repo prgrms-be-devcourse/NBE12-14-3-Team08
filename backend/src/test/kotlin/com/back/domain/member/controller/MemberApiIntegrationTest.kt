@@ -2,7 +2,6 @@ package com.back.domain.member.controller
 
 import com.back.domain.member.entity.MemberStatus
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -432,17 +431,15 @@ class MemberApiIntegrationTest : MemberApiTestSupport() {
             signUp("u".repeat(255), "가".repeat(255)).andExpect(status().isCreated())
         }
 
-        // --- 아래는 현재 500을 돌려주는 버그다. 올바른 동작(400)을 기대하도록 써 두고, 수정 이슈가 끝나면 @Disabled를 지운다. ---
+        // --- 한계를 넘으면 DB 오류(500)가 아니라 400이다. (메시지와 수정 경로까지는 MemberRequestLengthApiTest에서 본다) ---
 
         @Test
-        @Disabled("버그: 닉네임이 컬럼 길이(255자)를 넘으면 DB 오류로 500이 된다 (이슈 #53 후속). 수정 이슈 처리 후 활성화")
         @DisplayName("닉네임이 256자 이상이면 400이다")
         fun 닉네임_256자는_400이다() {
             signUp("long-nick", "가".repeat(256)).andExpect(status().isBadRequest())
         }
 
         @Test
-        @Disabled("버그: 아이디가 컬럼 길이(255자)를 넘으면 DB 오류로 500이 된다 (이슈 #53 후속). 수정 이슈 처리 후 활성화")
         @DisplayName("아이디가 256자 이상이면 400이다")
         fun 아이디_256자는_400이다() {
             signUp("u".repeat(256)).andExpect(status().isBadRequest())

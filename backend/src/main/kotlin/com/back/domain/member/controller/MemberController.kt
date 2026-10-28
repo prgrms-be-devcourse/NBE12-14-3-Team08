@@ -57,7 +57,7 @@ class MemberController(
     @PatchMapping("/me")
     fun updateMyInfo(
         @LoginMemberId memberId: Long,
-        @RequestBody request: UpdateMemberRequest,
+        @Valid @RequestBody request: UpdateMemberRequest,
     ): ResponseEntity<MemberResponse> =
         ResponseEntity.ok(memberService.updateMember(memberId, request))
 
