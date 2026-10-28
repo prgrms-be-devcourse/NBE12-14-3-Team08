@@ -12,6 +12,35 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * 색상 테마: 딥 포레스트 + 라임
+ * - forest: 브랜드 색(버튼·링크·강조). 500이 기본 버튼색, 600은 hover/강조 글자색
+ * - lime: 짙은 숲색 위에 올리는 포인트 색(버튼 글자, 선택 표시)
+ * emerald(기본값)는 인증 승인 같은 "성공" 상태 표시에만 그대로 쓴다.
+ */
+@theme {
+  --color-forest-50: #eef4ea;
+  --color-forest-100: #dfeadb;
+  --color-forest-200: #c4d9bf;
+  --color-forest-300: #9ec3a4;
+  --color-forest-400: #4c9470;
+  --color-forest-500: #0f3d2e;
+  --color-forest-600: #1f6b4e;
+  --color-forest-700: #174d39;
+  --color-forest-800: #0a2a20;
+  --color-forest-900: #0c1a13;
+  --color-forest-950: #07110c;
+
+  --color-lime-50: #f7fde4;
+  --color-lime-100: #eefbc4;
+  --color-lime-200: #e0f791;
+  --color-lime-300: #d6f66a;
+  --color-lime-400: #c6f24a;
+  --color-lime-500: #aee02d;
+  --color-lime-600: #8dbd16;
+
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
