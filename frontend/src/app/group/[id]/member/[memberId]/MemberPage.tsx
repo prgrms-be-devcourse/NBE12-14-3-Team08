@@ -283,9 +283,6 @@ export function MemberPage({ groupId, memberId }: Props) {
                     <ArrowLeft className="w-4 h-4" />
                     <span>돌아가기</span>
                 </Link>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                    멤버 상세 페이지
-                </span>
             </div>
 
             {/* 요약 카드: 프로필, 이번 주 링, 도전 습관 */}
@@ -300,15 +297,10 @@ export function MemberPage({ groupId, memberId }: Props) {
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h1 className="text-[22px] sm:text-2xl font-extrabold tracking-tight">{member.nickname}</h1>
+                                {/* 방장은 왕관만 보여 준다. 글씨는 툴팁과 화면 낭독기로 전한다 */}
                                 {isHost && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300">
-                                        <Crown className="w-3 h-3 fill-amber-300" />
-                                        방장
-                                    </span>
-                                )}
-                                {isMe && (
-                                    <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#c6f24a]/15 text-[#c6f24a]">
-                                        나
+                                    <span role="img" title="방장" aria-label="방장" className="inline-flex items-center text-amber-300">
+                                        <Crown className="w-[18px] h-[18px] fill-amber-300" />
                                     </span>
                                 )}
                                 <span

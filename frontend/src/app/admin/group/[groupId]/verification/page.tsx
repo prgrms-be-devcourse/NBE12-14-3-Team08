@@ -208,10 +208,8 @@ export default function AdminVerificationPage({
             >
               <span>←</span> 그룹으로 돌아가기
             </Link>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 mb-1">
-              관리자 페이지 <span className="text-emerald-600 font-bold text-lg ml-2">Group ID: {groupId}</span>
-            </h1>
-            <h2 className="text-xs font-bold text-emerald-600">미인증 내역 관리</h2>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">관리자 페이지</h1>
+            <p className="mt-1.5 text-sm text-slate-500">멤버가 올린 인증을 확인하고 승인하거나 반려해요.</p>
           </div>
 
           <section className="mb-12">
