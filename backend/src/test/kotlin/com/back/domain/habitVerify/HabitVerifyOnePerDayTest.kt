@@ -36,13 +36,13 @@ class HabitVerifyOnePerDayTest @Autowired constructor(
     @DisplayName("같은 습관에 같은 날짜의 습관 인증을 두 번 저장할 수 없다")
     fun 같은_날_습관_인증은_하나만() {
         val group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode("ONEPERDAY")
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = "ONEPERDAY",
+                memberLimit = 5,
+            )
         )
         val member = memberRepository.save(Member.create("회원", "one-per-day", "pass1234"))
         val groupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))

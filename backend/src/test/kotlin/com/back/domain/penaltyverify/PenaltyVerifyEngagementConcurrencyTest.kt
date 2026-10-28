@@ -61,7 +61,7 @@ class PenaltyVerifyEngagementConcurrencyTest @Autowired constructor(
     fun setUp() {
         val suffix = UUID.randomUUID().toString().substring(0, 8)
         val group = groupRepository.save(
-            Group.builder().title("벌칙 동시성 $suffix").penalty("커피").password("1234").inviteCode("P$suffix").memberLimit(20).build(),
+            Group(title = "벌칙 동시성 $suffix", penalty = "커피", password = "1234", inviteCode = "P$suffix", memberLimit = 20),
         )
         groupId = group.requiredId
 

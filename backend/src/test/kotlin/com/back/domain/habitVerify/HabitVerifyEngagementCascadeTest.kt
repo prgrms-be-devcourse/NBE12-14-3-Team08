@@ -66,7 +66,7 @@ class HabitVerifyEngagementCascadeTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         group = groupRepository.save(
-            Group.builder().title("삭제 경로 방").penalty("커피").password("1234").inviteCode("CASCADE1").memberLimit(10).build(),
+            Group(title = "삭제 경로 방", penalty = "커피", password = "1234", inviteCode = "CASCADE1", memberLimit = 10),
         )
         owner = memberRepository.save(Member.create("방장", "cas-owner", "pass1234"))
         memberA = memberRepository.save(Member.create("에이", "cas-a", "pass1234"))

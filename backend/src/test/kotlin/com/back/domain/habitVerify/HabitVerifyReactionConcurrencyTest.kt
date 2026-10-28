@@ -59,7 +59,7 @@ class HabitVerifyReactionConcurrencyTest @Autowired constructor(
     fun setUp() {
         val suffix = UUID.randomUUID().toString().substring(0, 8)
         val group = groupRepository.save(
-            Group.builder().title("하트 동시성 $suffix").penalty("커피").password("1234").inviteCode("R$suffix").memberLimit(20).build(),
+            Group(title = "하트 동시성 $suffix", penalty = "커피", password = "1234", inviteCode = "R$suffix", memberLimit = 20),
         )
         groupId = group.requiredId
 

@@ -48,14 +48,14 @@ class HabitRepositoryTest @Autowired constructor(
 
     private fun saveGroup(status: GroupStatus): Group =
         groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode(uniqueName("code"))
-                .memberLimit(10)
-                .status(status)
-                .build(),
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = uniqueName("code"),
+                memberLimit = 10,
+                status = status,
+            ),
         )
 
     private fun saveHabit(owner: GroupMember, title: String, status: HabitStatus): Habit {

@@ -79,7 +79,7 @@ class HabitVerifyEngagementApiTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         group = groupRepository.save(
-            Group.builder().title("반응 댓글 방").penalty("커피 사기").password("1234").inviteCode("ENGAGE01").memberLimit(10).build(),
+            Group(title = "반응 댓글 방", penalty = "커피 사기", password = "1234", inviteCode = "ENGAGE01", memberLimit = 10),
         )
         owner = memberRepository.save(Member.create("방장", "eng-owner", "pass1234"))
         author = memberRepository.save(Member.create("작성자", "eng-author", "pass1234"))

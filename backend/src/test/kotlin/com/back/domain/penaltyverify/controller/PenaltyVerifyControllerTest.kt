@@ -72,13 +72,13 @@ class PenaltyVerifyControllerTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         val group = groupRepository.save(
-            Group.builder()
-                .title("테스트 그룹")
-                .penalty("커피 사기")
-                .password("1234")
-                .inviteCode("TESTCODE")
-                .memberLimit(5)
-                .build()
+            Group(
+                title = "테스트 그룹",
+                penalty = "커피 사기",
+                password = "1234",
+                inviteCode = "TESTCODE",
+                memberLimit = 5,
+            )
         )
         groupId = requireNotNull(group.id)
 

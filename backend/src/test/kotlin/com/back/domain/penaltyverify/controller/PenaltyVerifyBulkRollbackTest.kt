@@ -58,14 +58,14 @@ class PenaltyVerifyBulkRollbackTest @Autowired constructor(
         owner = memberRepository.save(Member.create("방장", uniqueName("owner"), "pass1234"))
         member = memberRepository.save(Member.create("일반회원", uniqueName("member"), "pass1234"))
         group = groupRepository.save(
-            Group.builder()
-                .title("아침 기상 챌린지")
-                .penalty("커피 1잔 쏘기")
-                .password("1234")
-                .inviteCode(uniqueName("code"))
-                .memberLimit(10)
-                .deadline(LocalDate.now().plusMonths(1))
-                .build()
+            Group(
+                title = "아침 기상 챌린지",
+                penalty = "커피 1잔 쏘기",
+                password = "1234",
+                inviteCode = uniqueName("code"),
+                memberLimit = 10,
+                deadline = LocalDate.now().plusMonths(1),
+            )
         )
         ownerGroupMember = groupMemberRepository.save(GroupMember.create(group, owner, GroupMemberRole.OWNER))
         memberGroupMember = groupMemberRepository.save(GroupMember.create(group, member, GroupMemberRole.MEMBER))

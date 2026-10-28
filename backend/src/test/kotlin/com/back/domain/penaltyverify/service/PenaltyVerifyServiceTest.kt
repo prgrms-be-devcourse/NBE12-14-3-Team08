@@ -73,11 +73,11 @@ class PenaltyVerifyServiceTest {
         otherUser = Member.create("외부인", "other", "pass1234")
         ReflectionTestUtils.setField(otherUser, "id", 999L)
 
-        group = Group.builder()
-            .title("아침 기상 챌린지")
-            .penalty("커피 1잔 쏘기")
-            .memberLimit(10)
-            .build()
+        group = Group(
+            title = "아침 기상 챌린지",
+            penalty = "커피 1잔 쏘기",
+            memberLimit = 10,
+        )
         ReflectionTestUtils.setField(group, "id", 100L)
 
         ownerGroupMember = GroupMember.create(group, ownerUser, GroupMemberRole.OWNER)

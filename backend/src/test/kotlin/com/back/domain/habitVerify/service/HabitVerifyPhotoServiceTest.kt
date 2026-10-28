@@ -68,7 +68,7 @@ class HabitVerifyPhotoServiceTest {
     ): HabitVerify {
         val member = Member.create(nickname, "user$memberId", "pw")
         ReflectionTestUtils.setField(member, "id", memberId)
-        val group = Group.builder().title("그룹").penalty("벌칙").password("1234").inviteCode("code").memberLimit(10).build()
+        val group = Group(title = "그룹", penalty = "벌칙", password = "1234", inviteCode = "code", memberLimit = 10)
         val habit = Habit.create(GroupMember.create(group, member, GroupMemberRole.MEMBER), title, "설명", 3)
         val verify = HabitVerify.create(habit, date, "설명 $id", "https://example.com/$id.png", width, height)
         ReflectionTestUtils.setField(verify, "id", id)

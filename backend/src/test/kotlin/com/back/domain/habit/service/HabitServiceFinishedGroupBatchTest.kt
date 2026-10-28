@@ -48,15 +48,15 @@ class HabitServiceFinishedGroupBatchTest @Autowired constructor(
         val owner = memberRepository.save(Member.create("batch-$suffix", "batch-$suffix", "pw1234!"))
 
         val group = groupRepository.save(
-            Group.builder()
-                .title("배치 테스트 그룹")
-                .penalty("커피 사기")
-                .password("1234")
-                .inviteCode("B$suffix")
-                .memberLimit(5)
-                .deadline(deadline)
-                .status(status)
-                .build(),
+            Group(
+                title = "배치 테스트 그룹",
+                penalty = "커피 사기",
+                password = "1234",
+                inviteCode = "B$suffix",
+                memberLimit = 5,
+                deadline = deadline,
+                status = status,
+            ),
         )
         ReflectionTestUtils.setField(group, "createDate", now.minusDays(14))
         groupRepository.saveAndFlush(group)

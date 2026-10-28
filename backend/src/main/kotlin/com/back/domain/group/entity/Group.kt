@@ -78,34 +78,4 @@ class Group(
         return status == GroupStatus.FINISH ||
                 (deadline != null && today.isAfter(deadline))
     }
-
-    // Java 호출부(TestDataInit, Java 테스트)가 쓰던 Lombok builder를 대신한다.
-    // 호출부가 모두 Kotlin으로 전환되면 이름 붙인 인자로 바꾸고 제거한다.
-    class Builder {
-        private var title: String = ""
-        private var description: String? = null
-        private var deadline: LocalDate? = null
-        private var penalty: String = ""
-        private var password: String = ""
-        private var inviteCode: String = ""
-        private var memberLimit: Int = 0
-        private var status: GroupStatus = GroupStatus.ACTIVE
-
-        fun title(title: String) = apply { this.title = title }
-        fun description(description: String?) = apply { this.description = description }
-        fun deadline(deadline: LocalDate?) = apply { this.deadline = deadline }
-        fun penalty(penalty: String) = apply { this.penalty = penalty }
-        fun password(password: String) = apply { this.password = password }
-        fun inviteCode(inviteCode: String) = apply { this.inviteCode = inviteCode }
-        fun memberLimit(memberLimit: Int) = apply { this.memberLimit = memberLimit }
-        fun status(status: GroupStatus) = apply { this.status = status }
-
-        fun build(): Group =
-            Group(title, description, deadline, penalty, password, inviteCode, memberLimit, status)
-    }
-
-    companion object {
-
-        fun builder(): Builder = Builder()
-    }
 }

@@ -60,7 +60,7 @@ class HabitVerifyPhotoRepositoryTest @Autowired constructor(
 
     private fun saveGroup(): Group =
         groupRepository.save(
-            Group.builder().title("그룹").penalty("벌칙").password("1234").inviteCode(uniqueName("code")).memberLimit(10).build(),
+            Group(title = "그룹", penalty = "벌칙", password = "1234", inviteCode = uniqueName("code"), memberLimit = 10),
         )
 
     private fun join(group: Group, nickname: String): Participant {

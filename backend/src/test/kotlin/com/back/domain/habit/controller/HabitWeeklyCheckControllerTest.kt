@@ -75,13 +75,13 @@ class HabitWeeklyCheckControllerTest @Autowired constructor(
         ownerToken = authTokenService.createAccessToken(ownerId)
 
         val group = groupRepository.save(
-            Group.builder()
-                .title("테스트 그룹")
-                .penalty("팔굽혀펴기 30개")
-                .password("1234")
-                .inviteCode("WEEKLYCHECK01")
-                .memberLimit(5)
-                .build(),
+            Group(
+                title = "테스트 그룹",
+                penalty = "팔굽혀펴기 30개",
+                password = "1234",
+                inviteCode = "WEEKLYCHECK01",
+                memberLimit = 5,
+            ),
         )
         ReflectionTestUtils.setField(group, "createDate", now.minusDays(14))
         groupRepository.saveAndFlush(group)
