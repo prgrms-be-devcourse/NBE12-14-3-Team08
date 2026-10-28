@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-@Tag(name = "습관 인증 API", description = "일반 유저의 일일 습관 인증 기록 등록, 목록 조회, 수정, 반려 건 재제출 및 삭제")
+@Tag(name = "습관 인증 API", description = "일반 유저의 일일 습관 인증 기록 등록, 목록 조회, 수정, 반려 건 재제출")
 @RestController
 @RequestMapping("/api/habits/{habitId}/verifications")
 class HabitVerifyController(

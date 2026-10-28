@@ -82,7 +82,7 @@ class PenaltyVerifyController(
 
     @Operation(
         summary = "그룹 내 누적 벌칙 개수 조회",
-        description = "특정 그룹에서 발생한 전체 벌칙의 누적 개수를 조회합니다. (그룹 가입자만 조회 가능)",
+        description = "특정 그룹에서 발생한 멤버의 벌칙의 누적 개수를 조회합니다. (그룹 가입자만 조회 가능)",
     )
     @GetMapping("/groups/{groupId}/penalties/count")
     fun getCount(
