@@ -4,6 +4,7 @@ import com.back.domain.penaltyverify.dto.BulkActionRequest
 import com.back.domain.penaltyverify.dto.PenaltyVerifyDetailResponse
 import com.back.domain.penaltyverify.dto.PenaltyVerifySummaryResponse
 import com.back.domain.penaltyverify.dto.SubmitPenaltyVerifyRequest
+import com.back.domain.penaltyverify.service.PenaltyVerifyResetService
 import com.back.domain.penaltyverify.service.PenaltyVerifyService
 import com.back.global.security.LoginMemberId
 import com.back.global.storage.UploadUrlRequest
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api")
 class PenaltyVerifyController(
     private val penaltyVerifyService: PenaltyVerifyService,
+    private val penaltyVerifyResetService: PenaltyVerifyResetService,
 ) {
 
     @Operation(
@@ -163,11 +165,12 @@ class PenaltyVerifyController(
         description = "벌칙 기록은 결산을 위해 삭제하지 않고, 제출 내용(설명, 사진, 제출일)을 비워 REQUIRED 상태로 되돌립니다.\n\n" +
             "- 작성자: 방장 검토 전(PENDING)인 벌칙만 제출 취소할 수 있습니다.\n" +
             "- 방장: PENDING / APPROVED / REJECTED 벌칙을 초기화할 수 있습니다. (본인 벌칙 포함)\n" +
-            "- 그 외 사용자는 403, 종료된 방은 400을 반환합니다.",
+            "- 그 외 사용자는 403, 종료된 방은 400을 반환합니다.\n" +
+            "- 되돌릴 때 그 벌칙 인증에 달린 하트와 댓글도 함께 지웁니다.",
     )
     @PatchMapping("/penalties/{id}/cancel")
     fun cancelOrReset(
         @LoginMemberId memberId: Long,
         @PathVariable id: Long,
-    ): PenaltyVerifyDetailResponse = penaltyVerifyService.cancelOrReset(memberId, id)
+    ): PenaltyVerifyDetailResponse = penaltyVerifyResetService.cancelOrReset(memberId, id)
 }

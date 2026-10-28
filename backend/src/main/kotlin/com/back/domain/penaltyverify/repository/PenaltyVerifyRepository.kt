@@ -16,6 +16,11 @@ interface PenaltyVerifyRepository : JpaRepository<PenaltyVerify, Long> {
     @EntityGraph(attributePaths = ["groupMember", "groupMember.group", "groupMember.member"])
     override fun findById(id: Long): Optional<PenaltyVerify>
 
+    // 하트·댓글을 쓰는 동안 초기화가 끼어들지 못하게 그 벌칙 행을 잠근다. (초기화가 하트·댓글을 지운 뒤에 새 글이 들어오는 것을 막는다)
+    // 엔티티를 읽기 전에 불러서, 잠금이 풀린 뒤의 최신 상태를 읽게 한다.
+    @Query(value = "select id from penalty_verify where id = :id for update", nativeQuery = true)
+    fun lockRow(@Param("id") id: Long): Long?
+
     @EntityGraph(attributePaths = ["groupMember", "groupMember.member"])
     fun findByHabitId(habitId: Long): PenaltyVerify?
 
