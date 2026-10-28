@@ -16,6 +16,19 @@ interface HabitVerifyRepository : JpaRepository<HabitVerify, Long> {
 
     fun findByIdAndHabitId(id: Long, habitId: Long): HabitVerify?
 
+    // 반응·댓글의 권한 확인용: 인증 주인(멤버)과 방까지 한 번에 읽는다
+    @Query(
+        """
+        SELECT hv
+        FROM HabitVerify hv
+        JOIN FETCH hv.habit h
+        JOIN FETCH h.groupMember gm
+        JOIN FETCH gm.group
+        WHERE hv.id = :id
+        """,
+    )
+    fun findWithGroupById(@Param("id") id: Long): HabitVerify?
+
     fun existsByHabitIdAndVerifyDate(habitId: Long, verifyDate: LocalDate): Boolean
 
     fun existsByHabitIdAndVerifyDateAndIdNot(habitId: Long, verifyDate: LocalDate, id: Long): Boolean
