@@ -14,6 +14,7 @@ import { memberHandle } from '@/lib/memberDisplay';
 import type { MemberProvider } from '@/lib/memberApi';
 import { GroupStatistics } from '@/components/GroupStatistics';
 import { GroupPhotoLibrary } from '@/components/GroupPhotoLibrary';
+import { OverlayScrollArea } from '@/components/OverlayScrollArea';
 import { habitApi } from '@/lib/habitApi';
 import { summarizeThisWeek, type WeekSummary } from '@/lib/habitWeek';
 import { DarkPill, HeroCard, HeroTile, HeroTiles, btnGhost, btnLime } from '@/components/DesignKit';
@@ -330,7 +331,8 @@ export default function GroupDetailPage({
                 {view === 'members' && (
                     <div className="@container">
                         <GroupContentBar view={view} onViewChange={setView} memberCount={group.currentMemberCount} />
-                        <div id="group-view-panel" role="tabpanel" aria-label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
+                        {/* 높이는 앨범과 같게 고정하고, 인원이 많으면 앨범과 같은 모양의 스크롤바로 내린다 */}
+                        <OverlayScrollArea id="group-view-panel" role="tabpanel" label="멤버" className="grid grid-cols-1 gap-3.5 p-4 sm:p-5">
                         {members.map((m, index) => {
                             const linkHref = `/group/${rawId}/member/${m.memberId}`;
 
@@ -425,7 +427,7 @@ export default function GroupDetailPage({
                                 참여 중인 멤버가 없습니다.
                             </div>
                         )}
-                        </div>
+                        </OverlayScrollArea>
                     </div>
                 )}
                 </div>
