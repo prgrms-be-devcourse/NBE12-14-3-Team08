@@ -255,7 +255,7 @@ function ReactionCommentBody({ kind, targetId, isOwnVerify, writable, onChange }
         )}
         {comments.map((comment) => (
           <li key={comment.id} className="flex gap-2.5">
-            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-xs font-black text-emerald-700">
+            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-forest-100 bg-forest-50 text-xs font-black text-forest-700">
               {comment.authorNickname.slice(0, 1)}
             </span>
             <div className="min-w-0 flex-1">
@@ -301,7 +301,7 @@ function ReactionCommentBody({ kind, targetId, isOwnVerify, writable, onChange }
                     maxLength={COMMENT_MAX_LENGTH}
                     rows={2}
                     aria-label="댓글 수정 내용"
-                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm leading-5 text-slate-700 outline-none focus:border-emerald-400"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm leading-5 text-slate-700 outline-none focus:border-forest-400"
                   />
                   <div className="mt-1.5 flex justify-end gap-1.5">
                     <button
@@ -333,7 +333,7 @@ function ReactionCommentBody({ kind, targetId, isOwnVerify, writable, onChange }
               type="button"
               onClick={loadMore}
               disabled={loadingMore}
-              className="cursor-pointer text-xs font-bold text-emerald-700 hover:underline disabled:opacity-50"
+              className="cursor-pointer text-xs font-bold text-forest-700 hover:underline disabled:opacity-50"
             >
               {loadingMore ? '불러오는 중...' : '댓글 더 보기'}
             </button>
@@ -362,7 +362,7 @@ function ReactionCommentBody({ kind, targetId, isOwnVerify, writable, onChange }
             rows={1}
             placeholder="댓글을 남겨 보세요"
             aria-label="댓글 입력"
-            className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm leading-5 text-slate-700 outline-none focus:border-emerald-400"
+            className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm leading-5 text-slate-700 outline-none focus:border-forest-400"
           />
           <button
             type="submit"

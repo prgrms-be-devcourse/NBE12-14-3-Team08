@@ -112,7 +112,7 @@ export function HabitVerifyDetailModal({
                             onApprove();
                             onClose();
                           }}
-                          className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-500/20 transition-colors cursor-pointer"
+                          className="flex-1 py-3 rounded-xl bg-forest-500 hover:bg-forest-600 text-lime-400 font-bold text-sm shadow-md shadow-forest-500/20 transition-colors cursor-pointer"
                       >
                         승인
                       </button>

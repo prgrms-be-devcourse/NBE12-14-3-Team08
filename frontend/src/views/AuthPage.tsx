@@ -71,7 +71,7 @@ export const AuthPage: React.FC<{
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
         {/* Brand header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500 text-white font-extrabold text-2xl shadow-lg shadow-emerald-500/20 mb-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-forest-500 text-lime-400 font-extrabold text-2xl shadow-lg shadow-forest-500/20 mb-3">
             🎯
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">내기? 내기!</h1>
@@ -95,7 +95,7 @@ export const AuthPage: React.FC<{
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="아이디를 입력하세요"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
@@ -107,14 +107,14 @@ export const AuthPage: React.FC<{
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="비밀번호를 입력하세요"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-lime-400 bg-forest-500 hover:bg-forest-600 shadow-md shadow-forest-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
             >
               {isSubmitting ? '로그인 중...' : '로그인'}
             </button>
@@ -127,9 +127,9 @@ export const AuthPage: React.FC<{
                   setError('');
                   router.push('/signup');
                 }}
-                className="text-xs text-slate-500 hover:text-emerald-600 font-semibold"
+                className="text-xs text-slate-500 hover:text-forest-600 font-semibold"
               >
-                아직 계정이 없으신가요? <span className="underline text-emerald-600 font-bold">회원가입</span>
+                아직 계정이 없으신가요? <span className="underline text-forest-600 font-bold">회원가입</span>
               </button>
             </div>
 
@@ -146,7 +146,7 @@ export const AuthPage: React.FC<{
                 value={signupName}
                 onChange={(e) => setSignupName(e.target.value)}
                 placeholder="예: 정우, 멋진도전자"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
@@ -158,7 +158,7 @@ export const AuthPage: React.FC<{
                 value={signupUsername}
                 onChange={(e) => setSignupUsername(e.target.value)}
                 placeholder="영문/숫자 아이디"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
@@ -170,7 +170,7 @@ export const AuthPage: React.FC<{
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
                 placeholder="비밀번호"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
@@ -182,14 +182,14 @@ export const AuthPage: React.FC<{
                 value={signupPasswordConfirm}
                 onChange={(e) => setSignupPasswordConfirm(e.target.value)}
                 placeholder="비밀번호 재입력"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              className="mx-auto block w-full max-w-48 py-3 rounded-xl font-bold text-lime-400 bg-forest-500 hover:bg-forest-600 shadow-md shadow-forest-500/20 transition-all hover:scale-101 text-sm mt-4 cursor-pointer disabled:cursor-wait disabled:opacity-60"
             >
               {isSubmitting ? '가입 중...' : '회원가입'}
             </button>
@@ -202,9 +202,9 @@ export const AuthPage: React.FC<{
                   setError('');
                   router.push('/login');
                 }}
-                className="text-xs text-slate-500 hover:text-emerald-600 font-semibold"
+                className="text-xs text-slate-500 hover:text-forest-600 font-semibold"
               >
-                이미 계정이 있으신가요? <span className="underline text-emerald-600 font-bold">로그인</span>
+                이미 계정이 있으신가요? <span className="underline text-forest-600 font-bold">로그인</span>
               </button>
             </div>
           </form>

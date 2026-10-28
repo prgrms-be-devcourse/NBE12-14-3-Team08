@@ -138,7 +138,7 @@ export const MemberHabitHeatmap: React.FC<MemberHabitHeatmapProps> = ({
             <div className="flex items-center justify-between text-[11px] mb-2 text-slate-500">
                 <span className="font-bold text-slate-700">챌린지 실천 잔디</span>
                 <span className="tabular-nums font-semibold">
-                    <strong className="text-emerald-700 font-extrabold">{successCount}</strong> / {totalDays}일 완주 ({rate}%)
+                    <strong className="text-forest-700 font-extrabold">{successCount}</strong> / {totalDays}일 완주 ({rate}%)
                 </span>
             </div>
 
@@ -149,7 +149,7 @@ export const MemberHabitHeatmap: React.FC<MemberHabitHeatmapProps> = ({
                         title={`${tile.dateStr}: ${tile.isApproved ? '실천 성공 (방장 승인)' : '미인증'}`}
                         className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-xs transition-transform hover:scale-125 cursor-pointer ${
                             tile.isApproved
-                                ? 'bg-emerald-600 shadow-2xs'
+                                ? 'bg-forest-600 shadow-2xs'
                                 : 'bg-slate-100 border border-slate-200/80'
                         }`}
                     />

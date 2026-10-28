@@ -118,7 +118,7 @@ export function MemberFilterDropdown({ members, value, onChange }: MemberFilterD
         onKeyDown={handleButtonKeyDown}
         className={`flex max-w-[11rem] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
           filtered
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+            ? 'border-forest-200 bg-forest-50 text-forest-600'
             : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
         }`}
       >
@@ -149,7 +149,7 @@ export function MemberFilterDropdown({ members, value, onChange }: MemberFilterD
               onMouseMove={() => setActiveIndex(index)}
               className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-bold ${
                 index === activeIndex ? 'bg-slate-100' : ''
-              } ${index === selectedIndex ? 'text-emerald-600' : 'text-slate-700'}`}
+              } ${index === selectedIndex ? 'text-forest-600' : 'text-slate-700'}`}
             >
               <span className="truncate">{option.label}</span>
               {index === selectedIndex && <Check className="h-3.5 w-3.5 flex-none" />}

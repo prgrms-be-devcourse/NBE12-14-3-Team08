@@ -35,7 +35,7 @@ export const MyPage: React.FC = () => {
         <button
           type="button"
           onClick={() => router.push('/login')}
-          className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
+          className="rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 hover:bg-forest-600"
         >
           로그인하러 가기
         </button>
@@ -92,7 +92,7 @@ export const MyPage: React.FC = () => {
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-10">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-emerald-600">내기? 내기!</p>
+            <p className="text-xs font-bold text-forest-600">내기? 내기!</p>
             <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">마이페이지</h1>
           </div>
           <MemberNavigation embedded />
@@ -135,7 +135,7 @@ export const MyPage: React.FC = () => {
                 onChange={(event) => {
                   setNameEdit({ userId: currentUser.id, value: event.target.value });
                 }}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
             {!isSocial && (
@@ -149,7 +149,7 @@ export const MyPage: React.FC = () => {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 placeholder="비밀번호를 변경할 때만 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
             <div>
@@ -161,7 +161,7 @@ export const MyPage: React.FC = () => {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 placeholder="변경할 새 비밀번호를 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
             <div>
@@ -173,7 +173,7 @@ export const MyPage: React.FC = () => {
                 value={newPasswordConfirm}
                 onChange={(event) => setNewPasswordConfirm(event.target.value)}
                 placeholder="새 비밀번호를 한 번 더 입력하세요"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
               />
             </div>
               </>
@@ -191,7 +191,7 @@ export const MyPage: React.FC = () => {
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 transition-colors hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-60"
+              className="rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 shadow-md shadow-forest-500/20 transition-colors hover:bg-forest-600 disabled:cursor-wait disabled:opacity-60"
             >
               {isSaving ? '저장 중...' : '변경사항 저장'}
             </button>

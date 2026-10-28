@@ -40,7 +40,7 @@ export default function ModalTestPage() {
           <button
             type="button"
             onClick={() => setIsVerifyModalOpen(true)}
-            className="rounded-xl bg-emerald-500 px-6 py-3 font-bold text-white hover:bg-emerald-600"
+            className="rounded-xl bg-forest-500 px-6 py-3 font-bold text-lime-400 hover:bg-forest-600"
           >
             오늘 인증하기
           </button>

@@ -52,7 +52,7 @@ export const SocialCallbackPage: React.FC<{ provider: string }> = ({ provider })
             <p role="alert" className="text-sm font-semibold text-rose-600">{message}</p>
             <Link
               href="/login"
-              className="mt-6 inline-block rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600"
+              className="mt-6 inline-block rounded-xl bg-forest-500 px-6 py-2.5 text-sm font-bold text-lime-400 hover:bg-forest-600"
             >
               로그인으로 돌아가기
             </Link>

@@ -25,7 +25,7 @@ export default function RootLayout({
         />
       </head>
       <MemberProvider>
-          <body className="flex flex-col min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+          <body className="flex flex-col min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-lime-300 selection:text-forest-900">
           <Header />
           <main className="flex-grow flex-1">
               {children}

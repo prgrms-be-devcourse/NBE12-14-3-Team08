@@ -75,16 +75,16 @@ export function InvitePage() {
   return (
     <main className="flex min-h-[85vh] items-center justify-center px-4 py-10">
       <section className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-xl">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-emerald-100 opacity-60 blur-2xl" />
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-teal-100 opacity-60 blur-2xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-forest-100 opacity-60 blur-2xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-lime-200 opacity-60 blur-2xl" />
 
         <button type="button" onClick={() => router.push('/main')} aria-label="방 목록으로 돌아가기"
           className="absolute left-6 top-6 text-xl text-slate-400 transition-colors hover:text-slate-600">
           ←
         </button>
 
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-3xl text-emerald-600 shadow-sm">💌</div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wider text-emerald-600">방에 초대받으셨어요!</p>
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-forest-100 text-3xl text-forest-600 shadow-sm">💌</div>
+        <p className="mb-1 text-xs font-bold uppercase tracking-wider text-forest-600">방에 초대받으셨어요!</p>
 
         {isLoading ? (
           <div className="py-12 text-sm font-semibold text-slate-400">
@@ -128,7 +128,7 @@ export function InvitePage() {
               type="button"
               onClick={handleJoinClick}
               disabled={!authReady || !invitecode || preview.status === 'FINISH'}
-              className="w-full cursor-pointer rounded-2xl bg-emerald-500 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="w-full cursor-pointer rounded-2xl bg-forest-500 py-3.5 text-sm font-extrabold text-lime-400 shadow-lg shadow-forest-500/25 transition-all hover:bg-forest-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               {preview.status === 'FINISH'
                 ? '종료된 방입니다'

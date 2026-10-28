@@ -88,7 +88,7 @@ function createComparisonCards(comparison: SettlementGroupComparison): Compariso
       winner: winnerName(comparison.mostRejectedVerifications),
       value: winnerValue(comparison.mostRejectedVerifications, '인증 거절 ', '회'),
       detail: '거절된 인증도 다시 도전한 소중한 기록이에요.',
-      gradient: 'from-sky-500 to-blue-600',
+      gradient: 'from-forest-600 to-forest-800',
     },
     {
       eyebrow: '느긋한 벌칙왕',
@@ -97,7 +97,7 @@ function createComparisonCards(comparison: SettlementGroupComparison): Compariso
       winner: winnerName(comparison.longestPenaltyDelay),
       value: winnerValue(comparison.longestPenaltyDelay, '최장 ', '일'),
       detail: '벌칙이 생긴 날부터 제출한 날까지의 기간을 비교했어요.',
-      gradient: 'from-emerald-500 to-teal-600',
+      gradient: 'from-forest-500 to-forest-800',
     },
   ];
 }
@@ -170,7 +170,7 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
       <section className="relative mx-auto min-h-[calc(100vh-4rem)] max-w-5xl overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 text-slate-900 shadow-xl shadow-slate-200/60 sm:min-h-[calc(100vh-6rem)] sm:p-10">
-        <div aria-hidden="true" className="absolute -left-32 top-12 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
+        <div aria-hidden="true" className="absolute -left-32 top-12 h-72 w-72 rounded-full bg-forest-200/50 blur-3xl" />
         <div aria-hidden="true" className="absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-violet-200/40 blur-3xl" />
 
         <div className="relative mx-auto flex min-h-[calc(100vh-7rem)] max-w-4xl flex-col sm:min-h-[calc(100vh-11rem)]">
@@ -178,12 +178,12 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
           <button
             type="button"
             onClick={() => router.push('/main')}
-            className="justify-self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-emerald-50 hover:text-emerald-700"
+            className="justify-self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-forest-50 hover:text-forest-700"
           >
             ← 방 목록
           </button>
           <div className="text-center">
-            <p className="text-xs font-black tracking-[0.24em] text-emerald-600">내기? 내기!</p>
+            <p className="text-xs font-black tracking-[0.24em] text-forest-600">내기? 내기!</p>
             <p className="mt-1 text-[10px] font-semibold text-slate-400">{settlement.groupTitle} 결산</p>
           </div>
           <span aria-hidden="true" />
@@ -191,7 +191,7 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
 
         <div className="mt-6 h-1 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-forest-500 to-lime-400 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -222,7 +222,7 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
               {Array.from({ length: lastStep + 1 }, (_, index) => (
                 <span
                   key={index}
-                  className={`h-1.5 rounded-full transition-all ${index === step ? 'w-6 bg-emerald-500' : 'w-1.5 bg-slate-200'}`}
+                  className={`h-1.5 rounded-full transition-all ${index === step ? 'w-6 bg-forest-500' : 'w-1.5 bg-slate-200'}`}
                 />
               ))}
             </div>
@@ -230,7 +230,7 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
               <button
                 type="button"
                 onClick={goNext}
-                className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-600"
+                className="rounded-xl bg-forest-500 px-5 py-2.5 text-sm font-black text-lime-400 transition hover:bg-forest-600"
               >
                 다음 →
               </button>
@@ -238,7 +238,7 @@ export function SettlementEntryPage({ groupId, preview = false }: SettlementEntr
               <button
                 type="button"
                 onClick={() => router.push(`/group/${groupId}`)}
-                className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-600"
+                className="rounded-xl bg-forest-500 px-5 py-2.5 text-sm font-black text-lime-400 transition hover:bg-forest-600"
               >
                 방으로 이동
               </button>
@@ -281,7 +281,7 @@ function SettlementStatus({
             <button
               type="button"
               onClick={onAction}
-              className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-black text-white transition hover:bg-emerald-600"
+              className="rounded-xl bg-forest-500 px-4 py-2 text-xs font-black text-lime-400 transition hover:bg-forest-600"
             >
               {actionLabel}
             </button>
@@ -296,10 +296,10 @@ function SettlementStatus({
 function IntroSlide({ nickname, onStart }: { nickname: string; onStart: () => void }) {
   return (
     <div className="w-full text-center">
-      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-emerald-300 to-cyan-400 text-5xl shadow-2xl shadow-emerald-500/20">
+      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-lime-300 to-lime-400 text-5xl shadow-2xl shadow-forest-500/20">
         🎉
       </div>
-      <p className="mt-8 text-sm font-black tracking-[0.3em] text-emerald-600">HABIT RECAP</p>
+      <p className="mt-8 text-sm font-black tracking-[0.3em] text-forest-600">HABIT RECAP</p>
       <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight sm:text-6xl">
         함께 만든 습관의<br />마지막 장면이에요
       </h1>
@@ -309,7 +309,7 @@ function IntroSlide({ nickname, onStart }: { nickname: string; onStart: () => vo
       <button
         type="button"
         onClick={onStart}
-        className="mt-9 rounded-2xl bg-emerald-500 px-8 py-4 text-sm font-black text-white shadow-xl shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-emerald-600"
+        className="mt-9 rounded-2xl bg-forest-500 px-8 py-4 text-sm font-black text-lime-400 shadow-xl shadow-forest-500/20 transition hover:-translate-y-0.5 hover:bg-forest-600"
       >
         내 결산 시작하기 →
       </button>
@@ -329,7 +329,7 @@ function PersonalSlide({ stats }: { stats: SettlementPersonalStats }) {
     <div className="w-full max-w-3xl">
       <div className="flex flex-col items-center text-center">
         <ProfileAvatar nickname={stats.nickname} />
-        <p className="mt-4 text-xs font-black tracking-[0.2em] text-emerald-600">MY RECORD</p>
+        <p className="mt-4 text-xs font-black tracking-[0.2em] text-forest-600">MY RECORD</p>
         <h2 className="mt-2 text-3xl font-black sm:text-4xl">{stats.nickname} 님의 개인 결산</h2>
         <p className="mt-2 text-sm text-slate-500">이 방에서 남긴 기록을 한눈에 모았어요.</p>
       </div>
@@ -346,9 +346,9 @@ function PersonalSlide({ stats }: { stats: SettlementPersonalStats }) {
         ))}
       </div>
 
-      <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-        <p className="text-sm font-bold text-emerald-800">총 {stats.totalVerifyCount}번의 인증으로 꾸준함을 보여줬어요!</p>
-        <p className="mt-1 text-xs text-emerald-600">작은 반복이 멋진 습관을 만들었습니다.</p>
+      <div className="mt-5 rounded-3xl border border-forest-200 bg-forest-50 p-5 text-center">
+        <p className="text-sm font-bold text-forest-800">총 {stats.totalVerifyCount}번의 인증으로 꾸준함을 보여줬어요!</p>
+        <p className="mt-1 text-xs text-forest-600">작은 반복이 멋진 습관을 만들었습니다.</p>
       </div>
     </div>
   );
@@ -369,7 +369,7 @@ function ComparisonSlide({
       <div className={`mx-auto mt-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br ${card.gradient} text-5xl shadow-2xl`}>
         {card.icon}
       </div>
-      <p className="mt-7 text-sm font-black text-emerald-600">{card.eyebrow}</p>
+      <p className="mt-7 text-sm font-black text-forest-600">{card.eyebrow}</p>
       <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{card.title}</h2>
 
       <div className="mx-auto mt-8 max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -377,7 +377,7 @@ function ComparisonSlide({
           {card.winner === '기록 없음' ? '-' : card.winner.charAt(0)}
         </div>
         <p className="mt-3 text-lg font-black">{card.winner}</p>
-        <p className="mt-1 bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-2xl font-black text-transparent">
+        <p className="mt-1 bg-gradient-to-r from-forest-600 to-lime-600 bg-clip-text text-2xl font-black text-transparent">
           {card.value}
         </p>
         <p className="mt-4 text-xs leading-5 text-slate-500">{card.detail}</p>
@@ -390,7 +390,7 @@ function ClosingSlide({ nickname }: { nickname: string }) {
   return (
     <div className="w-full max-w-2xl text-center">
       <p className="text-6xl">🏁</p>
-      <p className="mt-7 text-sm font-black tracking-[0.25em] text-emerald-600">RECAP COMPLETE</p>
+      <p className="mt-7 text-sm font-black tracking-[0.25em] text-forest-600">RECAP COMPLETE</p>
       <h2 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">
         {nickname} 님,<br />이번 습관도 수고했어요!
       </h2>

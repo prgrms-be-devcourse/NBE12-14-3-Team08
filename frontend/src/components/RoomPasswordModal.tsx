@@ -75,14 +75,14 @@ export function RoomPasswordModal({
             value={password} onChange={(event) => { setPassword(event.target.value); setError(''); }}
             placeholder="비밀번호를 입력하세요"
             aria-invalid={Boolean(error)} aria-describedby={error ? 'invite-room-password-error' : undefined}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-500" />
           {error && <p id="invite-room-password-error" role="alert" className="mt-1 text-xs font-semibold text-rose-500">{error}</p>}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} disabled={isSubmitting}
               className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">취소</button>
             <button type="submit" disabled={isSubmitting}
-              className="rounded-xl bg-emerald-500 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-60">
+              className="rounded-xl bg-forest-500 px-5 py-2 text-xs font-bold text-lime-400 shadow-sm hover:bg-forest-600 disabled:cursor-wait disabled:opacity-60">
               {isSubmitting ? '확인 중...' : '인증하기'}
             </button>
           </div>

@@ -43,14 +43,14 @@ export default function PenaltyPlaygroundTestPage() {
 
   return (
       <div className="min-h-screen bg-[#F4F8F6] p-8 text-gray-900 font-sans">
-        <div className="mx-auto max-w-3xl rounded-[32px] bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-emerald-100">
+        <div className="mx-auto max-w-3xl rounded-[32px] bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.05)] border border-forest-100">
 
           {/* 상단 타이틀 */}
           <div className="border-b border-gray-100 pb-6 mb-8">
-          <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
+          <span className="bg-forest-100 text-forest-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
             Dev Test Playground
           </span>
-            <h1 className="text-2xl font-black text-emerald-950 mt-2">
+            <h1 className="text-2xl font-black text-forest-950 mt-2">
               벌칙 & 관리자 대시보드 종합 테스트 베드
             </h1>
             <p className="text-xs text-gray-500 mt-1">
@@ -61,7 +61,7 @@ export default function PenaltyPlaygroundTestPage() {
           {/* 1. 토큰 주입 섹션 */}
           <section className="mb-8 rounded-2xl bg-gray-50 p-5 border border-gray-200">
             <h2 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="h-2 w-2 rounded-full bg-forest-500"></span>
               1. 인증 토큰 설정 (LocalStorage Injection)
             </h2>
             <p className="text-xs text-gray-500 mb-3">
@@ -73,11 +73,11 @@ export default function PenaltyPlaygroundTestPage() {
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
                   placeholder="eyJhbGciOi..."
-                  className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-xs outline-none focus:border-emerald-500 font-mono"
+                  className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-xs outline-none focus:border-forest-500 font-mono"
               />
               <button
                   onClick={handleSaveToken}
-                  className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-600 transition"
+                  className="rounded-xl bg-forest-500 px-4 py-2 text-xs font-bold text-lime-400 hover:bg-forest-600 transition"
               >
                 저장
               </button>
@@ -90,16 +90,16 @@ export default function PenaltyPlaygroundTestPage() {
             </div>
             <div className="text-[11px] text-gray-400 truncate">
               현재 로컬스토리지 상태:{' '}
-              <span className={currentSavedToken ? 'text-emerald-600 font-semibold' : 'text-rose-500 font-semibold'}>
+              <span className={currentSavedToken ? 'text-forest-600 font-semibold' : 'text-rose-500 font-semibold'}>
               {currentSavedToken ? `토큰 등록됨 (${currentSavedToken.slice(0, 20)}...)` : '토큰 비어있음'}
             </span>
             </div>
           </section>
 
           {/* 2. 관리자 대시보드 바로가기 */}
-          <section className="mb-8 rounded-2xl bg-emerald-50/50 p-5 border border-emerald-100">
-            <h2 className="text-sm font-bold text-emerald-950 mb-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+          <section className="mb-8 rounded-2xl bg-forest-50/50 p-5 border border-forest-100">
+            <h2 className="text-sm font-bold text-forest-950 mb-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-forest-500"></span>
               2. 관리자 인증 검토 대시보드 이동 (방장 전용)
             </h2>
             <p className="text-xs text-gray-600 mb-3">
@@ -117,7 +117,7 @@ export default function PenaltyPlaygroundTestPage() {
               </div>
               <Link
                   href={`/admin/group/${groupId}/verification`}
-                  className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+                  className="rounded-xl bg-forest-600 px-5 py-2 text-xs font-bold text-lime-400 shadow-sm hover:bg-forest-700 transition"
               >
                 관리자 페이지(/admin/group/{groupId}/verification) 열기 ↗
               </Link>
@@ -127,7 +127,7 @@ export default function PenaltyPlaygroundTestPage() {
           {/* 3. 모달 컴포넌트 직접 트리거 테스트 */}
           <section className="rounded-2xl bg-white p-5 border border-gray-200">
             <h2 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="h-2 w-2 rounded-full bg-forest-500"></span>
               3. 모달 컴포넌트 단독 동작 테스트
             </h2>
             <p className="text-xs text-gray-500 mb-4">
@@ -138,7 +138,7 @@ export default function PenaltyPlaygroundTestPage() {
               {/* 제출 모달 테스트 */}
               <div className="rounded-2xl border border-gray-200 p-4 bg-gray-50 flex flex-col justify-between">
                 <div>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-bold text-forest-700 bg-forest-100 px-2 py-0.5 rounded-full">
                   일반 팀원 시점
                 </span>
                   <h3 className="text-sm font-bold text-gray-800 mt-2">벌칙 인증 제출 모달</h3>

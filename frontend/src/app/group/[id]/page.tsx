@@ -314,16 +314,16 @@ export default function GroupDetailPage({
                                 <div
                                     key={`member-${m.id}-${index}`}
                                     onClick={() => router.push(linkHref)}
-                                    className="group flex flex-col rounded-3xl border border-slate-200/80 bg-white p-5 transition-all hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer"
+                                    className="group flex flex-col rounded-3xl border border-slate-200/80 bg-white p-5 transition-all hover:border-forest-400 hover:shadow-lg hover:shadow-forest-500/5 cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-3.5">
-                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-sm font-black text-emerald-600 border border-emerald-100">
+                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest-50 text-sm font-black text-forest-600 border border-forest-100">
                                                 {m.nickname.slice(0, 1)}
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="text-sm font-extrabold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                                                    <span className="text-sm font-extrabold text-slate-900 group-hover:text-forest-600 transition-colors">
                                                         {m.nickname}
                                                     </span>
                                                     {m.role === 'OWNER' && <span className="text-xs">👑</span>}
@@ -343,7 +343,7 @@ export default function GroupDetailPage({
                                                     {m.habitDescription || '습관 설명이 없습니다.'}
                                                 </div>
                                             </div>
-                                            <span className="text-sm font-bold text-slate-300 group-hover:text-emerald-500 transition-colors">
+                                            <span className="text-sm font-bold text-slate-300 group-hover:text-forest-500 transition-colors">
                                                 →
                                             </span>
                                         </div>

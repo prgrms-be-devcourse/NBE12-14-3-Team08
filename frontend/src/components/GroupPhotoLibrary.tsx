@@ -727,7 +727,7 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
                   </span>
                   {selected?.id === photo.id && (
                     <span
-                      className={`pointer-events-none absolute inset-0 z-[1] ring-inset ring-emerald-500 ${
+                      className={`pointer-events-none absolute inset-0 z-[1] ring-inset ring-forest-500 ${
                         columns === 15 ? 'ring-2' : 'ring-4'
                       }`}
                     />
@@ -759,7 +759,7 @@ export function GroupPhotoLibrary({ groupId, members, view, onViewChange, member
                 onClick={() => {
                   setLoaded((prev) => (prev ? { ...prev, moreError: null } : prev));
                 }}
-                className="font-bold text-emerald-600 hover:underline cursor-pointer"
+                className="font-bold text-forest-600 hover:underline cursor-pointer"
               >
                 다시 시도
               </button>

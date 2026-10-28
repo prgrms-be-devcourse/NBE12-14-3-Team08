@@ -93,7 +93,7 @@ export function GroupContentBar({ view, onViewChange, memberCount, left, right }
           </svg>
           <span
             aria-hidden="true"
-            className="absolute left-[calc(50%+11px)] top-2.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-black text-white"
+            className="absolute left-[calc(50%+11px)] top-2.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-forest-500 px-1 text-[10px] font-black text-lime-400"
           >
             {memberCount}
           </span>

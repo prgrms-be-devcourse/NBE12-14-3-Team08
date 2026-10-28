@@ -25,7 +25,7 @@ export default function Header() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 w-full h-16 flex items-center justify-between">
                 {/* 좌측 영역: 로고 및 타이틀 (클릭 시 /main 이동) */}
                 <Link href="/main" className="flex items-center gap-3 group transition-transform active:scale-[0.99]">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-forest-500 flex items-center justify-center text-lime-400 shadow-sm shrink-0">
                         <Target className="w-5 h-5" strokeWidth={2.5} />
                     </div>
                     <div className="flex flex-col">
@@ -33,7 +33,7 @@ export default function Header() {
               <span className="text-lg font-extrabold text-slate-900 leading-tight tracking-tight">
                 내기? 내기!
               </span>
-                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                            <span className="bg-forest-100 text-forest-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                 습관 챌린지
               </span>
                         </div>
@@ -60,7 +60,7 @@ export default function Header() {
                         className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-slate-50 transition-colors"
                     >
                         {/* 프로필 아바타: 닉네임 첫 글자 표시 */}
-                        <div className="bg-emerald-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-black shrink-0 shadow-xs select-none">
+                        <div className="bg-forest-500 text-lime-400 rounded-full w-8 h-8 flex items-center justify-center text-xs font-black shrink-0 shadow-xs select-none">
                             {initial}
                         </div>
 

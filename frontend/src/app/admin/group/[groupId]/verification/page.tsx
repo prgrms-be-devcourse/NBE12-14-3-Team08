@@ -215,9 +215,9 @@ export default function AdminVerificationPage({
           <section className="mb-12">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-5 bg-emerald-500 rounded-full"></div>
+                <div className="w-1.5 h-5 bg-forest-500 rounded-full"></div>
                 <span className="text-lg font-extrabold text-slate-900">습관 인증 대기</span>
-                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full ml-1">
+                <span className="bg-forest-100 text-forest-700 text-xs font-bold px-2 py-0.5 rounded-full ml-1">
                 {habitVerifyList.length}
               </span>
               </div>
@@ -233,7 +233,7 @@ export default function AdminVerificationPage({
                 </button>
                 <button
                     onClick={() => handleBulkHabitAction('approve')}
-                    className="rounded-full bg-emerald-50 px-4 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                    className="rounded-full bg-forest-50 px-4 py-1.5 text-xs font-bold text-forest-700 hover:bg-forest-100 transition-colors cursor-pointer"
                 >
                   선택 승인
                 </button>
@@ -254,7 +254,7 @@ export default function AdminVerificationPage({
                         key={item.id}
                         onClick={() => setSelectedHabitVerify(item)}
                         className={`relative flex h-[280px] w-48 flex-shrink-0 flex-col justify-between rounded-[24px] bg-white p-4 border transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-                            isChecked ? 'border-emerald-400 shadow-md ring-1 ring-emerald-400' : 'border-slate-100 shadow-sm'
+                            isChecked ? 'border-forest-400 shadow-md ring-1 ring-forest-400' : 'border-slate-100 shadow-sm'
                         }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -267,14 +267,14 @@ export default function AdminVerificationPage({
                                     prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
                                 )
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 cursor-pointer"
+                            className="h-4 w-4 rounded border-slate-300 text-forest-500 focus:ring-forest-400 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
                       {item.date}
                     </span>
                       </div>
 
-                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-emerald-50/50 border border-emerald-50 overflow-hidden group">
+                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-forest-50/50 border border-forest-50 overflow-hidden group">
                         {item.imageUrl ? (
                             <img
                                 src={item.imageUrl}
@@ -282,7 +282,7 @@ export default function AdminVerificationPage({
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                         ) : (
-                            <span className="text-xs font-medium text-emerald-300">사진 없음</span>
+                            <span className="text-xs font-medium text-forest-300">사진 없음</span>
                         )}
                       </div>
 
@@ -296,7 +296,7 @@ export default function AdminVerificationPage({
                       <div className="flex gap-2 pt-3 border-t border-slate-50 mt-auto">
                         <button
                             onClick={(e) => handleSingleHabitAction(e, item.id, 'approve')}
-                            className="flex-1 py-1.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
+                            className="flex-1 py-1.5 rounded-xl bg-forest-500 text-lime-400 hover:bg-forest-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
                         >
                           승인
                         </button>
@@ -338,7 +338,7 @@ export default function AdminVerificationPage({
                 </button>
                 <button
                     onClick={() => handleBulkPenaltyAction('approve')}
-                    className="rounded-full bg-emerald-50 px-4 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                    className="rounded-full bg-forest-50 px-4 py-1.5 text-xs font-bold text-forest-700 hover:bg-forest-100 transition-colors cursor-pointer"
                 >
                   선택 승인
                 </button>
@@ -359,7 +359,7 @@ export default function AdminVerificationPage({
                         key={item.id}
                         onClick={() => setSelectedPenalty(item)}
                         className={`relative flex h-[280px] w-48 flex-shrink-0 flex-col justify-between rounded-[24px] bg-white p-4 border transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-lg ${
-                            isChecked ? 'border-emerald-400 shadow-md ring-1 ring-emerald-400' : 'border-slate-100 shadow-sm'
+                            isChecked ? 'border-forest-400 shadow-md ring-1 ring-forest-400' : 'border-slate-100 shadow-sm'
                         }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -372,14 +372,14 @@ export default function AdminVerificationPage({
                                     prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
                                 )
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 cursor-pointer"
+                            className="h-4 w-4 rounded border-slate-300 text-forest-500 focus:ring-forest-400 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
                       {item.date}
                     </span>
                       </div>
 
-                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-emerald-50/50 border border-emerald-50 overflow-hidden group">
+                      <div className="relative mb-3 flex h-28 w-full items-center justify-center rounded-2xl bg-forest-50/50 border border-forest-50 overflow-hidden group">
                         {item.imageUrl ? (
                             <img
                                 src={item.imageUrl}
@@ -387,7 +387,7 @@ export default function AdminVerificationPage({
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                         ) : (
-                            <span className="text-xs font-medium text-emerald-300">사진 없음</span>
+                            <span className="text-xs font-medium text-forest-300">사진 없음</span>
                         )}
                       </div>
 
@@ -401,7 +401,7 @@ export default function AdminVerificationPage({
                       <div className="flex gap-2 pt-3 border-t border-slate-50 mt-auto">
                         <button
                             onClick={(e) => handleSinglePenaltyAction(e, item.id, 'approve')}
-                            className="flex-1 py-1.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
+                            className="flex-1 py-1.5 rounded-xl bg-forest-500 text-lime-400 hover:bg-forest-600 text-[12px] font-bold shadow-sm transition-all cursor-pointer"
                         >
                           승인
                         </button>
