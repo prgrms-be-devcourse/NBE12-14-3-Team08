@@ -116,11 +116,11 @@
 * **그룹 만료 처리 (매일 00:00:00)**: 마감일이 지난 방은 자동으로 `FINISH` 상태로 전이됩니다.
 
 ## 🏗 서비스 구상도
-<img width="3817" height="8192" alt="8팀 자쿰" src="https://github.com/user-attachments/assets/ceba2e73-3600-4e6e-898c-47cab73a4b3c" />
+![서비스구상도](https://github.com/user-attachments/assets/ceba2e73-3600-4e6e-898c-47cab73a4b3c)
 
 
 ## 🗄 데이터베이스 구조 (ERD)
-<img width="1805" height="582" alt="내기?내기! ERD-2" src="https://github.com/user-attachments/assets/c83bf7b0-27a4-4012-9b93-aeb8a9135e0d" />
+![ERD](https://github.com/user-attachments/assets/c83bf7b0-27a4-4012-9b93-aeb8a9135e0d)
 
 ## 📂 프로젝트 구조 (Project Structure)
 ```text
